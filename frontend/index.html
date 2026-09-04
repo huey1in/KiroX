@@ -153,12 +153,6 @@
       <span class="nav-tooltip" data-i18n="nav.logs">运行日志</span>
     </div>
 
-    <!-- 注册 -->
-    <div class="nav-item" onclick="switchPage('register')" data-page="register">
-      <div class="nav-dot"></div>
-      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      <span class="nav-tooltip" data-i18n="nav.register">注册</span>
-    </div>
     <!-- 邮箱池 -->
     <div class="nav-item" onclick="switchPage('accounts')" data-page="accounts">
       <div class="nav-dot"></div>
@@ -256,7 +250,7 @@
           <div class="db-detail-body" style="flex-direction:column;">
             <!-- 操作按钮 -->
             <div style="display:flex;gap:8px;margin-bottom:4px;">
-              <button id="btn-start" onclick="switchPage('register')" class="btn btn-dark btn-sm" style="flex:1;justify-content:center;">
+              <button id="btn-start" onclick="openNewTaskModal()" class="btn btn-dark btn-sm" style="flex:1;justify-content:center;">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 <span data-i18n="overview.newTask">新建任务</span>
               </button>
@@ -562,17 +556,17 @@
       </div>
     </div>
 
-    <!-- ===== Page: 注册 ===== -->
-    <div class="page" id="page-register">
-      <div class="page-scroll" style="max-width:800px;margin:0 auto;">
-
-        <!-- 任务配置卡片 -->
-        <div class="card" style="margin-bottom:20px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-            <img src="assets/kiro.svg" style="width:24px;height:24px;border-radius:6px;">
-            <span style="font-size:15px;font-weight:700;color:var(--text);" data-i18n="register.newTask">新建注册任务</span>
-            <span id="reg-status-badge" class="db-badge db-badge-idle" style="margin-left:auto;" data-i18n="status.idle">空闲</span>
+    <!-- ===== 新建任务 模态框 ===== -->
+    <div id="new-task-modal" class="modal-overlay" style="z-index:1200;">
+      <div class="modal-content" style="max-width:640px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="assets/kiro.svg" style="width:22px;height:22px;border-radius:6px;">
+            <h3 style="font-size:16px;font-weight:700;" data-i18n="register.newTask">新建注册任务</h3>
+            <span id="ntm-status" class="db-badge db-badge-idle" data-i18n="status.idle">空闲</span>
           </div>
+          <button onclick="closeNewTaskModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
+        </div>
 
           <!-- 并发 & 延迟 & 数量 -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -686,17 +680,15 @@
 
           <!-- 操作按钮 -->
           <div style="display:flex;gap:10px;">
-            <button id="btn-start" onclick="startTask()" class="btn btn-dark" style="flex:1;justify-content:center;">
+            <button id="ntm-start" onclick="startTask()" class="btn btn-dark" style="flex:1;justify-content:center;">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               <span data-i18n="register.startBtn">开始注册</span>
             </button>
-            <button id="btn-stop" onclick="stopTask()" class="btn btn-secondary" style="flex:1;justify-content:center;" disabled>
+            <button id="ntm-stop" onclick="stopTask()" class="btn btn-secondary" style="flex:1;justify-content:center;" disabled>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
               <span data-i18n="register.stopBtn">停止</span>
             </button>
           </div>
-        </div>
-
       </div>
     </div>
 

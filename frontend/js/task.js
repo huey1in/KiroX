@@ -192,6 +192,7 @@ async function startTask() {
       return;
     }
     updateUIStatus(true);
+    closeNewTaskModal();
     showToast(_tkT('toast.taskStarted', '任务已启动'));
   } catch(e) {
     showToast(_tkT('toast.taskStartFailed', '启动失败') + ': ' + e.message, 'error');
@@ -226,7 +227,7 @@ async function stopTask() {
       showToast(result.error, 'error'); 
       return; 
     }
-    document.getElementById('btn-stop').disabled = true;
+    updateUIStatus(false);
     showToast(_tkT('toast.taskStopping', '正在停止任务...'));
   } catch(e) {
     showToast(_tkT('toast.taskStopFailed', '停止失败') + ': ' + (e.message || e), 'error');
@@ -284,7 +285,7 @@ setInterval(async function() {
     var s = await window.go.main.App.GetStatus();
     updateUIStatus(s.running);
     // 注册页状态徽章
-    var regBadge = document.getElementById('reg-status-badge');
+    var regBadge = document.getElementById('ntm-status');
     if (regBadge) {
       var _tt = (window.I18N && window.I18N.t) ? window.I18N.t : function(k){return k;};
       var rTxt = s.running ? _tt('status.running') : _tt('status.idle');

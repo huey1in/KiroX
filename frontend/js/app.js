@@ -247,12 +247,28 @@ async function resetProxy() {
   }
 }
 
-// UI 状态
+// UI 状态（概览页按钮 + 新建任务模态框按钮）
 function updateUIStatus(running) {
-  var btnStart = document.getElementById('btn-start');
-  var btnStop = document.getElementById('btn-stop');
-  if (btnStart) btnStart.disabled = running;
-  if (btnStop) btnStop.disabled = !running;
+  ['btn-start', 'ntm-start'].forEach(function(id) {
+    var b = document.getElementById(id);
+    if (b) b.disabled = running;
+  });
+  ['btn-stop', 'ntm-stop'].forEach(function(id) {
+    var b = document.getElementById(id);
+    if (b) b.disabled = !running;
+  });
+}
+
+// 新建任务模态框：打开 / 关闭
+function openNewTaskModal() {
+  // 重置并加载域名列表、恢复上次选中的邮箱提供商
+  if (typeof initEmailProviderSelection === 'function') initEmailProviderSelection();
+  var m = document.getElementById('new-task-modal');
+  if (m) m.classList.add('show');
+}
+function closeNewTaskModal() {
+  var m = document.getElementById('new-task-modal');
+  if (m) m.classList.remove('show');
 }
 
 // 配置读写
