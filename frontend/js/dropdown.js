@@ -22,7 +22,18 @@ function toggleDropdown(triggerEl, ev) {
     var t = wrap.querySelector('.dropdown-selected');
     if (t) t.classList.add('active');
     var o = wrap.querySelector('.dropdown-options');
-    if (o) o.classList.add('show');
+    if (o) {
+      // 用 fixed 定位（对齐 selected 视口坐标），避免被 modal 的 overflow 裁剪
+      var r = (t || wrap).getBoundingClientRect();
+      o.style.position = 'fixed';
+      o.style.top = (r.bottom + 4) + 'px';
+      o.style.left = r.left + 'px';
+      o.style.width = r.width + 'px';
+      o.style.right = 'auto';
+      o.style.maxHeight = 'min(320px, calc(100vh - ' + (r.bottom + 8) + 'px))';
+      o.style.overflowY = 'auto';
+      o.classList.add('show');
+    }
   }
 }
 
@@ -52,7 +63,17 @@ function closeAllDropdowns() {
     var t = c.querySelector('.dropdown-selected');
     if (t) t.classList.remove('active');
     var o = c.querySelector('.dropdown-options');
-    if (o) o.classList.remove('show');
+    if (o) {
+      o.classList.remove('show');
+      // 清理 fixed 定位内联样式，还原为相对定位默认
+      o.style.position = '';
+      o.style.top = '';
+      o.style.left = '';
+      o.style.width = '';
+      o.style.right = '';
+      o.style.maxHeight = '';
+      o.style.overflowY = '';
+    }
   });
 }
 

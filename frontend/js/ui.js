@@ -160,52 +160,31 @@ function initEmailProviderSelection() {
 function selectEmailProvider(provider) {
   selectedEmailProvider = provider;
 
-  // 更新按钮样式
-  const outlookBtn = document.querySelector('label[onclick*="outlook"]');
-  const moemailBtn = document.querySelector('label[onclick*="moemail"]');
-  const cloudmailBtn = document.querySelector('label[onclick*="cloudmail"]');
-  const mailnestBtn = document.querySelector('label[onclick*="mailnest"]');
-
-  // 全部还原
-  [outlookBtn, moemailBtn, cloudmailBtn, mailnestBtn].forEach(b => {
-    if (b) { b.style.borderColor = 'var(--border)'; b.style.background = 'transparent'; }
-  });
-
-  let activeBtn = outlookBtn;
-  if (provider === 'moemail') activeBtn = moemailBtn;
-  else if (provider === 'cloudmail') activeBtn = cloudmailBtn;
-  else if (provider === 'mailnest') activeBtn = mailnestBtn;
-  if (activeBtn) {
-    activeBtn.style.borderColor = 'var(--primary)';
-    activeBtn.style.background = 'rgba(59, 130, 246, 0.1)';
+  // 同步 dropdown 选中显示
+  const providerWrap = document.getElementById('cfg-email-provider');
+  if (providerWrap && typeof setDropdownValue === 'function') {
+    setDropdownValue(providerWrap, provider);
   }
 
   // 显示/隐藏配置块
   const moemailConfigDiv = document.getElementById('moemail-config-select');
   const cloudmailConfigDiv = document.getElementById('cloudmail-config-select');
-  const hintDiv = document.getElementById('email-provider-hint');
 
   if (moemailConfigDiv) moemailConfigDiv.style.display = (provider === 'moemail') ? 'block' : 'none';
   if (cloudmailConfigDiv) cloudmailConfigDiv.style.display = (provider === 'cloudmail') ? 'block' : 'none';
 
+  // 右栏（邮箱具体选项）随是否有选项动态展开/收起，模态框宽度同步延展/缩回
+  const optionsCol = document.getElementById('ntm-email-options');
+  const modalContent = document.getElementById('ntm-modal-content');
+  const hasRightCol = (provider === 'moemail' || provider === 'cloudmail');
+  if (optionsCol) optionsCol.classList.toggle('show', hasRightCol);
+  if (modalContent) modalContent.style.maxWidth = hasRightCol ? '520px' : '420px';
+
+  // 选择有域名选项的邮箱类型时加载域名列表
   if (provider === 'moemail') {
-    hintDiv.removeAttribute('data-i18n');
-    hintDiv.textContent = _uiT('register.moemailHint', '使用 MoeMail 临时邮箱进行注册，每次任务会自动生成新邮箱。');
-    hintDiv.setAttribute('data-i18n', 'register.moemailHint');
     loadMoeMailDomainsToList();
   } else if (provider === 'cloudmail') {
-    hintDiv.removeAttribute('data-i18n');
-    hintDiv.textContent = _uiT('register.cloudmailHint', '使用 Cloud-Mail 自部署邮箱注册。⚠️ 每次注册会创建永久账号，需手动清理。');
-    hintDiv.setAttribute('data-i18n', 'register.cloudmailHint');
     loadCloudMailDomainsToList();
-  } else if (provider === 'outlook') {
-    hintDiv.removeAttribute('data-i18n');
-    hintDiv.textContent = _uiT('register.outlookHintFull', '使用微软邮箱进行注册，代理配置请在设置页设置。');
-    hintDiv.setAttribute('data-i18n', 'register.outlookHintFull');
-  } else {
-    hintDiv.removeAttribute('data-i18n');
-    hintDiv.textContent = _uiT('register.mailnestHintFull', '使用 MailNest 提供的临时 Outlook 邮箱进行注册，代理配置请在设置页设置。');
-    hintDiv.setAttribute('data-i18n', 'register.mailnestHintFull');
   }
 }
 

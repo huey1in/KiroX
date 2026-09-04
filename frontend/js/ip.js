@@ -546,7 +546,7 @@ async function loadProxyOptions() {
   var html = '<div class="dropdown-option" data-value="">' + _ipT('ip.direct', '直连') + '</div>';
   enabled.forEach(function(p) {
     var u = parseProxyUrl(p.url);
-    var label = u.host + (u.port ? ':' + u.port : '');
+    var label = p.probeIp || (u.host + (u.port ? ':' + u.port : ''));
     html += '<div class="dropdown-option" data-value="' + _ipEscape(p.url) + '">' + _ipEscape(label) + '</div>';
   });
   box.innerHTML = html;
