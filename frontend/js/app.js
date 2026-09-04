@@ -249,11 +249,12 @@ async function resetProxy() {
 
 // UI 状态（概览页按钮 + 新建任务模态框按钮）
 function updateUIStatus(running) {
+  // 运行中：禁用所有「开始」入口（概览新建任务 + 模态框开始）；停止入口只保留在概览页
   ['btn-start', 'ntm-start'].forEach(function(id) {
     var b = document.getElementById(id);
     if (b) b.disabled = running;
   });
-  ['btn-stop', 'ntm-stop'].forEach(function(id) {
+  ['btn-stop'].forEach(function(id) {
     var b = document.getElementById(id);
     if (b) b.disabled = !running;
   });

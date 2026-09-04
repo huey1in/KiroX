@@ -563,7 +563,6 @@
           <div style="display:flex;align-items:center;gap:10px;">
             <img src="assets/kiro.svg" style="width:22px;height:22px;border-radius:6px;">
             <h3 style="font-size:16px;font-weight:700;" data-i18n="register.newTask">新建注册任务</h3>
-            <span id="ntm-status" class="db-badge db-badge-idle" data-i18n="status.idle">空闲</span>
           </div>
           <button onclick="closeNewTaskModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
         </div>
@@ -683,10 +682,6 @@
             <button id="ntm-start" onclick="startTask()" class="btn btn-dark" style="flex:1;justify-content:center;">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               <span data-i18n="register.startBtn">开始注册</span>
-            </button>
-            <button id="ntm-stop" onclick="stopTask()" class="btn btn-secondary" style="flex:1;justify-content:center;" disabled>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-              <span data-i18n="register.stopBtn">停止</span>
             </button>
           </div>
       </div>

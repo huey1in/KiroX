@@ -284,15 +284,6 @@ setInterval(async function() {
   try {
     var s = await window.go.main.App.GetStatus();
     updateUIStatus(s.running);
-    // 注册页状态徽章
-    var regBadge = document.getElementById('ntm-status');
-    if (regBadge) {
-      var _tt = (window.I18N && window.I18N.t) ? window.I18N.t : function(k){return k;};
-      var rTxt = s.running ? _tt('status.running') : _tt('status.idle');
-      if (!rTxt || rTxt === 'status.running' || rTxt === 'status.idle') rTxt = s.running ? '运行中' : '空闲';
-      regBadge.textContent = rTxt;
-      regBadge.className = 'db-badge ' + (s.running ? 'db-badge-running' : 'db-badge-idle');
-    }
     document.getElementById('st-progress').textContent = s.completed + '/' + s.total;
     document.getElementById('st-success').textContent = s.success;
     document.getElementById('st-failed').textContent = s.failed;
