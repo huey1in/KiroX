@@ -26,6 +26,22 @@ KiroX は [Wails v2](https://wails.io) ベースの Kiro 登録ツールで、HT
 
 ---
 
+## 特別な感謝
+
+<p align="center">
+  <a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">
+    <img src="docs/ipwo.webp" alt="IPWO" width="800">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> は 195 以上の国・地域をカバーするレジデンシャルプロキシ IP を提供し、HTTP・HTTPS・SOCKS5 プロトコルに対応しています。<br>
+  Kiro、AI コーディング、ブラウザ自動化、海外ネットワークアクセスに適しており、地域やビジネスニーズに応じてネットワーク環境を選択できます。<br>
+  無料トライアル対応。専用割引コード：<code>0205</code>
+</p>
+
+---
+
 ## 機能
 
 **Kiro 登録フロー**

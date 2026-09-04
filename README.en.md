@@ -26,6 +26,22 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
 
 ---
 
+## Special Thanks
+
+<p align="center">
+  <a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">
+    <img src="docs/ipwo.webp" alt="IPWO" width="800">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> provides residential proxy IPs covering 195+ countries and regions, supporting HTTP, HTTPS, and SOCKS5 protocols.<br>
+  It is suitable for Kiro, AI Coding, browser automation, and overseas network access, letting you choose the network environment that suits your region and business needs.<br>
+  Free trial supported. Exclusive discount code: <code>0205</code>
+</p>
+
+---
+
 ## Features
 
 **Kiro registration flow**
