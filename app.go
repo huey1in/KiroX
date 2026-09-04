@@ -402,7 +402,9 @@ func (a *App) TestProxyByID(id string) map[string]interface{} {
 	_ = proxy.SetProbe(id, info, ms)
 	return map[string]interface{}{
 		"ok": info.OK, "scheme": info.Scheme, "ip": info.IP,
-		"country": info.Country, "region": info.Region, "city": info.City,
-		"isp": info.ISP, "error": info.Error, "ms": ms,
+		"country": info.Country, "countryCode": info.CountryCode,
+		"region": info.Region, "city": info.City,
+		"isp": info.ISP, "proxyType": info.ProxyType,
+		"error": info.Error, "ms": ms,
 	}
 }

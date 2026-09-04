@@ -21,15 +21,17 @@ type PoolEntry struct {
 	Enabled bool   `json:"enabled"` // 关闭时不参与抽签
 
 	// 最近一次探测结果（持久化，供 IP 管理页展示）
-	ProbeOK      bool   `json:"probeOk"`                 // 探测是否成功
-	ProbeIP      string `json:"probeIp"`                 // 出口 IP
-	ProbeCountry string `json:"probeCountry,omitempty"`  // 国家
-	ProbeRegion  string `json:"probeRegion,omitempty"`   // 省份
-	ProbeCity    string `json:"probeCity,omitempty"`     // 城市
-	ProbeISP     string `json:"probeIsp,omitempty"`      // ISP
-	ProbeMS      int    `json:"probeMs,omitempty"`       // 延迟(ms)
-	ProbeError   string `json:"probeError,omitempty"`    // 失败原因
-	ProbeAt      int64  `json:"probeAt,omitempty"`       // 探测时间戳(unix秒)
+	ProbeOK          bool   `json:"probeOk"`                    // 探测是否成功
+	ProbeIP          string `json:"probeIp"`                    // 出口 IP
+	ProbeCountry     string `json:"probeCountry,omitempty"`     // 国家
+	ProbeCountryCode string `json:"probeCountryCode,omitempty"` // 国家代码（用于国旗）
+	ProbeRegion      string `json:"probeRegion,omitempty"`      // 省份
+	ProbeCity        string `json:"probeCity,omitempty"`        // 城市
+	ProbeISP         string `json:"probeIsp,omitempty"`         // ISP
+	ProbeType        string `json:"probeType,omitempty"`        // residential / mobile / datacenter
+	ProbeMS          int    `json:"probeMs,omitempty"`          // 延迟(ms)
+	ProbeError       string `json:"probeError,omitempty"`       // 失败原因
+	ProbeAt          int64  `json:"probeAt,omitempty"`          // 探测时间戳(unix秒)
 }
 
 // poolFile JSON 持久化结构
@@ -224,9 +226,11 @@ func SetProbe(id string, info Info, ms int) error {
 			poolEntries[i].ProbeOK = info.OK
 			poolEntries[i].ProbeIP = info.IP
 			poolEntries[i].ProbeCountry = info.Country
+			poolEntries[i].ProbeCountryCode = info.CountryCode
 			poolEntries[i].ProbeRegion = info.Region
 			poolEntries[i].ProbeCity = info.City
 			poolEntries[i].ProbeISP = info.ISP
+			poolEntries[i].ProbeType = info.ProxyType
 			poolEntries[i].ProbeMS = ms
 			poolEntries[i].ProbeError = info.Error
 			poolEntries[i].ProbeAt = time.Now().Unix()

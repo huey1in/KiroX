@@ -65,6 +65,23 @@ function _badgeOk(t) { return '<span style="padding:2px 8px;border-radius:10px;f
 function _badgeOff(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(107,114,128,0.15);color:var(--text-muted);">' + t + '</span>'; }
 function _badgeErr(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.15);color:#ef4444;">' + t + '</span>'; }
 
+// 代理类型徽章：机房(橙) / 移动(蓝) / 家宽(绿)
+function _badgeType(t) {
+  var map = {
+    'datacenter': ['#f59e0b', 'rgba(245,158,11,0.15)'],
+    'mobile': ['#3b82f6', 'rgba(59,130,246,0.15)'],
+    'residential': ['#10b981', 'rgba(16,185,129,0.15)']
+  };
+  var c = map[t] || ['var(--text-muted)', 'rgba(107,114,128,0.15)'];
+  return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + c[1] + ';color:' + c[0] + ';">' + t + '</span>';
+}
+
+// 国旗图标：用与侧边栏语言切换一致的 flagcdn 图标（如 CN -> https://flagcdn.com/w40/cn.png）
+function flagImg(cc) {
+  if (!cc || cc.length !== 2) return '';
+  return '<img src="https://flagcdn.com/w40/' + cc.toLowerCase() + '.png" alt="' + _ipEscape(cc) + '" style="width:18px;height:13px;border-radius:2px;vertical-align:-2px;object-fit:cover;display:inline-block;">';
+}
+
 function selectedIpIds() {
   return Object.keys(ipSelected).filter(function(k) { return ipSelected[k]; });
 }
@@ -106,9 +123,11 @@ async function probeOne(p) {
       p.probeOk = !!res.ok;
       p.probeIp = res.ip || '';
       p.probeCountry = res.country || '';
+      p.probeCountryCode = res.countryCode || '';
       p.probeRegion = res.region || '';
       p.probeCity = res.city || '';
       p.probeIsp = res.isp || '';
+      p.probeType = res.proxyType || '';
       p.probeMs = ms;
       p.probeError = res.error || '';
       p.probeAt = Math.floor(Date.now() / 1000);
@@ -121,14 +140,14 @@ async function probeOne(p) {
   renderIpList();
 }
 
-// 并行探测（限并发5）。force=true 强制全部，否则只探测从未测过的
+// 并行探测（限并发5）。force=true 强制全部，否则只探测从未测过或缺国家代码的（旧数据补国旗）
 async function probeAllIp(force) {
   var i = 0;
   async function worker() {
     while (i < ipPool.length) {
       var p = ipPool[i++];
       if (!p || !p.url) continue;
-      if (!force && p.probeAt) continue; // 已有结果则不重复测
+      if (!force && p.probeAt && p.probeCountryCode) continue; // 已有完整结果则不重复测
       await probeOne(p);
     }
   }
@@ -166,6 +185,7 @@ function renderIpTable(rows) {
   h += '<thead><tr style="border-bottom:1px solid var(--border);">'
     + '<th style="width:30px;padding:8px;text-align:center;white-space:nowrap;"><input type="checkbox" ' + (allSel ? 'checked' : '') + ' onclick="toggleIpSelectAll(this)"></th>'
     + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colAddress', '地址') + '</th>'
+    + '<th style="text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;width:70px;">' + _ipT('ip.colType', '类型') + '</th>'
     + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colLocation', '位置') + '</th>'
     + '<th style="width:86px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colLatency', '延迟') + '</th>'
     + '<th style="width:56px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colStatus', '状态') + '</th>'
@@ -193,8 +213,11 @@ function renderIpRow(p) {
     addrCell = '<span style="font-family:var(--font-mono);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;" title="' + _ipEscape(addr) + '">' + _ipEscape(exitIp) + '</span>';
   }
 
-  // 位置列
-  var loc = probing ? sk : (p.probeOk ? (_ipEscape(p.probeCountry || '') + (p.probeCity ? (' · ' + _ipEscape(p.probeCity)) : '')) : '—');
+  // 类型列：机房 / 移动 / 家宽（探测中骨架屏）
+  var typeCell = probing ? sk : (p.probeOk && p.probeType ? _badgeType(_ipT('ip.type.' + p.probeType, p.probeType)) : '—');
+
+  // 位置列：国旗 + 国家（只显示国家，不显示城市等详细地址）
+  var loc = probing ? sk : (p.probeOk ? (flagImg(p.probeCountryCode) + ' ' + _ipEscape(p.probeCountry || '')) : '—');
 
   // 延迟列
   var lat = '—';
@@ -215,6 +238,7 @@ function renderIpRow(p) {
     + '<td style="padding:8px;text-align:center;"><input type="checkbox" ' + chk + ' onclick="toggleIpSelect(\'' + id + '\',this)"></td>'
     + '<td style="padding:8px;"><div style="display:flex;align-items:center;gap:6px;min-width:0;">'
       + addrCell + '</div></td>'
+    + '<td style="padding:8px;text-align:center;white-space:nowrap;">' + typeCell + '</td>'
     + '<td style="padding:8px;white-space:nowrap;">' + loc + '</td>'
     + '<td style="padding:8px;text-align:center;white-space:nowrap;">' + lat + '</td>'
     + '<td style="padding:8px;text-align:center;">' + toggleHtml + '</td>'
