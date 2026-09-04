@@ -611,7 +611,7 @@
             <button type="button" onclick="openIpFormModal()" class="btn btn-dark btn-sm" style="margin-left:auto;" data-i18n="ip.add">+ 添加代理</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <input type="text" id="ip-search" placeholder="搜索名称 / 地址" class="form-input" style="flex:1;min-width:180px;height:36px;" oninput="onIpSearch()" data-i18n-placeholder="ip.searchPlaceholder">
+            <input type="text" id="ip-search" placeholder="搜索出口 IP / 地址 / 国家" class="form-input" style="flex:1;min-width:180px;height:36px;" oninput="onIpSearch()" data-i18n-placeholder="ip.searchPlaceholder">
             <div class="custom-dropdown" id="ip-filter-status" style="width:110px;" data-onchange="onIpFilterStatus">
               <div class="dropdown-selected" onclick="toggleDropdown(this)">
                 <span class="dropdown-selected-text" data-i18n="ip.allStatus">全部状态</span>
@@ -680,6 +680,17 @@
             <button type="button" onclick="closeIpFormModal()" class="btn btn-secondary" data-i18n="common.cancel">取消</button>
             <button type="button" onclick="submitIpForm()" class="btn btn-dark" data-i18n="ip.save">保存</button>
           </div>
+        </div>
+      </div>
+
+      <!-- 测试结果模态框 -->
+      <div id="ip-result-modal" class="modal-overlay" style="z-index:1200;">
+        <div class="modal-content" style="max-width:420px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-size:16px;font-weight:700;" data-i18n="ip.resultTitle">测试结果</h3>
+            <button onclick="closeIpResultModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
+          </div>
+          <div id="ip-result-body"></div>
         </div>
       </div>
     </div>

@@ -91,6 +91,11 @@ function onIpSearch() {
   _ipSearchTimer = setTimeout(renderIpList, 300);
 }
 
+// 搜索匹配串：包含出口 IP / 国家 / 类型 / 原始 URL / id，确保按看到的字段都能搜到
+function ipSearchHay(p) {
+  return [p.url, p.probeIp, p.probeCountry, p.probeType, p.id].filter(Boolean).join(' ').toLowerCase();
+}
+
 // ===== 加载 =====
 var ipProbing = {}; // 正在测试中的代理 id -> true，用于骨架屏
 
@@ -107,14 +112,15 @@ async function loadIpList() {
   probeAllIp(false);
 }
 
-// 探测单个代理：显示骨架屏，结果写回持久化字段并重绘
+// 探测单个代理：显示骨架屏，结果写回持久化字段并重绘。返回完整上游结果。
 async function probeOne(p) {
-  if (!p || !p.url || ipProbing[p.id]) return;
+  if (!p || !p.url || ipProbing[p.id]) return null;
   ipProbing[p.id] = true;
   renderIpList();
   var t0 = performance.now();
+  var res = null;
   try {
-    var res = await window.go.main.App.TestProxyByID(p.id);
+    res = await window.go.main.App.TestProxyByID(p.id);
     var ms = typeof res.ms === 'number' ? res.ms : Math.round(performance.now() - t0);
     if (res && res.error) {
       p.probeOk = false;
@@ -138,6 +144,7 @@ async function probeOne(p) {
   }
   delete ipProbing[p.id];
   renderIpList();
+  return res;
 }
 
 // 并行探测（限并发5）。force=true 强制全部，否则只探测从未测过或缺国家代码的（旧数据补国旗）
@@ -168,8 +175,7 @@ function renderIpList() {
   var fstatus = _dv('ip-filter-status');
   var rows = ipPool.filter(function(p) {
     if (q) {
-      var hay = ((p.url || '') + ' ' + (p.id || '')).toLowerCase();
-      if (hay.indexOf(q) < 0) return false;
+      if (ipSearchHay(p).indexOf(q) < 0) return false;
     }
     if (fstatus === 'enabled' && !p.enabled) return false;
     if (fstatus === 'disabled' && p.enabled) return false;
@@ -268,7 +274,7 @@ function toggleIpSelectAll(el) {
   var fstatus = _dv('ip-filter-status');
   ipPool.forEach(function(p) {
     var visible = true;
-    if (q && (((p.url || '') + ' ' + (p.id || '')).toLowerCase().indexOf(q) < 0)) visible = false;
+    if (q && (ipSearchHay(p).indexOf(q) < 0)) visible = false;
     if (fstatus === 'enabled' && !p.enabled) visible = false;
     if (fstatus === 'disabled' && p.enabled) visible = false;
     if (visible) ipSelected[p.id] = el.checked;
@@ -280,13 +286,82 @@ function toggleIpSelectAll(el) {
 async function testIpEntry(id) {
   var p = ipPool.find(function(x) { return x.id === id; });
   if (!p) return;
-  showToast(_ipT('ip.testing', '正在测试…'));
-  await probeOne(p);
-  if (p.probeOk) {
-    showToast((p.probeIp || '') + (p.probeCountry ? (' (' + p.probeCountry + ')') : '') + (p.probeMs ? ' · ' + p.probeMs + 'ms' : ''));
-  } else {
-    showToast(_ipT('ip.unavailable', '不可用') + ': ' + (p.probeError || _ipT('ip.unknownError', '未知错误')), 'error');
+  // 立即打开模态框显示加载骨架屏，探测完成后异步填充结果
+  showIpResultModal(p, null);
+  var res = await probeOne(p);
+  showIpResultModal(p, res);
+}
+
+function closeIpResultModal() {
+  var m = document.getElementById('ip-result-modal');
+  if (m) m.classList.remove('show');
+}
+
+// 在模态框里展示完整上游检测结果；res 为 null 时显示加载骨架屏
+function showIpResultModal(p, res) {
+  var body = document.getElementById('ip-result-body');
+  var m = document.getElementById('ip-result-modal');
+  if (!body || !m) return;
+
+  var row = function(label, valHtml) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">'
+      + '<span style="color:var(--text-muted);flex-shrink:0;">' + label + '</span>'
+      + '<span style="font-weight:600;text-align:right;word-break:break-all;">' + valHtml + '</span></div>';
+  };
+
+  // 加载态：已知信息（协议、上次出口 IP）直接硬编码，其余用骨架屏
+  if (!res) {
+    var u0 = parseProxyUrl(p.url);
+    var known = [];
+    known.push(row(_ipT('ip.resultScheme', '协议'), _ipEscape(u0.proto || '—')));
+    known.push(row(_ipT('ip.resultIP', '出口 IP'), p.probeIp
+      ? '<span style="font-family:var(--font-mono);">' + _ipEscape(p.probeIp) + '</span>'
+      : '<span class="ip-skel" style="width:70%;"></span>'));
+    known.push(row(_ipT('ip.colType', '类型'), p.probeType
+      ? _badgeType(_ipT('ip.type.' + p.probeType, p.probeType))
+      : '<span class="ip-skel" style="width:60px;"></span>'));
+    known.push(row(_ipT('ip.resultCountry', '国家'), p.probeCountryCode
+      ? (flagImg(p.probeCountryCode) + ' ' + _ipEscape(p.probeCountry || '—'))
+      : '<span class="ip-skel" style="width:70%;"></span>'));
+    body.innerHTML =
+        '<div style="margin-bottom:12px;"><span class="ip-skel" style="width:110px;height:16px;"></span></div>'
+      + known.join('')
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">'
+      + '<button onclick="closeIpResultModal()" class="btn btn-dark" data-i18n="common.close">' + _ipT('common.close', '关闭') + '</button>'
+      + '</div>';
+    m.classList.add('show');
+    return;
   }
+
+  var ok = !!(res && !res.error && res.ok);
+  var ms = (res && typeof res.ms === 'number') ? res.ms : (p.probeMs || 0);
+  var typeLabel = (p.probeType && _ipT('ip.type.' + p.probeType, p.probeType)) || '—';
+
+  var html = '';
+  html += '<div style="margin-bottom:12px;">'
+    + (ok
+        ? _badgeOk(_ipT('ip.available', '可用') + (ms ? ' · ' + ms + 'ms' : ''))
+        : _badgeErr(_ipT('ip.failure', '失败') + ((res && res.error) ? ' · ' + _ipEscape(res.error) : '')))
+    + '</div>';
+
+  if (ok) {
+    html += row(_ipT('ip.resultScheme', '协议'), _ipEscape(res.scheme || p._scheme || '—'));
+    html += row(_ipT('ip.resultIP', '出口 IP'), '<span style="font-family:var(--font-mono);">' + _ipEscape(res.ip || p.probeIp || '—') + '</span>');
+    html += row(_ipT('ip.colType', '类型'), _badgeType(typeLabel));
+    html += row(_ipT('ip.resultCountry', '国家'), flagImg(res.countryCode || p.probeCountryCode) + ' ' + _ipEscape(res.country || p.probeCountry || '—'));
+    html += row(_ipT('ip.resultRegion', '地区'), _ipEscape(res.region || p.probeRegion || '—'));
+    html += row(_ipT('ip.resultCity', '城市'), _ipEscape(res.city || p.probeCity || '—'));
+    html += row(_ipT('ip.resultISP', '运营商'), _ipEscape(res.isp || p.probeIsp || '—'));
+  } else {
+    html += row(_ipT('ip.resultError', '错误'), _ipEscape((res && res.error) || p.probeError || _ipT('ip.unknownError', '未知错误')));
+  }
+
+  html += '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">'
+    + '<button onclick="closeIpResultModal()" class="btn btn-dark" data-i18n="common.close">' + _ipT('common.close', '关闭') + '</button>'
+    + '</div>';
+
+  body.innerHTML = html;
+  m.classList.add('show');
 }
 
 async function batchTestIp() {
