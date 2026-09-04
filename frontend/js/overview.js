@@ -30,26 +30,13 @@ async function loadOverview() {
 async function loadTaskStatus() {
   if (!window.go || !window.go.main || !window.go.main.App || !window.go.main.App.GetTaskStatus) return;
   try {
-    var data = await window.go.main.App.GetTaskStatus();
-    updateTaskStatusUI(data);
+    await window.go.main.App.GetTaskStatus();
   } catch (e) {}
 }
 
 // updateOverviewUI 更新概览界面
 function updateOverviewUI(data) {
   var kiro = data.kiro || {};
-
-  // Kiro 状态徽章
-  var kiroStatusEl = document.getElementById('ov-kiro-status');
-  if (kiroStatusEl) {
-    if (kiro.taskRunning) {
-      kiroStatusEl.textContent = _ovT('status.running', '运行中');
-      kiroStatusEl.className = 'db-badge db-badge-running';
-    } else {
-      kiroStatusEl.textContent = _ovT('status.idle', '空闲');
-      kiroStatusEl.className = 'db-badge db-badge-idle';
-    }
-  }
 
   // 本次任务成功数 + 成功率（来自实时任务状态）
   var taskSuccess = kiro.taskSuccess || 0;
@@ -64,20 +51,6 @@ function updateOverviewUI(data) {
 function setText(id, text) {
   var el = document.getElementById(id);
   if (el) el.textContent = text;
-}
-
-// 更新任务状态卡片（从快速轮询）
-function updateTaskStatusUI(data) {
-  var kiro = data.kiro || {};
-  var kiroStatusEl = document.getElementById('ov-kiro-status');
-  if (!kiroStatusEl) return;
-  if (kiro.taskRunning) {
-    kiroStatusEl.textContent = _ovT('status.running', '运行中');
-    kiroStatusEl.className = 'db-badge db-badge-running';
-  } else {
-    kiroStatusEl.textContent = _ovT('status.idle', '空闲');
-    kiroStatusEl.className = 'db-badge db-badge-idle';
-  }
 }
 
 // 启动概览定时刷新

@@ -313,24 +313,6 @@ setInterval(async function() {
     } else {
       avgEl.textContent = '-';
     }
-    // 成功率
-    var rateEl = document.getElementById('st-rate');
-    if (s.completed > 0) {
-      rateEl.textContent = Math.round(s.success / s.completed * 100) + '%';
-      rateEl.style.color = s.success > 0 ? 'var(--success)' : 'var(--danger)';
-    } else {
-      rateEl.textContent = '-';
-      rateEl.style.color = '';
-    }
-    // 预计剩余
-    var etaEl = document.getElementById('st-eta');
-    if (s.running && s.completed > 0 && s.total > s.completed) {
-      var avgTime = s.elapsed / s.completed;
-      var remaining = (s.total - s.completed) * avgTime;
-      etaEl.textContent = formatTime(remaining);
-    } else {
-      etaEl.textContent = '-';
-    }
   } catch(e) {}
   try {
     var kiroLogs = await window.go.main.App.GetLogs() || [];
