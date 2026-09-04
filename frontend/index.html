@@ -159,16 +159,10 @@
       <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       <span class="nav-tooltip" data-i18n="nav.accounts">邮箱池</span>
     </div>
-    <!-- 订阅 -->
-    <div class="nav-item" onclick="switchPage('subscription')" data-page="subscription">
-      <div class="nav-dot"></div>
-      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
-      <span class="nav-tooltip" data-i18n="nav.subscription">订阅</span>
-    </div>
     <!-- IP 管理 -->
     <div class="nav-item" onclick="switchPage('ip')" data-page="ip">
       <div class="nav-dot"></div>
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><line x1="10" y1="7" x2="14" y2="7"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="17" y1="10" x2="17" y2="14"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <span class="nav-tooltip" data-i18n="nav.ip">IP 管理</span>
     </div>
   </div>
@@ -465,90 +459,6 @@
 
 
 
-    <!-- ===== Page: 订阅 ===== -->
-    <div class="page" id="page-subscription">
-      <div class="page-scroll" style="padding:28px 32px 40px;max-width:1100px;margin:0 auto;">
-
-        <div class="card" style="margin-bottom:20px;">
-          <div class="settings-group">
-            <div class="settings-group-title">
-              <span data-i18n="subscription.accountList">账号列表</span>
-              <span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:6px;" id="sub-output-dir" data-i18n="subscription.autoLoaded">已自动加载输出文件夹中的账号</span>
-            </div>
-
-            <!-- 操作工具栏 -->
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--border);">
-              <button onclick="openSubscriptionPlanModal()" id="sub-batch-btn" class="btn btn-dark btn-sm" data-i18n="subscription.batchGet">一键获取选中</button>
-              <button onclick="copyAllSubscriptionLinks()" class="btn btn-secondary btn-sm" data-i18n="subscription.copyLinks">复制选中链接</button>
-              <button onclick="reloadSubscriptionAccounts()" class="btn btn-secondary btn-sm" data-i18n="subscription.reload">重新加载账号</button>
-              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-left:auto;">
-                <span data-i18n="subscription.concurrency">并发</span>
-                <input type="number" id="sub-concurrency" min="1" max="20" value="3" class="form-input" style="width:60px;text-align:center;height:28px;padding:2px;">
-              </div>
-              <span id="sub-progress" style="font-size:12px;color:var(--muted);" data-i18n="subscription.notStarted">未开始</span>
-            </div>
-
-            <!-- 表格 -->
-            <div style="overflow-x:auto;">
-              <table id="sub-table" style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead>
-                  <tr style="text-align:left;color:var(--muted);font-size:12px;">
-                    <th style="padding:8px 12px;width:36px;">
-                      <input type="checkbox" id="sub-select-all" onchange="toggleSubSelectAll(this.checked)">
-                    </th>
-                    <th style="padding:8px 8px;width:36px;">#</th>
-                    <th style="padding:8px 8px;" data-i18n="subscription.thEmail">邮箱</th>
-                    <th style="padding:8px 8px;width:120px;" data-i18n="subscription.thSubscription">订阅</th>
-                    <th style="padding:8px 8px;width:90px;" data-i18n="subscription.thStatus">状态</th>
-                    <th style="padding:8px 12px;width:180px;text-align:right;" data-i18n="subscription.thActions">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="sub-table-body"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ===== 订阅计划选择模态框 ===== -->
-    <div id="sub-plan-modal" class="modal-overlay">
-      <div class="modal-content" style="max-width:560px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 style="font-size:16px;font-weight:700;" data-i18n="subscription.planModalTitle">选择订阅计划</h3>
-          <button onclick="closeSubscriptionPlanModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;" id="sub-plan-modal-hint" data-i18n="subscription.planLoading">将使用账号 — 加载中…</div>
-        <div id="sub-plan-modal-list" style="display:flex;flex-direction:column;gap:8px;min-height:80px;max-height:50vh;overflow-y:auto;margin-bottom:20px;">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 0;color:var(--text-muted);font-size:12px;">
-            <div style="width:28px;height:28px;border:3px solid var(--border);border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-            <span data-i18n="common.loading">加载中…</span>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
-          <button onclick="closeSubscriptionPlanModal()" class="btn btn-secondary" data-i18n="common.cancel">取消</button>
-          <button onclick="confirmStartBatchFetch()" id="sub-plan-modal-confirm" class="btn btn-dark" disabled data-i18n="subscription.startBatch">开始获取</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== 订阅获取失败详情模态框 ===== -->
-    <div id="sub-error-modal" class="modal-overlay">
-      <div class="modal-content" style="max-width:640px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h3 style="font-size:16px;font-weight:700;color:#ef4444;" data-i18n="subscription.errorModalTitle">获取失败 · 上游响应</h3>
-          <button onclick="closeSubErrorModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;"><span data-i18n="subscription.errorAccount">账号</span>：<span id="sub-error-modal-email" style="color:var(--text);font-weight:600;"></span></div>
-        <pre id="sub-error-modal-body" style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:12px;line-height:1.5;max-height:50vh;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0 0 16px;"></pre>
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
-          <button onclick="copySubErrorDetail()" class="btn btn-secondary" data-i18n="common.copy">复制</button>
-          <button onclick="closeSubErrorModal()" class="btn btn-dark" data-i18n="common.close">关闭</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ===== 新建任务 模态框 ===== -->
     <div id="new-task-modal" class="modal-overlay" style="z-index:1200;">
       <div class="modal-content" style="max-width:640px;">
@@ -576,10 +486,10 @@
             </div>
           </div>
           <div class="form-group" style="margin-bottom:16px;">
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">代理</label>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;" data-i18n="ip.proxy">代理</label>
             <div class="custom-dropdown" id="cfg-proxy-select" style="height:38px;">
               <div class="dropdown-selected" onclick="toggleDropdown(this)">
-                <span class="dropdown-selected-text">直连</span>
+                <span class="dropdown-selected-text" data-i18n="ip.direct">直连</span>
                 <span class="dropdown-arrow"></span>
               </div>
               <div class="dropdown-options" id="cfg-proxy-select-options"></div>
@@ -698,44 +608,31 @@
         <div class="card" style="margin-bottom:20px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
             <h3 style="font-size:16px;font-weight:700;" data-i18n="page.ip">IP 管理</h3>
-            <button type="button" onclick="openIpFormModal()" class="btn btn-dark btn-sm" style="margin-left:auto;">+ 添加代理</button>
+            <button type="button" onclick="openIpFormModal()" class="btn btn-dark btn-sm" style="margin-left:auto;" data-i18n="ip.add">+ 添加代理</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <input type="text" id="ip-search" placeholder="搜索名称 / 地址" class="form-input" style="flex:1;min-width:180px;height:36px;" oninput="onIpSearch()">
-            <div class="custom-dropdown" id="ip-filter-protocol" style="width:130px;" data-onchange="onIpFilterProtocol">
-              <div class="dropdown-selected" onclick="toggleDropdown(this)">
-                <span class="dropdown-selected-text">全部协议</span>
-                <span class="dropdown-arrow"></span>
-              </div>
-              <div class="dropdown-options">
-                <div class="dropdown-option" data-value="">全部协议</div>
-                <div class="dropdown-option" data-value="http">http</div>
-                <div class="dropdown-option" data-value="https">https</div>
-                <div class="dropdown-option" data-value="socks5">socks5</div>
-                <div class="dropdown-option" data-value="socks5h">socks5h</div>
-              </div>
-            </div>
+            <input type="text" id="ip-search" placeholder="搜索名称 / 地址" class="form-input" style="flex:1;min-width:180px;height:36px;" oninput="onIpSearch()" data-i18n-placeholder="ip.searchPlaceholder">
             <div class="custom-dropdown" id="ip-filter-status" style="width:110px;" data-onchange="onIpFilterStatus">
               <div class="dropdown-selected" onclick="toggleDropdown(this)">
-                <span class="dropdown-selected-text">全部状态</span>
+                <span class="dropdown-selected-text" data-i18n="ip.allStatus">全部状态</span>
                 <span class="dropdown-arrow"></span>
               </div>
               <div class="dropdown-options">
-                <div class="dropdown-option" data-value="">全部状态</div>
-                <div class="dropdown-option" data-value="enabled">启用</div>
-                <div class="dropdown-option" data-value="disabled">停用</div>
+                <div class="dropdown-option" data-value="" data-i18n="ip.allStatus">全部状态</div>
+                <div class="dropdown-option" data-value="enabled" data-i18n="ip.enabled">启用</div>
+                <div class="dropdown-option" data-value="disabled" data-i18n="ip.disabled">停用</div>
               </div>
             </div>
-            <button type="button" onclick="loadIpList()" class="btn btn-secondary btn-sm">刷新</button>
-            <button type="button" onclick="batchTestIp()" class="btn btn-secondary btn-sm">批量测试</button>
-            <button type="button" onclick="batchDeleteIp()" class="btn btn-secondary btn-sm" style="color:var(--danger);">批量删除</button>
+            <button type="button" onclick="loadIpList()" class="btn btn-secondary btn-sm" data-i18n="ip.refresh">刷新</button>
+            <button type="button" onclick="batchTestIp()" class="btn btn-secondary btn-sm" data-i18n="ip.batchTest">批量测试</button>
+            <button type="button" onclick="batchDeleteIp()" class="btn btn-secondary btn-sm" style="color:var(--danger);" data-i18n="ip.batchDelete">批量删除</button>
           </div>
         </div>
 
         <!-- 数据表 -->
         <div class="card" style="overflow-x:auto;">
           <div id="ip-list"></div>
-          <div id="ip-empty" style="display:none;text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">暂无代理，点击右上角添加。</div>
+          <div id="ip-empty" style="display:none;text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;" data-i18n="ip.empty">暂无代理，点击右上角添加。</div>
         </div>
 
       </div>
@@ -744,18 +641,17 @@
       <div id="ip-form-modal" class="modal-overlay" style="z-index:1200;">
         <div class="modal-content" style="max-width:640px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 id="ip-form-title" style="font-size:16px;font-weight:700;">添加代理</h3>
+            <h3 id="ip-form-title" style="font-size:16px;font-weight:700;" data-i18n="ip.addTitle">添加代理</h3>
             <button onclick="closeIpFormModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
           </div>
 
           <div style="display:flex;gap:8px;margin-bottom:14px;">
-            <button type="button" id="ip-tab-single" class="btn btn-dark btn-sm" onclick="switchIpFormTab('single')">单个添加</button>
-            <button type="button" id="ip-tab-batch" class="btn btn-secondary btn-sm" onclick="switchIpFormTab('batch')">批量添加</button>
+            <button type="button" id="ip-tab-single" class="btn btn-dark btn-sm" onclick="switchIpFormTab('single')" data-i18n="ip.tabSingle">单个添加</button>
+            <button type="button" id="ip-tab-batch" class="btn btn-secondary btn-sm" onclick="switchIpFormTab('batch')" data-i18n="ip.tabBatch">批量添加</button>
           </div>
 
           <div id="ip-form-single" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">名称</label><input id="ip-form-name" class="form-input" style="height:38px;"></div>
-            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">协议</label>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);" data-i18n="ip.protocol">协议</label>
               <div class="custom-dropdown" id="ip-form-protocol" data-onchange="">
                 <div class="dropdown-selected" onclick="toggleDropdown(this)">
                   <span class="dropdown-selected-text">http</span>
@@ -769,21 +665,20 @@
                 </div>
               </div>
             </div>
-            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">主机</label><input id="ip-form-host" class="form-input" style="height:38px;" placeholder="host / IPv4 / IPv6"></div>
-            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">端口</label><input id="ip-form-port" type="number" class="form-input" style="height:38px;" value="8080"></div>
-            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">用户名</label><input id="ip-form-user" class="form-input" style="height:38px;"></div>
-            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">密码</label><input id="ip-form-pass" type="password" class="form-input" style="height:38px;"></div>
-            <div class="form-group" style="margin-bottom:0;display:flex;align-items:center;gap:8px;"><label style="margin:0;font-size:12px;font-weight:600;color:var(--text-secondary);">启用</label><input id="ip-form-enabled" type="checkbox" checked></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);" data-i18n="ip.host">主机</label><input id="ip-form-host" class="form-input" style="height:38px;" placeholder="host / IPv4 / IPv6"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);" data-i18n="ip.port">端口</label><input id="ip-form-port" type="number" class="form-input" style="height:38px;" value="8080"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);" data-i18n="ip.username">用户名</label><input id="ip-form-user" class="form-input" style="height:38px;"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);" data-i18n="ip.password">密码</label><input id="ip-form-pass" type="password" class="form-input" style="height:38px;"></div>
           </div>
 
           <div id="ip-form-batch" style="display:none;">
-            <textarea id="ip-form-batch-text" class="form-input" style="height:140px;font-family:var(--font-mono);font-size:12px;resize:vertical;" placeholder="每行一个代理，格式：scheme://[user:pass@]host:port"></textarea>
+            <textarea id="ip-form-batch-text" class="form-input" style="height:140px;font-family:var(--font-mono);font-size:12px;resize:vertical;" placeholder="每行一个代理，格式：scheme://[user:pass@]host:port" data-i18n-placeholder="ip.batchPlaceholder"></textarea>
             <div id="ip-batch-status" style="font-size:12px;color:var(--text-muted);margin-top:8px;"></div>
           </div>
 
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-            <button type="button" onclick="closeIpFormModal()" class="btn btn-secondary">取消</button>
-            <button type="button" onclick="submitIpForm()" class="btn btn-dark">保存</button>
+            <button type="button" onclick="closeIpFormModal()" class="btn btn-secondary" data-i18n="common.cancel">取消</button>
+            <button type="button" onclick="submitIpForm()" class="btn btn-dark" data-i18n="ip.save">保存</button>
           </div>
         </div>
       </div>
@@ -896,7 +791,7 @@
                   </button>
                   <span id="cloudmail-inline-status" class="moemail-status-text"></span>
                 </div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;">域名将在保存或测试连接时自动从服务器拉取，无需手动填写。</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;" data-i18n="cloudmail.domainHint">域名将在保存或测试连接时自动从服务器拉取，无需手动填写。</div>
               </div>
             </div>
             <div id="cloudmail-inline-list" class="moemail-config-list"></div>
@@ -1065,8 +960,6 @@
 <script src="js/mailnest.js"></script>
 <script src="js/task.js"></script>
 <script src="js/overview.js"></script>
-<script src="js/subscription.js"></script>
-<script src="js/proxy_pool.js"></script>
 <script src="js/dropdown.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>

@@ -7,7 +7,7 @@ function getPageTitle(pageId) {
     var v = window.I18N.t('page.' + pageId);
     if (v && v !== 'page.' + pageId) return v;
   }
-  var fallback = { overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅', ip: 'IP 管理', info: '关于', settings: '设置' };
+  var fallback = { overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', ip: 'IP 管理', info: '关于', settings: '设置' };
   return fallback[pageId] || pageId;
 }
 function switchPage(pageId) {
@@ -37,9 +37,6 @@ function switchPage(pageId) {
   }
   if (pageId === 'info') {
     loadInfoVersion();
-  }
-  if (pageId === 'subscription') {
-    reloadSubscriptionAccounts();
   }
 }
 
@@ -449,7 +446,6 @@ async function loadConfig() {
   loadResultOutputDir();
   loadProxy();
   if (typeof loadProxyOptions === 'function') loadProxyOptions();
-  if (typeof loadProxyPool === 'function') loadProxyPool();
   startOverviewTimer();
   console.log('[启动] 初始化完成');
 }

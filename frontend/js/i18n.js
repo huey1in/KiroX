@@ -10,14 +10,37 @@
   var DICT = {
     zh: {
       nav: {
-        overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅',
+        overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池',
         about: '关于', settings: '设置', toggleTheme: '切换主题', checkUpdate: '检查更新',
         language: '语言：中文 (点击切换)',
         ip: 'IP 管理'
       },
       page: {
-        overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅',
+        overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池',
         settings: '设置', ip: 'IP 管理'
+      },
+      ip: {
+        proxy: '代理', direct: '直连', add: '+ 添加代理', refresh: '刷新',
+        batchTest: '批量测试', batchDelete: '批量删除', searchPlaceholder: '搜索名称 / 地址',
+        allStatus: '全部状态', enabled: '启用', disabled: '停用',
+        empty: '暂无代理，点击右上角添加。', addTitle: '添加代理', editTitle: '编辑代理',
+        tabSingle: '单个添加', tabBatch: '批量添加', protocol: '协议',
+        host: '主机', port: '端口', username: '用户名', password: '密码', save: '保存',
+        test: '测试', edit: '编辑', delete: '删除',
+        colAddress: '地址',
+        colLocation: '位置', colLatency: '延迟', colStatus: '状态', colActions: '操作',
+        batchPlaceholder: '每行一个代理，格式：scheme://[user:pass@]host:port',
+        loading: '加载中...',
+        available: '可用', failure: '失败',
+        testing: '正在测试…', unavailable: '不可用', unknownError: '未知错误',
+        testFailed: '测试失败', noProxies: '没有可测试的代理', testingN: '测试 {n} 个代理…',
+        addFailed: '添加失败', saveFailed: '保存失败', added: '已添加', saved: '已保存',
+        hostRequired: '主机不能为空', invalidBatch: '没有有效的代理行',
+        batchDone: '完成：{added} 成功', batchDup: '，{n} 已存在', batchFail: '，{n} 失败',
+        deleteTitle: '删除代理', deleteMsg: '确认从池中删除该代理？', deleted: '已删除',
+        deleteFailed: '删除失败', selectFirst: '请选择要删除的代理',
+        batchDeleteTitle: '批量删除', batchDeleteMsg: '确认删除选中的 {n} 个代理？',
+        batchDelete: '批量删除', batchDeleteDone: '删除完成：{ok} 成功'
       },
       common: {
         loading: '加载中...', loadFailed: '加载失败', noData: '暂无数据',
@@ -103,38 +126,6 @@
         mailnestTitle: 'MailNest 临时邮箱',
         projectCode: '项目代码',
       },
-      subscription: {
-        accountList: '账号列表', autoLoaded: '已自动加载输出文件夹中的账号',
-        autoLoadedFrom: '已自动加载：{dir}',
-        batchGet: '一键获取选中', copyLinks: '复制选中链接', reload: '重新加载账号',
-        concurrency: '并发', notStarted: '未开始',
-        thEmail: '邮箱', thSubscription: '订阅', thStatus: '状态', thActions: '操作',
-        planModalTitle: '选择订阅计划', planLoading: '将使用账号 — 加载中…',
-        startBatch: '开始获取',
-        errorModalTitle: '获取失败 · 上游响应', errorAccount: '账号',
-        loadFailed: '加载账号失败',
-        totalSelected: '共 {total} 个 / 已选 {sel}',
-        statRunning: '进行中 {n}', statSuccess: '成功 {n}',
-        statSuspended: '封禁 {n}', statFailed: '失败 {n}',
-        emptyOutput: '输出目录下尚无账号，请先注册或调整输出目录。',
-        clickForDetail: '点击查看详情', clickForResponse: '点击查看详细响应',
-        openLink: '打开链接', copyLink: '复制链接',
-        fetch: '获取', refetch: '重新获取',
-        pickFirst: '请先勾选要获取的账号',
-        planHintSingle: '将使用账号 {email} 加载可用计划，并仅为该账号获取链接。',
-        planHintBatch: '将使用账号 {email} 加载可用计划，并对已勾选的 {n} 个账号批量获取链接。',
-        noPlans: '未返回任何可用计划',
-        pickPlan: '请先选择一个计划',
-        loadPickPlan: '请先加载并选择计划',
-        bannedRemoved: '账号 {email} 已被封禁，已从输出文件移除',
-        bannedShort: '账号已被封禁',
-        unknownError: '未知错误',
-        linkCopied: '已复制链接',
-        linksCopied: '已复制 {n} 条链接',
-        noLinksToCopy: '暂无可复制的链接（需勾选且已获取成功）',
-        noErrorInfo: '(无错误信息)',
-        errCopied: '已复制错误详情'
-      },
       modal: {
         updateTitle: '发现新版本', updateLater: '稍后', updateDownload: '前往下载'
       },
@@ -180,6 +171,7 @@
         testOkNoDomain: '连接成功，但未返回可用域名'
       },
       cloudmail: {
+        domainHint: '域名将在保存或测试连接时自动从服务器拉取，无需手动填写。',
         summaryNone: '未配置',
         summaryActive: '已配置 {n} 个，可用 {m} 个',
         emptyInline: '暂无配置，请在上方添加 Cloud-Mail 配置',
@@ -212,14 +204,37 @@
     },
     en: {
       nav: {
-        overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails', subscription: 'Subscription',
+        overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails',
         about: 'About', settings: 'Settings', toggleTheme: 'Toggle theme', checkUpdate: 'Check update',
         language: 'Language: English (click to switch)',
         ip: 'IPs'
       },
       page: {
-        overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails', subscription: 'Subscription',
+        overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails',
         settings: 'Settings', ip: 'IPs'
+      },
+      ip: {
+        proxy: 'Proxy', direct: 'Direct', add: '+ Add proxy', refresh: 'Refresh',
+        batchTest: 'Batch test', batchDelete: 'Batch delete', searchPlaceholder: 'Search name / address',
+        allStatus: 'All statuses', enabled: 'Enabled', disabled: 'Disabled',
+        empty: 'No proxies yet. Click Add proxy above.', addTitle: 'Add proxy', editTitle: 'Edit proxy',
+        tabSingle: 'Add single', tabBatch: 'Add batch', protocol: 'Protocol',
+        host: 'Host', port: 'Port', username: 'Username', password: 'Password', save: 'Save',
+        test: 'Test', edit: 'Edit', delete: 'Delete',
+        colAddress: 'Address',
+        colLocation: 'Location', colLatency: 'Latency', colStatus: 'Status', colActions: 'Actions',
+        batchPlaceholder: 'One proxy per line: scheme://[user:pass@]host:port',
+        loading: 'Loading...',
+        available: 'Available', failure: 'Failed',
+        testing: 'Testing…', unavailable: 'Unavailable', unknownError: 'Unknown error',
+        testFailed: 'Test failed', noProxies: 'No proxies to test', testingN: 'Testing {n} proxies…',
+        addFailed: 'Add failed', saveFailed: 'Save failed', added: 'Added', saved: 'Saved',
+        hostRequired: 'Host is required', invalidBatch: 'No valid proxy lines',
+        batchDone: 'Done: {added} added', batchDup: ', {n} already exists', batchFail: ', {n} failed',
+        deleteTitle: 'Delete proxy', deleteMsg: 'Remove this proxy from the pool?', deleted: 'Deleted',
+        deleteFailed: 'Delete failed', selectFirst: 'Select proxies to delete',
+        batchDeleteTitle: 'Batch delete', batchDeleteMsg: 'Delete {n} selected proxies?',
+        batchDelete: 'Batch delete', batchDeleteDone: 'Deleted: {ok}'
       },
       common: {
         loading: 'Loading...', loadFailed: 'Failed to load', noData: 'No data',
@@ -305,38 +320,6 @@
         mailnestTitle: 'MailNest temp mail',
         projectCode: 'Project code',
       },
-      subscription: {
-        accountList: 'Accounts', autoLoaded: 'Auto-loaded accounts from output folder',
-        autoLoadedFrom: 'Auto-loaded: {dir}',
-        batchGet: 'Fetch selected', copyLinks: 'Copy selected links', reload: 'Reload accounts',
-        concurrency: 'Concurrency', notStarted: 'Not started',
-        thEmail: 'Email', thSubscription: 'Subscription', thStatus: 'Status', thActions: 'Actions',
-        planModalTitle: 'Select plan', planLoading: 'Loading account…',
-        startBatch: 'Start fetching',
-        errorModalTitle: 'Fetch failed · upstream response', errorAccount: 'Account',
-        loadFailed: 'Failed to load accounts',
-        totalSelected: 'Total {total} / Selected {sel}',
-        statRunning: 'Running {n}', statSuccess: 'Success {n}',
-        statSuspended: 'Suspended {n}', statFailed: 'Failed {n}',
-        emptyOutput: 'No accounts in output directory. Register first or change the output directory.',
-        clickForDetail: 'Click for details', clickForResponse: 'Click for full response',
-        openLink: 'Open link', copyLink: 'Copy link',
-        fetch: 'Fetch', refetch: 'Refetch',
-        pickFirst: 'Please select accounts first',
-        planHintSingle: 'Will load plans using {email} and fetch link only for this account.',
-        planHintBatch: 'Will load plans using {email} and fetch links for {n} selected accounts.',
-        noPlans: 'No plans returned',
-        pickPlan: 'Please select a plan',
-        loadPickPlan: 'Please load and select a plan first',
-        bannedRemoved: 'Account {email} suspended, removed from output file',
-        bannedShort: 'Account suspended',
-        unknownError: 'Unknown error',
-        linkCopied: 'Link copied',
-        linksCopied: 'Copied {n} links',
-        noLinksToCopy: 'No links to copy (must be selected and fetched successfully)',
-        noErrorInfo: '(no error info)',
-        errCopied: 'Error details copied'
-      },
       modal: {
         updateTitle: 'New version available', updateLater: 'Later', updateDownload: 'Download'
       },
@@ -382,6 +365,7 @@
         testOkNoDomain: 'Connected, but no domains returned'
       },
       cloudmail: {
+        domainHint: 'Domains are auto-fetched from the server on save or test — no need to fill in manually.',
         summaryNone: 'Not configured',
         summaryActive: '{n} configured, {m} active',
         emptyInline: 'No configs yet. Add a Cloud-Mail config above.',
@@ -414,14 +398,37 @@
     },
     ja: {
       nav: {
-        overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール', subscription: 'サブスク',
+        overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール',
         about: '情報', settings: '設定', toggleTheme: 'テーマ切替', checkUpdate: '更新確認',
         language: '言語：日本語 (クリックで切替)',
         ip: 'IP管理'
       },
       page: {
-        overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール', subscription: 'サブスク',
+        overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール',
         settings: '設定', ip: 'IP管理'
+      },
+      ip: {
+        proxy: 'プロキシ', direct: '直接接続', add: '+ プロキシを追加', refresh: '更新',
+        batchTest: '一括テスト', batchDelete: '一括削除', searchPlaceholder: '名前 / アドレスを検索',
+        allStatus: 'すべての状態', enabled: '有効', disabled: '無効',
+        empty: 'プロキシがありません。右上から追加してください。', addTitle: 'プロキシを追加', editTitle: 'プロキシを編集',
+        tabSingle: '単数追加', tabBatch: '一括追加', protocol: 'プロトコル',
+        host: 'ホスト', port: 'ポート', username: 'ユーザー名', password: 'パスワード', save: '保存',
+        test: 'テスト', edit: '編集', delete: '削除',
+        colAddress: 'アドレス',
+        colLocation: '場所', colLatency: '遅延', colStatus: '状態', colActions: '操作',
+        batchPlaceholder: '1行1プロキシ: scheme://[user:pass@]host:port',
+        loading: '読み込み中...',
+        available: '利用可能', failure: '失敗',
+        testing: 'テスト中…', unavailable: '利用不可', unknownError: '不明なエラー',
+        testFailed: 'テスト失敗', noProxies: 'テストするプロキシがありません', testingN: '{n} 件のプロキシをテスト…',
+        addFailed: '追加失敗', saveFailed: '保存失敗', added: '追加しました', saved: '保存しました',
+        hostRequired: 'ホストを入力してください', invalidBatch: '有効なプロキシ行がありません',
+        batchDone: '完了：{added} 件追加', batchDup: '、{n} 件重複', batchFail: '、{n} 件失敗',
+        deleteTitle: 'プロキシを削除', deleteMsg: 'このプロキシをプールから削除しますか？', deleted: '削除しました',
+        deleteFailed: '削除失敗', selectFirst: '削除するプロキシを選択してください',
+        batchDeleteTitle: '一括削除', batchDeleteMsg: '選択した {n} 件のプロキシを削除しますか？',
+        batchDelete: '一括削除', batchDeleteDone: '削除完了：{ok} 件'
       },
       common: {
         loading: '読み込み中...', loadFailed: '読み込み失敗', noData: 'データなし',
@@ -507,38 +514,6 @@
         mailnestTitle: 'MailNest 使い捨てメール',
         projectCode: 'プロジェクトコード',
       },
-      subscription: {
-        accountList: 'アカウント一覧', autoLoaded: '出力フォルダのアカウントを自動読み込み済み',
-        autoLoadedFrom: '自動読み込み済み: {dir}',
-        batchGet: '選択した項目を取得', copyLinks: '選択リンクをコピー', reload: '再読み込み',
-        concurrency: '同時実行数', notStarted: '未開始',
-        thEmail: 'メール', thSubscription: 'サブスク', thStatus: '状態', thActions: '操作',
-        planModalTitle: 'プランを選択', planLoading: 'アカウント読み込み中…',
-        startBatch: '取得開始',
-        errorModalTitle: '取得失敗 · サーバ応答', errorAccount: 'アカウント',
-        loadFailed: 'アカウントの読み込みに失敗',
-        totalSelected: '合計 {total} 件 / 選択 {sel} 件',
-        statRunning: '進行中 {n}', statSuccess: '成功 {n}',
-        statSuspended: '凍結 {n}', statFailed: '失敗 {n}',
-        emptyOutput: '出力ディレクトリにアカウントがありません。先に登録するか出力ディレクトリを変更してください。',
-        clickForDetail: '詳細を表示', clickForResponse: 'レスポンス詳細を表示',
-        openLink: 'リンクを開く', copyLink: 'リンクをコピー',
-        fetch: '取得', refetch: '再取得',
-        pickFirst: '取得するアカウントを選択してください',
-        planHintSingle: '{email} を使ってプランを読み込み、このアカウントのみリンクを取得します。',
-        planHintBatch: '{email} を使ってプランを読み込み、選択中の {n} 件にリンクを一括取得します。',
-        noPlans: '利用可能なプランがありません',
-        pickPlan: 'プランを選択してください',
-        loadPickPlan: '先にプランを読み込み選択してください',
-        bannedRemoved: 'アカウント {email} は凍結され、出力ファイルから削除しました',
-        bannedShort: 'アカウントが凍結されました',
-        unknownError: '不明なエラー',
-        linkCopied: 'リンクをコピーしました',
-        linksCopied: '{n} 件のリンクをコピー',
-        noLinksToCopy: 'コピー可能なリンクなし (選択 & 取得成功が必要)',
-        noErrorInfo: '(エラー情報なし)',
-        errCopied: 'エラー詳細をコピー'
-      },
       modal: {
         updateTitle: '新しいバージョンがあります', updateLater: '後で', updateDownload: 'ダウンロード'
       },
@@ -584,6 +559,7 @@
         testOkNoDomain: '接続成功、ただしドメインなし'
       },
       cloudmail: {
+        domainHint: 'ドメインは保存時または接続テスト時にサーバーから自動取得されます。手動入力は不要です。',
         summaryNone: '未設定',
         summaryActive: '{n} 件設定、{m} 件利用可',
         emptyInline: '設定なし。上のフォームから Cloud-Mail 設定を追加してください。',
@@ -719,7 +695,6 @@
     en: {
       tags: [
         ['[指纹]', '[Fingerprint]'],
-        ['[订阅]', '[Subscription]'],
         ['[验活]', '[Verify]']
       ],
       phrases: [
@@ -859,7 +834,6 @@
         ['邮箱', 'email'],
         ['配置', 'config'],
         ['域名', 'domain'],
-        ['订阅', 'subscription'],
         ['重试', 'retry'],
         ['失败', 'failed'],
         ['成功', 'success'],
@@ -875,7 +849,6 @@
     ja: {
       tags: [
         ['[指纹]', '[フィンガープリント]'],
-        ['[订阅]', '[サブスク]'],
         ['[验活]', '[認証確認]']
       ],
       phrases: [
@@ -1015,7 +988,6 @@
         ['邮箱', 'メール'],
         ['配置', '設定'],
         ['域名', 'ドメイン'],
-        ['订阅', 'サブスク'],
         ['重试', '再試行'],
         ['失败', '失敗'],
         ['成功', '成功'],

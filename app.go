@@ -5,10 +5,8 @@ import (
 	"log"
 	"os"
 	"reg_go/internal/browser"
-	"reg_go/internal/data"
 	"reg_go/internal/email"
 	"reg_go/internal/proxy"
-	"reg_go/internal/subscription"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -354,130 +352,6 @@ func (a *App) ResetFingerprintCache() map[string]interface{} {
 	return map[string]interface{}{"success": true}
 }
 
-// ---- 订阅：一键获取支付链接 ----
-
-func accountFromMap(m map[string]interface{}) subscription.Account {
-	get := func(k string) string { v, _ := m[k].(string); return v }
-	return subscription.Account{
-		Email:        get("email"),
-		RefreshToken: get("refreshToken"),
-		ClientID:     get("clientId"),
-		ClientSecret: get("clientSecret"),
-		Region:       get("region"),
-		Provider:     get("provider"),
-		Time:         get("time"),
-		Subscription: get("subscription"),
-	}
-}
-
-// LoadOutputAccounts 读取当前输出目录下 accounts.json 中的账号列表，并附带已缓存的订阅链接信息
-func (a *App) LoadOutputAccounts() map[string]interface{} {
-	items, err := data.LoadAccounts(storage.GetResultOutputDir())
-	if err != nil {
-		return map[string]interface{}{"success": false, "error": err.Error()}
-	}
-	cache := subscription.LoadCache(storage.GetDataDir())
-	for _, m := range items {
-		if em, _ := m["email"].(string); em != "" {
-			if entry, ok := cache[em]; ok {
-				m["cachedUrl"] = entry.URL
-				m["cachedPlanType"] = entry.PlanType
-				m["cachedFetchedAt"] = entry.FetchedAt
-			}
-		}
-	}
-	return map[string]interface{}{"success": true, "accounts": items, "outputDir": storage.GetResultOutputDir()}
-}
-
-// GetSubscriptionPlans 用第一个有效账号拉取可用订阅计划（可指定邮箱）
-func (a *App) GetSubscriptionPlans(email string) map[string]interface{} {
-	items, err := data.LoadAccounts(storage.GetResultOutputDir())
-	if err != nil || len(items) == 0 {
-		return map[string]interface{}{"success": false, "error": "未找到任何账号"}
-	}
-	// 如指定邮箱，优先用该账号
-	if email != "" {
-		for _, m := range items {
-			if e, _ := m["email"].(string); e == email {
-				acc := accountFromMap(m)
-				token, err := subscription.RefreshAccessToken(acc)
-				if err != nil {
-					return map[string]interface{}{"success": false, "error": err.Error()}
-				}
-				plans, err := subscription.ListPlans(acc, token)
-				if err != nil {
-					return map[string]interface{}{"success": false, "error": err.Error()}
-				}
-				return map[string]interface{}{"success": true, "plans": plans}
-			}
-		}
-		return map[string]interface{}{"success": false, "error": "未找到账号: " + email}
-	}
-	var lastErr error
-	for _, m := range items {
-		acc := accountFromMap(m)
-		if acc.RefreshToken == "" || acc.ClientID == "" {
-			continue
-		}
-		token, err := subscription.RefreshAccessToken(acc)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		plans, err := subscription.ListPlans(acc, token)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		return map[string]interface{}{"success": true, "plans": plans}
-	}
-	msg := "全部账号均无法获取计划列表"
-	if lastErr != nil {
-		msg = lastErr.Error()
-	}
-	return map[string]interface{}{"success": false, "error": msg}
-}
-
-// GetSubscriptionLink 单账号获取支付/试用链接
-func (a *App) GetSubscriptionLink(email, planType string) map[string]interface{} {
-	items, err := data.LoadAccounts(storage.GetResultOutputDir())
-	if err != nil {
-		return map[string]interface{}{"success": false, "error": err.Error()}
-	}
-	var acc subscription.Account
-	for _, m := range items {
-		if e, _ := m["email"].(string); e == email {
-			acc = accountFromMap(m)
-			break
-		}
-	}
-	if acc.Email == "" {
-		return map[string]interface{}{"success": false, "error": "未找到账号: " + email}
-	}
-	token, err := subscription.RefreshAccessToken(acc)
-	if err != nil {
-		if subscription.IsSuspended(err) {
-			removed, _ := data.DeleteAccount(storage.GetResultOutputDir(), email)
-			subscription.DeleteCache(storage.GetDataDir(), email)
-			log.Printf("[订阅] 账号 %s 已被封禁，已从输出文件移除 (removed=%v)", email, removed)
-			return map[string]interface{}{"success": false, "error": err.Error(), "suspended": true, "removed": removed}
-		}
-		return map[string]interface{}{"success": false, "error": err.Error()}
-	}
-	url, err := subscription.CreateSubscriptionLink(acc, token, planType)
-	if err != nil {
-		if subscription.IsSuspended(err) {
-			removed, _ := data.DeleteAccount(storage.GetResultOutputDir(), email)
-			subscription.DeleteCache(storage.GetDataDir(), email)
-			log.Printf("[订阅] 账号 %s 已被封禁，已从输出文件移除 (removed=%v)", email, removed)
-			return map[string]interface{}{"success": false, "error": err.Error(), "suspended": true, "removed": removed}
-		}
-		return map[string]interface{}{"success": false, "error": err.Error()}
-	}
-	_ = subscription.PutCache(storage.GetDataDir(), email, url, planType)
-	return map[string]interface{}{"success": true, "url": url}
-}
-
 // ---- 多代理池 ----
 
 // ListProxyPool 返回当前代理池
@@ -516,8 +390,19 @@ func (a *App) DeleteProxyEntry(id string) map[string]interface{} {
 	return map[string]interface{}{"success": true}
 }
 
-// TestProxyEntry 测试某条代理是否可用
-func (a *App) TestProxyEntry(rawURL string) proxy.Info {
-	normalized := storage.NormalizeProxyAddress(rawURL)
-	return proxy.Detect(normalized)
+// TestProxyByID 测试某条代理（按 id），并把探测结果持久化到代理池
+func (a *App) TestProxyByID(id string) map[string]interface{} {
+	entry, err := proxy.Get(id)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	start := time.Now()
+	info := proxy.Detect(entry.URL)
+	ms := int(time.Since(start) / time.Millisecond)
+	_ = proxy.SetProbe(id, info, ms)
+	return map[string]interface{}{
+		"ok": info.OK, "scheme": info.Scheme, "ip": info.IP,
+		"country": info.Country, "region": info.Region, "city": info.City,
+		"isp": info.ISP, "error": info.Error, "ms": ms,
+	}
 }

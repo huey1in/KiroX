@@ -13,6 +13,14 @@ function _ipEscape(s) {
   });
 }
 
+function _ipT(key, fallback) {
+  if (window.I18N && typeof window.I18N.t === 'function') {
+    var v = window.I18N.t(key);
+    if (v && v !== key) return v;
+  }
+  return fallback;
+}
+
 // ---- 代理 URL 解析 / 拼装 ----
 // url 形如 scheme://[user:pass@]host[:port]（后端已归一化），兼容简写
 function parseProxyUrl(u) {
@@ -67,9 +75,11 @@ function onIpSearch() {
 }
 
 // ===== 加载 =====
+var ipProbing = {}; // 正在测试中的代理 id -> true，用于骨架屏
+
 async function loadIpList() {
   var box = document.getElementById('ip-list');
-  if (box) box.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">加载中...</div>';
+  if (box) box.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">' + _ipT('ip.loading', '加载中...') + '</div>';
   try {
     ipPool = await window.go.main.App.ListProxyPool();
   } catch (e) {
@@ -77,43 +87,58 @@ async function loadIpList() {
   }
   ipSelected = {};
   renderIpList();
-  probeAllIp();
+  probeAllIp(false);
 }
 
-// 并行探测（限并发5），填充地理位置 / 延迟 / 可用性
-async function probeAllIp() {
+// 探测单个代理：显示骨架屏，结果写回持久化字段并重绘
+async function probeOne(p) {
+  if (!p || !p.url || ipProbing[p.id]) return;
+  ipProbing[p.id] = true;
+  renderIpList();
+  var t0 = performance.now();
+  try {
+    var res = await window.go.main.App.TestProxyByID(p.id);
+    var ms = typeof res.ms === 'number' ? res.ms : Math.round(performance.now() - t0);
+    if (res && res.error) {
+      p.probeOk = false;
+      p.probeError = res.error;
+    } else {
+      p.probeOk = !!res.ok;
+      p.probeIp = res.ip || '';
+      p.probeCountry = res.country || '';
+      p.probeRegion = res.region || '';
+      p.probeCity = res.city || '';
+      p.probeIsp = res.isp || '';
+      p.probeMs = ms;
+      p.probeError = res.error || '';
+      p.probeAt = Math.floor(Date.now() / 1000);
+    }
+  } catch (e) {
+    p.probeOk = false;
+    p.probeError = e.message;
+  }
+  delete ipProbing[p.id];
+  renderIpList();
+}
+
+// 并行探测（限并发5）。force=true 强制全部，否则只探测从未测过的
+async function probeAllIp(force) {
   var i = 0;
   async function worker() {
     while (i < ipPool.length) {
-      var __i = i++;
-      var p = ipPool[__i];
+      var p = ipPool[i++];
       if (!p || !p.url) continue;
-      try {
-        var t0 = performance.now();
-        var info = await window.go.main.App.TestProxyEntry(p.url);
-        var ms = Math.round(performance.now() - t0);
-        p._probe = {
-          ok: !!(info && info.ok),
-          ms: ms,
-          country: info && info.country,
-          city: info && info.city,
-          region: info && info.region,
-          error: info && info.error
-        };
-      } catch (e) {
-        p._probe = { ok: false, error: e.message };
-      }
+      if (!force && p.probeAt) continue; // 已有结果则不重复测
+      await probeOne(p);
     }
   }
   var ws = [];
   for (var k = 0; k < 5; k++) ws.push(worker());
   await Promise.all(ws);
-  renderIpList();
 }
 
 // ===== 渲染 =====
 function _dv(id) { var el = document.getElementById(id); return (el && el.dataset) ? (el.dataset.value || '') : ''; }
-function onIpFilterProtocol() { renderIpList(); }
 function onIpFilterStatus() { renderIpList(); }
 
 function renderIpList() {
@@ -121,15 +146,12 @@ function renderIpList() {
   var empty = document.getElementById('ip-empty');
   if (!box) return;
   var q = (document.getElementById('ip-search').value || '').toLowerCase().trim();
-  var fproto = _dv('ip-filter-protocol');
   var fstatus = _dv('ip-filter-status');
   var rows = ipPool.filter(function(p) {
-    var u = parseProxyUrl(p.url);
     if (q) {
-      var hay = (((p.name || '') + ' ' + (p.url || '')) + ' ' + (p.id || '')).toLowerCase();
+      var hay = ((p.url || '') + ' ' + (p.id || '')).toLowerCase();
       if (hay.indexOf(q) < 0) return false;
     }
-    if (fproto && u.proto !== fproto) return false;
     if (fstatus === 'enabled' && !p.enabled) return false;
     if (fstatus === 'disabled' && p.enabled) return false;
     return true;
@@ -140,17 +162,14 @@ function renderIpList() {
 
 function renderIpTable(rows) {
   var allSel = rows.length > 0 && rows.every(function(p) { return ipSelected[p.id]; });
-  var h = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">';
+  var h = '<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;">';
   h += '<thead><tr style="border-bottom:1px solid var(--border);">'
-    + '<th style="width:32px;padding:8px;text-align:center;"><input type="checkbox" ' + (allSel ? 'checked' : '') + ' onclick="toggleIpSelectAll(this)"></th>'
-    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;">名称</th>'
-    + '<th style="text-align:center;padding:8px;color:var(--text-muted);font-weight:600;">协议</th>'
-    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;">地址</th>'
-    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;">认证</th>'
-    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;">位置</th>'
-    + '<th style="text-align:center;padding:8px;color:var(--text-muted);font-weight:600;">延迟</th>'
-    + '<th style="text-align:center;padding:8px;color:var(--text-muted);font-weight:600;">状态</th>'
-    + '<th style="padding:8px;color:var(--text-muted);font-weight:600;">操作</th>'
+    + '<th style="width:30px;padding:8px;text-align:center;white-space:nowrap;"><input type="checkbox" ' + (allSel ? 'checked' : '') + ' onclick="toggleIpSelectAll(this)"></th>'
+    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colAddress', '地址') + '</th>'
+    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colLocation', '位置') + '</th>'
+    + '<th style="width:86px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colLatency', '延迟') + '</th>'
+    + '<th style="width:56px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colStatus', '状态') + '</th>'
+    + '<th style="width:172px;text-align:right;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colActions', '操作') + '</th>'
     + '</tr></thead><tbody>';
   rows.forEach(function(p) { h += renderIpRow(p); });
   h += '</tbody></table>';
@@ -162,56 +181,70 @@ function renderIpRow(p) {
   var id = p.id;
   var chk = ipSelected[id] ? 'checked' : '';
   var addr = u.host + (u.port ? (':' + u.port) : '');
+  var probing = !!ipProbing[id];
+  var sk = '<span class="ip-skel"></span>';
 
-  var copyBtn = '<button type="button" class="btn btn-secondary btn-sm" title="复制" onclick="copyIpAddress(\'' + _ipEscape(p.url) + '\')">复制</button>';
-
-  var auth = '—';
-  if (u.user) {
-    var show = p._showPass ? _ipEscape(u.pass) : '••••••';
-    auth = _ipEscape(u.user) + ' : ' + show + ' <button type="button" class="btn btn-secondary btn-sm" onclick="toggleIpPass(\'' + id + '\')">' + (p._showPass ? '隐藏' : '👁') + '</button>';
+  // 地址列：显示探测到的出口 IP（持久化），未探测时回退到原始 host:port；正在测试时骨架屏
+  var addrCell;
+  if (probing) {
+    addrCell = '<span class="ip-skel wide"></span>';
+  } else {
+    var exitIp = (p.probeOk && p.probeIp) ? p.probeIp : addr;
+    addrCell = '<span style="font-family:var(--font-mono);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;" title="' + _ipEscape(addr) + '">' + _ipEscape(exitIp) + '</span>';
   }
 
-  var loc = '—';
-  if (p._probe && p._probe.ok) {
-    loc = _ipEscape(p._probe.country || '') + (p._probe.city ? (' · ' + _ipEscape(p._probe.city)) : '');
-  }
+  // 位置列
+  var loc = probing ? sk : (p.probeOk ? (_ipEscape(p.probeCountry || '') + (p.probeCity ? (' · ' + _ipEscape(p.probeCity)) : '')) : '—');
 
+  // 延迟列
   var lat = '—';
-  if (p._probe) {
-    lat = p._probe.ok ? _badgeOk(p._probe.ms ? (p._probe.ms + 'ms') : '可用') : _badgeErr('失败');
-  }
+  if (probing) lat = sk;
+  else if (p.probeOk) lat = _badgeOk(p.probeMs ? (p.probeMs + 'ms') : _ipT('ip.available', '可用'));
+  else if (p.probeAt) lat = _badgeErr(_ipT('ip.failure', '失败'));
 
-  var protoBadge = _badgeOff((u.proto || 'http').toUpperCase());
-  var statusBadge = p.enabled ? _badgeOk('启用') : _badgeOff('停用');
+  // 状态开关：添加后通过列表开关控制启用/停用
+  var toggleHtml = '<label class="toggle-switch" title="' + (p.enabled ? _ipT('ip.enabled', '启用') : _ipT('ip.disabled', '停用')) + '">'
+    + '<input type="checkbox" ' + (p.enabled ? 'checked' : '') + ' onchange="toggleIpEnabled(\'' + id + '\', this.checked)">'
+    + '<span class="toggle-slider"></span></label>';
 
-  var ops = '<button type="button" class="btn btn-secondary btn-sm" onclick="testIpEntry(\'' + id + '\')">测试</button>'
-    + '<button type="button" class="btn btn-secondary btn-sm" onclick="editIpEntry(\'' + id + '\')">编辑</button>'
-    + '<button type="button" class="btn btn-secondary btn-sm" style="color:var(--danger);" onclick="deleteIpEntry(\'' + id + '\')">删除</button>';
+  var ops = '<button type="button" class="btn btn-secondary btn-sm" onclick="testIpEntry(\'' + id + '\')">' + _ipT('ip.test', '测试') + '</button>'
+    + '<button type="button" class="btn btn-secondary btn-sm" onclick="editIpEntry(\'' + id + '\')">' + _ipT('ip.edit', '编辑') + '</button>'
+    + '<button type="button" class="btn btn-secondary btn-sm" style="color:var(--danger);" onclick="deleteIpEntry(\'' + id + '\')">' + _ipT('ip.delete', '删除') + '</button>';
 
   return '<tr style="border-bottom:1px solid var(--border);">'
     + '<td style="padding:8px;text-align:center;"><input type="checkbox" ' + chk + ' onclick="toggleIpSelect(\'' + id + '\',this)"></td>'
-    + '<td style="padding:8px;font-weight:600;">' + _ipEscape(p.name || u.host) + '</td>'
-    + '<td style="padding:8px;text-align:center;">' + protoBadge + '</td>'
-    + '<td style="padding:8px;font-family:var(--font-mono);font-size:12px;">' + _ipEscape(addr) + ' ' + copyBtn + '</td>'
-    + '<td style="padding:8px;">' + auth + '</td>'
-    + '<td style="padding:8px;">' + loc + '</td>'
-    + '<td style="padding:8px;text-align:center;">' + lat + '</td>'
-    + '<td style="padding:8px;text-align:center;">' + statusBadge + '</td>'
-    + '<td style="padding:8px;white-space:nowrap;">' + ops + '</td>'
+    + '<td style="padding:8px;"><div style="display:flex;align-items:center;gap:6px;min-width:0;">'
+      + addrCell + '</div></td>'
+    + '<td style="padding:8px;white-space:nowrap;">' + loc + '</td>'
+    + '<td style="padding:8px;text-align:center;white-space:nowrap;">' + lat + '</td>'
+    + '<td style="padding:8px;text-align:center;">' + toggleHtml + '</td>'
+    + '<td style="padding:8px;text-align:right;white-space:nowrap;">' + ops + '</td>'
     + '</tr>';
+}
+
+// 列表开关：启用/停用某个代理
+async function toggleIpEnabled(id, enabled) {
+  var p = ipPool.find(function(x) { return x.id === id; });
+  if (!p) return;
+  try {
+    var res = await window.go.main.App.UpdateProxyEntry(id, '', p.url || '', p.weight || 1, enabled);
+    if (res && res.error) { showToast(res.error, 'error'); await loadIpList(); return; }
+    p.enabled = enabled;
+    renderIpList();
+  } catch (e) {
+    showToast(_ipT('ip.saveFailed', '保存失败') + ': ' + e.message, 'error');
+    await loadIpList();
+  }
 }
 
 // 选择
 function toggleIpSelect(id, el) { ipSelected[id] = el.checked; }
 function toggleIpSelectAll(el) {
   var q = (document.getElementById('ip-search').value || '').toLowerCase().trim();
-  var fproto = _dv('ip-filter-protocol');
   var fstatus = _dv('ip-filter-status');
   ipPool.forEach(function(p) {
-    var u = parseProxyUrl(p.url);
     var visible = true;
-    if (q && (((p.name || '') + ' ' + (p.url || '') + ' ' + (p.id || '')).toLowerCase().indexOf(q) < 0)) visible = false;
-    if (fproto && u.proto !== fproto) visible = false;
+    if (q && (((p.url || '') + ' ' + (p.id || '')).toLowerCase().indexOf(q) < 0)) visible = false;
     if (fstatus === 'enabled' && !p.enabled) visible = false;
     if (fstatus === 'disabled' && p.enabled) visible = false;
     if (visible) ipSelected[p.id] = el.checked;
@@ -219,73 +252,47 @@ function toggleIpSelectAll(el) {
   renderIpList();
 }
 
-// 复制 / 密码显隐
-function copyIpAddress(url) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(function() { showToast('已复制'); }, function() { showToast('复制失败', 'error'); });
-  } else {
-    showToast('复制失败', 'error');
-  }
-}
-function toggleIpPass(id) {
-  var p = ipPool.find(function(x) { return x.id === id; });
-  if (!p) return;
-  p._showPass = !p._showPass;
-  renderIpList();
-}
-
 // ===== 测试 =====
 async function testIpEntry(id) {
   var p = ipPool.find(function(x) { return x.id === id; });
   if (!p) return;
-  showToast('正在测试…');
-  try {
-    var t0 = performance.now();
-    var info = await window.go.main.App.TestProxyEntry(p.url);
-    var ms = Math.round(performance.now() - t0);
-    p._probe = { ok: info && info.ok, ms: ms, country: info && info.country, city: info && info.city, region: info && info.region, error: info && info.error };
-    renderIpList();
-    if (info && info.ok) showToast((info.scheme || '').toUpperCase() + ' · ' + (info.ip || '') + (info.country ? (' (' + info.country + ')') : '') + ' · ' + ms + 'ms');
-    else showToast('不可用: ' + ((info && info.error) || '未知错误'), 'error');
-  } catch (e) {
-    showToast('测试失败: ' + e.message, 'error');
+  showToast(_ipT('ip.testing', '正在测试…'));
+  await probeOne(p);
+  if (p.probeOk) {
+    showToast((p.probeIp || '') + (p.probeCountry ? (' (' + p.probeCountry + ')') : '') + (p.probeMs ? ' · ' + p.probeMs + 'ms' : ''));
+  } else {
+    showToast(_ipT('ip.unavailable', '不可用') + ': ' + (p.probeError || _ipT('ip.unknownError', '未知错误')), 'error');
   }
 }
 
 async function batchTestIp() {
   var sel = selectedIpIds();
   var targets = ipPool.filter(function(p) { return sel.length ? sel.indexOf(p.id) >= 0 : !!p.url; });
-  if (!targets.length) { showToast('没有可测试的代理'); return; }
-  showToast('测试 ' + targets.length + ' 个代理…');
+  if (!targets.length) { showToast(_ipT('ip.noProxies', '没有可测试的代理')); return; }
+  showToast(_ipT('ip.testingN', '测试 {n} 个代理…').replace('{n}', targets.length));
   var i = 0;
   async function w() {
     while (i < targets.length) {
       var t = targets[i++];
-      try {
-        var info = await window.go.main.App.TestProxyEntry(t.url);
-        t._probe = { ok: info && info.ok, ms: 0, country: info && info.country, city: info && info.city, region: info && info.region, error: info && info.error };
-      } catch (e) {}
+      await probeOne(t);
     }
   }
   var ws = [];
   for (var k = 0; k < 5; k++) ws.push(w());
   await Promise.all(ws);
-  renderIpList();
 }
 
 // ===== 新增/编辑 =====
 function openIpFormModal() {
   ipFormMode = 'create';
   ipEditingId = null;
-  document.getElementById('ip-form-title').textContent = '添加代理';
-  document.getElementById('ip-form-name').value = '';
+  document.getElementById('ip-form-title').textContent = _ipT('ip.addTitle', '添加代理');
   document.getElementById('ip-form-protocol').value = 'http';
   document.getElementById('ip-form-host').value = '';
   document.getElementById('ip-form-port').value = '8080';
   setDropdownValue(document.getElementById('ip-form-protocol'), 'http');
   document.getElementById('ip-form-user').value = '';
   document.getElementById('ip-form-pass').value = '';
-  document.getElementById('ip-form-enabled').checked = true;
   document.getElementById('ip-form-batch-text').value = '';
   document.getElementById('ip-batch-status').textContent = '';
   switchIpFormTab('single');
@@ -298,14 +305,12 @@ function editIpEntry(id) {
   var u = parseProxyUrl(p.url);
   ipFormMode = 'edit';
   ipEditingId = id;
-  document.getElementById('ip-form-title').textContent = '编辑代理';
-  document.getElementById('ip-form-name').value = p.name || u.host || '';
+  document.getElementById('ip-form-title').textContent = _ipT('ip.editTitle', '编辑代理');
   document.getElementById('ip-form-protocol').value = u.proto || 'http';
   document.getElementById('ip-form-host').value = u.host || '';
   document.getElementById('ip-form-port').value = u.port || '';
   document.getElementById('ip-form-user').value = u.user || '';
   document.getElementById('ip-form-pass').value = u.pass || '';
-  document.getElementById('ip-form-enabled').checked = p.enabled;
   setDropdownValue(document.getElementById('ip-form-protocol'), u.proto || 'http');
   switchIpFormTab('single');
   document.getElementById('ip-form-modal').classList.add('show');
@@ -359,23 +364,25 @@ async function submitSingle() {
     host: document.getElementById('ip-form-host').value.trim(),
     port: document.getElementById('ip-form-port').value,
     user: document.getElementById('ip-form-user').value,
-    pass: document.getElementById('ip-form-pass').value,
-    name: document.getElementById('ip-form-name').value.trim()
+    pass: document.getElementById('ip-form-pass').value
   };
-  if (!obj.host) { showToast('主机不能为空', 'error'); return; }
+  if (!obj.host) { showToast(_ipT('ip.hostRequired', '主机不能为空'), 'error'); return; }
   var url = buildProxyUrl(obj);
   if (ipFormMode === 'create') {
     try {
-      var res = await window.go.main.App.AddProxyEntry(obj.name, url, 1);
+      var res = await window.go.main.App.AddProxyEntry('', url, 1);
       if (res && res.error) { showToast(res.error, 'error'); return; }
-      showToast('已添加');
-    } catch (e) { showToast('添加失败: ' + e.message, 'error'); return; }
+      showToast(_ipT('ip.added', '已添加'));
+    } catch (e) { showToast(_ipT('ip.addFailed', '添加失败') + ': ' + e.message, 'error'); return; }
   } else {
+    // 编辑时保持现有启用状态（列表开关负责切换）
+    var cur = ipPool.find(function(x) { return x.id === ipEditingId; });
+    var enabled = cur ? cur.enabled : true;
     try {
-      var res2 = await window.go.main.App.UpdateProxyEntry(ipEditingId, obj.name, url, 1, document.getElementById('ip-form-enabled').checked);
+      var res2 = await window.go.main.App.UpdateProxyEntry(ipEditingId, '', url, 1, enabled);
       if (res2 && res2.error) { showToast(res2.error, 'error'); return; }
-      showToast('已保存');
-    } catch (e) { showToast('保存失败: ' + e.message, 'error'); return; }
+      showToast(_ipT('ip.saved', '已保存'));
+    } catch (e) { showToast(_ipT('ip.saveFailed', '保存失败') + ': ' + e.message, 'error'); return; }
   }
   closeIpFormModal();
   await loadIpList();
@@ -383,7 +390,7 @@ async function submitSingle() {
 
 async function submitBatch() {
   var r = parseBatchText();
-  if (!r.valid.length) { showToast('没有有效的代理行', 'error'); return; }
+  if (!r.valid.length) { showToast(_ipT('ip.invalidBatch', '没有有效的代理行'), 'error'); return; }
   var added = 0, dup = 0, fail = 0;
   for (var i = 0; i < r.valid.length; i++) {
     try {
@@ -393,27 +400,30 @@ async function submitBatch() {
       } else added++;
     } catch (e) { fail++; }
   }
-  showToast('完成：' + added + ' 成功' + (dup ? '，' + dup + ' 已存在' : '') + (fail ? '，' + fail + ' 失败' : ''));
+  var msg = _ipT('ip.batchDone', '完成：{added} 成功').replace('{added}', added);
+  if (dup > 0) msg += _ipT('ip.batchDup', '，{n} 已存在').replace('{n}', dup);
+  if (fail > 0) msg += _ipT('ip.batchFail', '，{n} 失败').replace('{n}', fail);
+  showToast(msg);
   closeIpFormModal();
   await loadIpList();
 }
 
 // ===== 删除 =====
 function deleteIpEntry(id) {
-  showConfirmModal('删除代理', '确认从池中删除该代理？', '删除', async function() {
+  showConfirmModal(_ipT('ip.deleteTitle', '删除代理'), _ipT('ip.deleteMsg', '确认从池中删除该代理？'), _ipT('ip.delete', '删除'), async function() {
     try {
       var res = await window.go.main.App.DeleteProxyEntry(id);
       if (res && res.error) { showToast(res.error, 'error'); return; }
-      showToast('已删除');
+      showToast(_ipT('ip.deleted', '已删除'));
       await loadIpList();
-    } catch (e) { showToast('删除失败: ' + e.message, 'error'); }
+    } catch (e) { showToast(_ipT('ip.deleteFailed', '删除失败') + ': ' + e.message, 'error'); }
   });
 }
 
 async function batchDeleteIp() {
   var sel = selectedIpIds();
-  if (!sel.length) { showToast('请选择要删除的代理'); return; }
-  showConfirmModal('批量删除', '确认删除选中的 ' + sel.length + ' 个代理？', '批量删除', async function() {
+  if (!sel.length) { showToast(_ipT('ip.selectFirst', '请选择要删除的代理')); return; }
+  showConfirmModal(_ipT('ip.batchDeleteTitle', '批量删除'), _ipT('ip.batchDeleteMsg', '确认删除选中的 {n} 个代理？').replace('{n}', sel.length), _ipT('ip.batchDelete', '批量删除'), async function() {
     var ok = 0, err = 0;
     for (var i = 0; i < sel.length; i++) {
       try {
@@ -421,7 +431,7 @@ async function batchDeleteIp() {
         if (res && res.error) err++; else ok++;
       } catch (e) { err++; }
     }
-    showToast('删除完成：' + ok + ' 成功' + (err ? '，' + err + ' 失败' : ''));
+    showToast(_ipT('ip.batchDeleteDone', '删除完成：{ok} 成功').replace('{ok}', ok) + (err ? _ipT('ip.batchFail', '，{n} 失败').replace('{n}', err) : ''));
     await loadIpList();
   });
 }
@@ -434,10 +444,10 @@ async function loadProxyOptions() {
   var list = [];
   try { list = await window.go.main.App.ListProxyPool(); } catch (e) {}
   var enabled = (list || []).filter(function(p) { return p.enabled; });
-  var html = '<div class="dropdown-option" data-value="">直连</div>';
+  var html = '<div class="dropdown-option" data-value="">' + _ipT('ip.direct', '直连') + '</div>';
   enabled.forEach(function(p) {
     var u = parseProxyUrl(p.url);
-    var label = p.name || (u.host + (u.port ? ':' + u.port : ''));
+    var label = u.host + (u.port ? ':' + u.port : '');
     html += '<div class="dropdown-option" data-value="' + _ipEscape(p.url) + '">' + _ipEscape(label) + '</div>';
   });
   box.innerHTML = html;

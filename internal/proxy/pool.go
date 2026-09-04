@@ -19,6 +19,17 @@ type PoolEntry struct {
 	URL     string `json:"url"`     // 完整代理 URL（已归一化）
 	Weight  int    `json:"weight"`  // 1-100，越高被选中概率越大
 	Enabled bool   `json:"enabled"` // 关闭时不参与抽签
+
+	// 最近一次探测结果（持久化，供 IP 管理页展示）
+	ProbeOK      bool   `json:"probeOk"`                 // 探测是否成功
+	ProbeIP      string `json:"probeIp"`                 // 出口 IP
+	ProbeCountry string `json:"probeCountry,omitempty"`  // 国家
+	ProbeRegion  string `json:"probeRegion,omitempty"`   // 省份
+	ProbeCity    string `json:"probeCity,omitempty"`     // 城市
+	ProbeISP     string `json:"probeIsp,omitempty"`      // ISP
+	ProbeMS      int    `json:"probeMs,omitempty"`       // 延迟(ms)
+	ProbeError   string `json:"probeError,omitempty"`    // 失败原因
+	ProbeAt      int64  `json:"probeAt,omitempty"`       // 探测时间戳(unix秒)
 }
 
 // poolFile JSON 持久化结构
@@ -81,6 +92,19 @@ func savePoolLocked() error {
 		return err
 	}
 	return os.Rename(tmp, poolPath)
+}
+
+// Get 按 id 返回单个代理
+func Get(id string) (PoolEntry, error) {
+	poolMu.Lock()
+	defer poolMu.Unlock()
+	loadPoolLocked()
+	for _, e := range poolEntries {
+		if e.ID == id {
+			return e, nil
+		}
+	}
+	return PoolEntry{}, fmt.Errorf("代理不存在")
 }
 
 // List 返回当前所有代理（含禁用项）
@@ -184,6 +208,28 @@ func Delete(id string) error {
 	for i, e := range poolEntries {
 		if e.ID == id {
 			poolEntries = append(poolEntries[:i], poolEntries[i+1:]...)
+			return savePoolLocked()
+		}
+	}
+	return fmt.Errorf("代理不存在")
+}
+
+// SetProbe 保存某条代理的探测结果（按 id），并持久化到 JSON
+func SetProbe(id string, info Info, ms int) error {
+	poolMu.Lock()
+	defer poolMu.Unlock()
+	loadPoolLocked()
+	for i := range poolEntries {
+		if poolEntries[i].ID == id {
+			poolEntries[i].ProbeOK = info.OK
+			poolEntries[i].ProbeIP = info.IP
+			poolEntries[i].ProbeCountry = info.Country
+			poolEntries[i].ProbeRegion = info.Region
+			poolEntries[i].ProbeCity = info.City
+			poolEntries[i].ProbeISP = info.ISP
+			poolEntries[i].ProbeMS = ms
+			poolEntries[i].ProbeError = info.Error
+			poolEntries[i].ProbeAt = time.Now().Unix()
 			return savePoolLocked()
 		}
 	}

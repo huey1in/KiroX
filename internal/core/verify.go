@@ -146,11 +146,6 @@ func (r *Registrar) parseUsage(body []byte) map[string]interface{} {
 
 	userInfo, _ := usage["userInfo"].(map[string]interface{})
 	emailAddr, _ := userInfo["email"].(string)
-	subInfo, _ := usage["subscriptionInfo"].(map[string]interface{})
-	sub, _ := subInfo["subscriptionTitle"].(string)
-	if sub == "" {
-		sub = "Free"
-	}
 
 	var totalLimit, totalUsed float64
 	if breakdown, ok := usage["usageBreakdownList"].([]interface{}); ok {
@@ -183,9 +178,9 @@ func (r *Registrar) parseUsage(body []byte) map[string]interface{} {
 		}
 	}
 
-	log.Printf("验活成功! 邮箱=%s 订阅=%s Credit=%.1f/%.1f", emailAddr, sub, totalUsed, totalLimit)
+	log.Printf("验活成功! 邮箱=%s Credit=%.1f/%.1f", emailAddr, totalUsed, totalLimit)
 	return map[string]interface{}{
-		"alive": true, "email": emailAddr, "subscription": sub,
+		"alive": true, "email": emailAddr,
 		"credit_used": totalUsed, "credit_limit": totalLimit,
 	}
 }

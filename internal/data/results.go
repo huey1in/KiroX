@@ -37,7 +37,6 @@ func SaveKiroSuccess(result map[string]interface{}, outDir string) error {
 	if verify != nil {
 		item["creditUsed"] = verify["credit_used"]
 		item["creditLimit"] = verify["credit_limit"]
-		item["subscription"] = verify["subscription"]
 	}
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
