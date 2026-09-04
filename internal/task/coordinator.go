@@ -13,7 +13,6 @@ import (
 	"reg_go/internal/core"
 	"reg_go/internal/data"
 	"reg_go/internal/email"
-	"reg_go/internal/proxy"
 	"reg_go/internal/storage"
 )
 
@@ -33,6 +32,9 @@ type StartTaskRequest struct {
 	CloudMailRandomMode bool                               `json:"cloudmailRandomMode"`
 
 	MailNestConfig email.MailNestConfig `json:"mailNestConfig"`
+
+	// Proxy 本次任务使用的代理（用户在新建任务时选择，空=直连）
+	Proxy string `json:"proxy"`
 }
 
 // StartTask 公开方法（包装器）
@@ -195,7 +197,7 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 
 	taskConfig := core.NewConfig()
 	taskConfig.EmailProvider = emailProvider
-	taskConfig.Proxy = storage.GetProxy()
+	taskConfig.Proxy = req.Proxy
 	if taskConfig.Proxy != "" {
 		log.Printf("[Kiro] 已启用代理")
 	}
@@ -311,11 +313,6 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 
 		taskCfg := *taskConfig
 		taskCfg.Password = core.GenPassword()
-		// 多代理池：若存在启用项，按权重抽签覆盖单代理
-		if picked := proxy.PickRandom(); picked != "" {
-			taskCfg.Proxy = picked
-			log.Printf("[Kiro][%d/%d] 选中代理 %s", i+1, req.Count, picked)
-		}
 		var currentEmail string
 
 		// 根据邮箱提供商类型获取邮箱

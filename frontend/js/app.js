@@ -7,7 +7,7 @@ function getPageTitle(pageId) {
     var v = window.I18N.t('page.' + pageId);
     if (v && v !== 'page.' + pageId) return v;
   }
-  var fallback = { overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅', info: '关于', settings: '设置' };
+  var fallback = { overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅', ip: 'IP 管理', info: '关于', settings: '设置' };
   return fallback[pageId] || pageId;
 }
 function switchPage(pageId) {
@@ -25,6 +25,9 @@ function switchPage(pageId) {
     startOverviewTimer();
   } else {
     stopOverviewTimer();
+  }
+  if (pageId === 'ip') {
+    loadIpList();
   }
   if (pageId === 'accounts') {
     loadOutlookAccountsList();
@@ -264,6 +267,8 @@ function updateUIStatus(running) {
 function openNewTaskModal() {
   // 重置并加载域名列表、恢复上次选中的邮箱提供商
   if (typeof initEmailProviderSelection === 'function') initEmailProviderSelection();
+  // 刷新代理下拉，保证新增代理后选项最新
+  if (typeof loadProxyOptions === 'function') loadProxyOptions();
   var m = document.getElementById('new-task-modal');
   if (m) m.classList.add('show');
 }
@@ -278,7 +283,8 @@ function getFormConfig() {
     count: parseInt(document.getElementById('cfg-count').value) || 1,
     concurrency: parseInt(document.getElementById('cfg-concurrency').value) || 1,
     delay: parseInt(document.getElementById('cfg-delay').value) || 3,
-    emailProvider: selectedEmailProvider || 'outlook'
+    emailProvider: selectedEmailProvider || 'outlook',
+    proxy: ((document.getElementById('cfg-proxy-select') || {}).dataset || {}).value || ''
   };
 
   // 如果选择了 MoeMail，添加域名信息和前缀配置
@@ -442,6 +448,7 @@ async function loadConfig() {
   loadDataDir();
   loadResultOutputDir();
   loadProxy();
+  if (typeof loadProxyOptions === 'function') loadProxyOptions();
   if (typeof loadProxyPool === 'function') loadProxyPool();
   startOverviewTimer();
   console.log('[启动] 初始化完成');

@@ -186,7 +186,7 @@ iframe::-webkit-scrollbar {
   letter-spacing: -0.5px; 
 }
 
-.form-input, .form-select {
+.form-input {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   color: var(--text);
@@ -199,7 +199,7 @@ iframe::-webkit-scrollbar {
   transition: all 0.15s;
 }
 
-.form-input:focus, .form-select:focus { 
+.form-input:focus {
   border-color: var(--accent); 
   box-shadow: 0 0 0 3px rgba(0,0,0,0.05); 
   background: var(--bg-card);

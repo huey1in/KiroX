@@ -282,8 +282,7 @@ tbody td a:hover {
   color: #fff;
 }
 
-[data-theme="dark"] .form-input:focus,
-[data-theme="dark"] .form-select:focus {
+[data-theme="dark"] .form-input:focus {
   box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
 }
 

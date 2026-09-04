@@ -12,11 +12,12 @@
       nav: {
         overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅',
         about: '关于', settings: '设置', toggleTheme: '切换主题', checkUpdate: '检查更新',
-        language: '语言：中文 (点击切换)'
+        language: '语言：中文 (点击切换)',
+        ip: 'IP 管理'
       },
       page: {
         overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池', subscription: '订阅',
-        settings: '设置'
+        settings: '设置', ip: 'IP 管理'
       },
       common: {
         loading: '加载中...', loadFailed: '加载失败', noData: '暂无数据',
@@ -213,11 +214,12 @@
       nav: {
         overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails', subscription: 'Subscription',
         about: 'About', settings: 'Settings', toggleTheme: 'Toggle theme', checkUpdate: 'Check update',
-        language: 'Language: English (click to switch)'
+        language: 'Language: English (click to switch)',
+        ip: 'IPs'
       },
       page: {
         overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails', subscription: 'Subscription',
-        settings: 'Settings'
+        settings: 'Settings', ip: 'IPs'
       },
       common: {
         loading: 'Loading...', loadFailed: 'Failed to load', noData: 'No data',
@@ -414,11 +416,12 @@
       nav: {
         overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール', subscription: 'サブスク',
         about: '情報', settings: '設定', toggleTheme: 'テーマ切替', checkUpdate: '更新確認',
-        language: '言語：日本語 (クリックで切替)'
+        language: '言語：日本語 (クリックで切替)',
+        ip: 'IP管理'
       },
       page: {
         overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール', subscription: 'サブスク',
-        settings: '設定'
+        settings: '設定', ip: 'IP管理'
       },
       common: {
         loading: '読み込み中...', loadFailed: '読み込み失敗', noData: 'データなし',

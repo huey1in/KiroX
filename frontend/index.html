@@ -165,6 +165,12 @@
       <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
       <span class="nav-tooltip" data-i18n="nav.subscription">订阅</span>
     </div>
+    <!-- IP 管理 -->
+    <div class="nav-item" onclick="switchPage('ip')" data-page="ip">
+      <div class="nav-dot"></div>
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><line x1="10" y1="7" x2="14" y2="7"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="17" y1="10" x2="17" y2="14"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+      <span class="nav-tooltip" data-i18n="nav.ip">IP 管理</span>
+    </div>
   </div>
 
   <div class="sidebar-bottom">
@@ -412,19 +418,6 @@
               </div>
             </div>
 
-            <div class="settings-item">
-              <div class="settings-item-main">
-                <div class="settings-item-title" data-i18n="settings.proxy">代理</div>
-                <div class="settings-item-desc" data-i18n="settings.proxyDesc">留空=直连。支持 http/https/socks5 完整 URL，也支持 host:port:user:pass、host:port、user:pass@host:port 等简写。添加多条后将按权重随机分配。</div>
-              </div>
-              <div class="settings-item-action">
-                <div style="display:flex;flex-direction:column;gap:8px;width:100%;">
-                  <div id="proxy-pool-list"></div>
-                  <button type="button" onclick="addEmptyProxyRow()" class="btn btn-secondary btn-sm" style="align-self:flex-start;">+ 添加代理</button>
-                  <div id="proxy-detect-card" style="display:none;"></div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -583,6 +576,16 @@
             </div>
           </div>
           <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">代理</label>
+            <div class="custom-dropdown" id="cfg-proxy-select" style="height:38px;">
+              <div class="dropdown-selected" onclick="toggleDropdown(this)">
+                <span class="dropdown-selected-text">直连</span>
+                <span class="dropdown-arrow"></span>
+              </div>
+              <div class="dropdown-options" id="cfg-proxy-select-options"></div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:16px;">
             <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;display:block;" data-i18n="register.emailProvider">邮箱提供商</label>
             <div style="display:flex;gap:8px;">
               <label style="order:2;flex:1;display:flex;align-items:center;justify-content:center;padding:10px;border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all 0.2s;" onclick="selectEmailProvider('moemail')">
@@ -684,6 +687,105 @@
               <span data-i18n="register.startBtn">开始注册</span>
             </button>
           </div>
+      </div>
+    </div>
+
+    <!-- ===== Page: IP 管理 ===== -->
+    <div class="page" id="page-ip">
+      <div class="page-scroll" style="padding:28px 32px 40px;max-width:1100px;margin:0 auto;">
+
+        <!-- 工具栏 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+            <h3 style="font-size:16px;font-weight:700;" data-i18n="page.ip">IP 管理</h3>
+            <button type="button" onclick="openIpFormModal()" class="btn btn-dark btn-sm" style="margin-left:auto;">+ 添加代理</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <input type="text" id="ip-search" placeholder="搜索名称 / 地址" class="form-input" style="flex:1;min-width:180px;height:36px;" oninput="onIpSearch()">
+            <div class="custom-dropdown" id="ip-filter-protocol" style="width:130px;" data-onchange="onIpFilterProtocol">
+              <div class="dropdown-selected" onclick="toggleDropdown(this)">
+                <span class="dropdown-selected-text">全部协议</span>
+                <span class="dropdown-arrow"></span>
+              </div>
+              <div class="dropdown-options">
+                <div class="dropdown-option" data-value="">全部协议</div>
+                <div class="dropdown-option" data-value="http">http</div>
+                <div class="dropdown-option" data-value="https">https</div>
+                <div class="dropdown-option" data-value="socks5">socks5</div>
+                <div class="dropdown-option" data-value="socks5h">socks5h</div>
+              </div>
+            </div>
+            <div class="custom-dropdown" id="ip-filter-status" style="width:110px;" data-onchange="onIpFilterStatus">
+              <div class="dropdown-selected" onclick="toggleDropdown(this)">
+                <span class="dropdown-selected-text">全部状态</span>
+                <span class="dropdown-arrow"></span>
+              </div>
+              <div class="dropdown-options">
+                <div class="dropdown-option" data-value="">全部状态</div>
+                <div class="dropdown-option" data-value="enabled">启用</div>
+                <div class="dropdown-option" data-value="disabled">停用</div>
+              </div>
+            </div>
+            <button type="button" onclick="loadIpList()" class="btn btn-secondary btn-sm">刷新</button>
+            <button type="button" onclick="batchTestIp()" class="btn btn-secondary btn-sm">批量测试</button>
+            <button type="button" onclick="batchDeleteIp()" class="btn btn-secondary btn-sm" style="color:var(--danger);">批量删除</button>
+          </div>
+        </div>
+
+        <!-- 数据表 -->
+        <div class="card" style="overflow-x:auto;">
+          <div id="ip-list"></div>
+          <div id="ip-empty" style="display:none;text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">暂无代理，点击右上角添加。</div>
+        </div>
+
+      </div>
+
+      <!-- 新增/编辑代理模态框 -->
+      <div id="ip-form-modal" class="modal-overlay" style="z-index:1200;">
+        <div class="modal-content" style="max-width:640px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="ip-form-title" style="font-size:16px;font-weight:700;">添加代理</h3>
+            <button onclick="closeIpFormModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-bottom:14px;">
+            <button type="button" id="ip-tab-single" class="btn btn-dark btn-sm" onclick="switchIpFormTab('single')">单个添加</button>
+            <button type="button" id="ip-tab-batch" class="btn btn-secondary btn-sm" onclick="switchIpFormTab('batch')">批量添加</button>
+          </div>
+
+          <div id="ip-form-single" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">名称</label><input id="ip-form-name" class="form-input" style="height:38px;"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">协议</label>
+              <div class="custom-dropdown" id="ip-form-protocol" data-onchange="">
+                <div class="dropdown-selected" onclick="toggleDropdown(this)">
+                  <span class="dropdown-selected-text">http</span>
+                  <span class="dropdown-arrow"></span>
+                </div>
+                <div class="dropdown-options">
+                  <div class="dropdown-option" data-value="http">http</div>
+                  <div class="dropdown-option" data-value="https">https</div>
+                  <div class="dropdown-option" data-value="socks5">socks5</div>
+                  <div class="dropdown-option" data-value="socks5h">socks5h</div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">主机</label><input id="ip-form-host" class="form-input" style="height:38px;" placeholder="host / IPv4 / IPv6"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">端口</label><input id="ip-form-port" type="number" class="form-input" style="height:38px;" value="8080"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">用户名</label><input id="ip-form-user" class="form-input" style="height:38px;"></div>
+            <div class="form-group" style="margin-bottom:0;"><label style="display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-secondary);">密码</label><input id="ip-form-pass" type="password" class="form-input" style="height:38px;"></div>
+            <div class="form-group" style="margin-bottom:0;display:flex;align-items:center;gap:8px;"><label style="margin:0;font-size:12px;font-weight:600;color:var(--text-secondary);">启用</label><input id="ip-form-enabled" type="checkbox" checked></div>
+          </div>
+
+          <div id="ip-form-batch" style="display:none;">
+            <textarea id="ip-form-batch-text" class="form-input" style="height:140px;font-family:var(--font-mono);font-size:12px;resize:vertical;" placeholder="每行一个代理，格式：scheme://[user:pass@]host:port"></textarea>
+            <div id="ip-batch-status" style="font-size:12px;color:var(--text-muted);margin-top:8px;"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button type="button" onclick="closeIpFormModal()" class="btn btn-secondary">取消</button>
+            <button type="button" onclick="submitIpForm()" class="btn btn-dark">保存</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -965,7 +1067,9 @@
 <script src="js/overview.js"></script>
 <script src="js/subscription.js"></script>
 <script src="js/proxy_pool.js"></script>
+<script src="js/dropdown.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+<script src="js/ip.js"></script>
 </body>
 </html>
