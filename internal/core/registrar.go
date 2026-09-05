@@ -62,13 +62,13 @@ type Registrar struct {
 	OutlookMailCount int
 
 	// 遥测/指纹计时: 记录各页面开始时间, 用于生成真实 timeSpentOnPage 与 D2C/katal 上报
-	SigninPageStartedAt         time.Time
-	SigninPageURL               string
-	LastD2CFetchDuration        time.Duration
-	ProfilePageStartedAt        time.Time
-	ProfileEmailStartedAt       time.Time
+	SigninPageStartedAt          time.Time
+	SigninPageURL                string
+	LastD2CFetchDuration         time.Duration
+	ProfilePageStartedAt         time.Time
+	ProfileEmailStartedAt        time.Time
 	ProfileVerificationStartedAt time.Time
-	PasswordPageStartedAt       time.Time
+	PasswordPageStartedAt        time.Time
 }
 
 // NewRegistrar 创建注册器
@@ -114,6 +114,28 @@ func retryBackoff(attempt int) time.Duration {
 	return base + jitter
 }
 
+func (r *Registrar) context() context.Context {
+	if r.Ctx != nil {
+		return r.Ctx
+	}
+	return context.Background()
+}
+
+func (r *Registrar) wait(delay time.Duration) error {
+	ctx := r.context()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return ctx.Err()
+	}
+}
+
 // DoPost 发送 POST 请求（带自动重试）
 func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]string) ([]byte, map[string][]string, error) {
 	const maxRetries = 2
@@ -124,16 +146,21 @@ func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]s
 	}
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if err := r.context().Err(); err != nil {
+			return nil, nil, err
+		}
 		if attempt > 0 {
 			log.Printf("[HTTP] POST 重试 (%d/%d), 等待退避...", attempt, maxRetries)
-			time.Sleep(retryBackoff(attempt))
+			if err := r.wait(retryBackoff(attempt)); err != nil {
+				return nil, nil, err
+			}
 		}
 
 		var body io.Reader
 		if payloadBytes != nil {
 			body = bytes.NewReader(payloadBytes)
 		}
-		req, err := http.NewRequest("POST", url, body)
+		req, err := http.NewRequestWithContext(r.context(), "POST", url, body)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -147,8 +174,8 @@ func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]s
 			return nil, nil, err
 		}
 		defer resp.Body.Close()
-		data, _ := io.ReadAll(resp.Body)
-		return data, resp.Header, nil
+		data, err := io.ReadAll(resp.Body)
+		return data, resp.Header, err
 	}
 	return nil, nil, lastErr
 }
@@ -159,12 +186,17 @@ func (r *Registrar) DoGet(url string, headers map[string]string) ([]byte, int, m
 	var lastErr error
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if err := r.context().Err(); err != nil {
+			return nil, 0, nil, err
+		}
 		if attempt > 0 {
 			log.Printf("[HTTP] GET 重试 (%d/%d), 等待退避...", attempt, maxRetries)
-			time.Sleep(retryBackoff(attempt))
+			if err := r.wait(retryBackoff(attempt)); err != nil {
+				return nil, 0, nil, err
+			}
 		}
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequestWithContext(r.context(), "GET", url, nil)
 		if err != nil {
 			return nil, 0, nil, err
 		}
@@ -178,16 +210,19 @@ func (r *Registrar) DoGet(url string, headers map[string]string) ([]byte, int, m
 			return nil, 0, nil, err
 		}
 		defer resp.Body.Close()
-		data, _ := io.ReadAll(resp.Body)
-		return data, resp.StatusCode, resp.Header, nil
+		data, err := io.ReadAll(resp.Body)
+		return data, resp.StatusCode, resp.Header, err
 	}
 	return nil, 0, nil, lastErr
 }
 
 // DoPostBodyRaw 发送 POST 请求 (原始字符串 body, 不做 JSON 序列化)
 func (r *Registrar) DoPostBodyRaw(url string, rawBody string, headers map[string]string) ([]byte, int, map[string][]string, error) {
+	if err := r.context().Err(); err != nil {
+		return nil, 0, nil, err
+	}
 	body := strings.NewReader(rawBody)
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequestWithContext(r.context(), "POST", url, body)
 	if err != nil {
 		return nil, 0, nil, err
 	}
@@ -197,8 +232,8 @@ func (r *Registrar) DoPostBodyRaw(url string, rawBody string, headers map[string
 		return nil, 0, nil, err
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	return data, resp.StatusCode, resp.Header, nil
+	data, err := io.ReadAll(resp.Body)
+	return data, resp.StatusCode, resp.Header, err
 }
 
 // DoPostRaw 发送 POST 请求，返回状态码（带自动重试）
@@ -211,16 +246,21 @@ func (r *Registrar) DoPostRaw(url string, payload interface{}, headers map[strin
 	}
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if err := r.context().Err(); err != nil {
+			return nil, 0, nil, err
+		}
 		if attempt > 0 {
 			log.Printf("[HTTP] POST 重试 (%d/%d), 等待退避...", attempt, maxRetries)
-			time.Sleep(retryBackoff(attempt))
+			if err := r.wait(retryBackoff(attempt)); err != nil {
+				return nil, 0, nil, err
+			}
 		}
 
 		var body io.Reader
 		if payloadBytes != nil {
 			body = bytes.NewReader(payloadBytes)
 		}
-		req, err := http.NewRequest("POST", url, body)
+		req, err := http.NewRequestWithContext(r.context(), "POST", url, body)
 		if err != nil {
 			return nil, 0, nil, err
 		}
@@ -234,8 +274,8 @@ func (r *Registrar) DoPostRaw(url string, payload interface{}, headers map[strin
 			return nil, 0, nil, err
 		}
 		defer resp.Body.Close()
-		data, _ := io.ReadAll(resp.Body)
-		return data, resp.StatusCode, resp.Header, nil
+		data, err := io.ReadAll(resp.Body)
+		return data, resp.StatusCode, resp.Header, err
 	}
 	return nil, 0, nil, lastErr
 }

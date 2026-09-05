@@ -65,15 +65,11 @@ function _badgeOk(t) { return '<span style="padding:2px 8px;border-radius:10px;f
 function _badgeOff(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(107,114,128,0.15);color:var(--text-muted);">' + t + '</span>'; }
 function _badgeErr(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.15);color:#ef4444;">' + t + '</span>'; }
 
-// 代理类型徽章：机房(橙) / 移动(蓝) / 家宽(绿)
-function _badgeType(t) {
-  var map = {
-    'datacenter': ['#f59e0b', 'rgba(245,158,11,0.15)'],
-    'mobile': ['#3b82f6', 'rgba(59,130,246,0.15)'],
-    'residential': ['#10b981', 'rgba(16,185,129,0.15)']
-  };
-  var c = map[t] || ['var(--text-muted)', 'rgba(107,114,128,0.15)'];
-  return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + c[1] + ';color:' + c[0] + ';">' + t + '</span>';
+// 代理质量色阶：家宽(最佳) / 移动(中等) / 机房(较差)
+function _badgeType(type, label) {
+  var knownTypes = { residential: true, mobile: true, datacenter: true };
+  var typeClass = knownTypes[type] ? type : 'unknown';
+  return '<span class="ip-type-badge ip-type-' + typeClass + '">' + _ipEscape(label || type) + '</span>';
 }
 
 // 国旗图标：用与侧边栏语言切换一致的 flagcdn 图标（如 CN -> https://flagcdn.com/w40/cn.png）
@@ -220,7 +216,7 @@ function renderIpRow(p) {
   }
 
   // 类型列：机房 / 移动 / 家宽（探测中骨架屏）
-  var typeCell = probing ? sk : (p.probeOk && p.probeType ? _badgeType(_ipT('ip.type.' + p.probeType, p.probeType)) : '—');
+  var typeCell = probing ? sk : (p.probeOk && p.probeType ? _badgeType(p.probeType, _ipT('ip.type.' + p.probeType, p.probeType)) : '—');
 
   // 位置列：国旗 + 国家（只显示国家，不显示城市等详细地址）
   var loc = probing ? sk : (p.probeOk ? (flagImg(p.probeCountryCode) + ' ' + _ipEscape(p.probeCountry || '')) : '—');
@@ -318,7 +314,7 @@ function showIpResultModal(p, res) {
       ? '<span style="font-family:var(--font-mono);">' + _ipEscape(p.probeIp) + '</span>'
       : '<span class="ip-skel" style="width:70%;"></span>'));
     known.push(row(_ipT('ip.colType', '类型'), p.probeType
-      ? _badgeType(_ipT('ip.type.' + p.probeType, p.probeType))
+      ? _badgeType(p.probeType, _ipT('ip.type.' + p.probeType, p.probeType))
       : '<span class="ip-skel" style="width:60px;"></span>'));
     known.push(row(_ipT('ip.resultCountry', '国家'), p.probeCountryCode
       ? (flagImg(p.probeCountryCode) + ' ' + _ipEscape(p.probeCountry || '—'))
@@ -347,7 +343,7 @@ function showIpResultModal(p, res) {
   if (ok) {
     html += row(_ipT('ip.resultScheme', '协议'), _ipEscape(res.scheme || p._scheme || '—'));
     html += row(_ipT('ip.resultIP', '出口 IP'), '<span style="font-family:var(--font-mono);">' + _ipEscape(res.ip || p.probeIp || '—') + '</span>');
-    html += row(_ipT('ip.colType', '类型'), _badgeType(typeLabel));
+    html += row(_ipT('ip.colType', '类型'), _badgeType(p.probeType, typeLabel));
     html += row(_ipT('ip.resultCountry', '国家'), flagImg(res.countryCode || p.probeCountryCode) + ' ' + _ipEscape(res.country || p.probeCountry || '—'));
     html += row(_ipT('ip.resultRegion', '地区'), _ipEscape(res.region || p.probeRegion || '—'));
     html += row(_ipT('ip.resultCity', '城市'), _ipEscape(res.city || p.probeCity || '—'));

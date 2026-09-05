@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">KiroX - Coral Wink</title>
+  <desc id="desc">A playful white ghost with a sweeping tail and a winking eye on a coral app tile.</desc>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#F58E87"/>
+  <path d="M51 397C168 449 359 435 466 361V387C466 432 430 468 384 468H128C92 468 62 438 51 409Z" fill="#DE716F" opacity=".4"/>
+  <g transform="rotate(7 256 256)">
+    <path d="M384 249C388 176 351 116 280 104C210 92 155 134 141 202C132 243 141 282 119 306C106 320 91 322 85 334C75 354 93 372 121 370C124 395 151 404 177 391C189 422 223 433 250 412C272 440 315 431 339 403C373 365 384 309 384 249Z" fill="#C45F67"/>
+    <path d="M381 233C385 160 348 100 277 88C207 76 152 118 138 186C129 227 138 266 116 290C103 304 88 306 82 318C72 338 90 356 118 354C121 379 148 388 174 375C186 406 220 417 247 396C269 424 312 415 336 387C370 349 381 293 381 233Z" fill="#FFFFFF" stroke="#653640" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M152 303C173 339 206 351 239 344C279 357 328 337 366 291C359 335 349 362 331 382C309 408 274 413 248 386C221 408 196 400 178 364C151 378 133 373 124 344C109 348 98 345 94 336C116 340 137 329 152 303Z" fill="#F6E9EC"/>
+    <path d="M177 169C194 139 221 122 250 120" fill="none" stroke="#FFF5F5" stroke-width="12" stroke-linecap="round"/>
+    <ellipse cx="230" cy="210" rx="21" ry="29" fill="#56303C"/>
+    <ellipse cx="223" cy="200" rx="7" ry="9" fill="#FFFFFF"/>
+    <path d="m319 194-22 17 24 7" fill="none" stroke="#56303C" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <ellipse cx="194" cy="247" rx="23" ry="13" fill="#F6A5AF"/>
+    <ellipse cx="334" cy="247" rx="21" ry="12" fill="#F6A5AF"/>
+    <path d="M254 249Q270 265 287 248" fill="none" stroke="#56303C" stroke-width="7" stroke-linecap="round"/>
+    <path d="M379 116v24m-12-12h24" stroke="#FFF0BB" stroke-width="9" stroke-linecap="round"/>
+  </g>
+</svg>

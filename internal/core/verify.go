@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 func (r *Registrar) VerifyAlive(awsToken map[string]interface{}) map[string]interface{} {
 	log.Println("[验活] 刷新 Token + 查用量 + 查模型")
 	client := httputil.NewTLSClient(r.Cfg.Proxy, true, r.Identity.ChromeVer)
+	defer client.CloseIdleConnections()
 
 	refreshToken, _ := awsToken["refreshToken"].(string)
 
@@ -25,16 +27,22 @@ func (r *Registrar) VerifyAlive(awsToken map[string]interface{}) map[string]inte
 		"refreshToken": refreshToken,
 		"grantType":    "refresh_token",
 	})
-	req, _ := fhttp.NewRequest("POST", "https://oidc.us-east-1.amazonaws.com/token",
+	req, err := fhttp.NewRequestWithContext(r.context(), "POST", "https://oidc.us-east-1.amazonaws.com/token",
 		bytes.NewReader(tokenBody))
+	if err != nil {
+		return map[string]interface{}{"alive": false, "error": err.Error()}
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("验活异常: %v", err)
 		return map[string]interface{}{"alive": false, "error": err.Error()}
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if err != nil {
+		return map[string]interface{}{"alive": false, "error": err.Error()}
+	}
 
 	if resp.StatusCode != 200 {
 		log.Printf("Token 刷新失败: %d", resp.StatusCode)
@@ -48,7 +56,7 @@ func (r *Registrar) VerifyAlive(awsToken map[string]interface{}) map[string]inte
 	log.Printf("Token 刷新成功, expiresIn=%ds", int(expiresIn))
 
 	usageURL := "https://q.us-east-1.amazonaws.com/getUsageLimits?origin=AI_EDITOR&resourceType=AGENTIC_REQUEST&isEmailRequired=true"
-	usageRes := queryGetEndpoint(client, access, usageURL)
+	usageRes := queryGetEndpoint(r.context(), client, access, usageURL)
 	if usageRes.suspended {
 		return map[string]interface{}{"alive": false, "suspended": true, "error": "suspended"}
 	}
@@ -56,7 +64,7 @@ func (r *Registrar) VerifyAlive(awsToken map[string]interface{}) map[string]inte
 		return map[string]interface{}{"alive": false, "error": "usage query failed"}
 	}
 
-	modelRes := queryGetEndpoint(client, access, "https://q.us-east-1.amazonaws.com/ListAvailableModels?origin=AI_EDITOR")
+	modelRes := queryGetEndpoint(r.context(), client, access, "https://q.us-east-1.amazonaws.com/ListAvailableModels?origin=AI_EDITOR")
 	if modelRes.suspended {
 		return map[string]interface{}{"alive": false, "suspended": true, "error": "suspended"}
 	}
@@ -67,7 +75,7 @@ func (r *Registrar) VerifyAlive(awsToken map[string]interface{}) map[string]inte
 		"refreshToken": refreshToken,
 		"grantType":    "refresh_token",
 	})
-	kiroRes := queryPostEndpoint(client, "https://prod.us-east-1.auth.desktop.kiro.dev/refreshToken", kiroRefreshBody)
+	kiroRes := queryPostEndpoint(r.context(), client, "https://prod.us-east-1.auth.desktop.kiro.dev/refreshToken", kiroRefreshBody)
 	if kiroRes.suspended {
 		return map[string]interface{}{"alive": false, "suspended": true, "error": "suspended"}
 	}
@@ -110,8 +118,13 @@ func endpointLabel(url string) string {
 	}
 }
 
-func queryGetEndpoint(client interface{ Do(req *fhttp.Request) (*fhttp.Response, error) }, access, url string) endpointResult {
-	req, _ := fhttp.NewRequest("GET", url, nil)
+func queryGetEndpoint(ctx context.Context, client interface {
+	Do(req *fhttp.Request) (*fhttp.Response, error)
+}, access, url string) endpointResult {
+	req, err := fhttp.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return endpointResult{}
+	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+access)
 	req.Header.Set("User-Agent", "aws-sdk-js/1.0.18 ua/2.1 os/windows lang/js md/nodejs#20.16.0 api/codewhispererstreaming#1.0.18 m/E KiroIDE-0.6.18")
@@ -121,13 +134,21 @@ func queryGetEndpoint(client interface{ Do(req *fhttp.Request) (*fhttp.Response,
 		log.Printf("端点查询异常 [%s]: %s", endpointLabel(url), scrubURLs(err.Error()))
 		return endpointResult{}
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if err != nil {
+		return endpointResult{}
+	}
 	return checkEndpointResponse(url, resp.StatusCode, body)
 }
 
-func queryPostEndpoint(client interface{ Do(req *fhttp.Request) (*fhttp.Response, error) }, url string, payload []byte) endpointResult {
-	req, _ := fhttp.NewRequest("POST", url, bytes.NewReader(payload))
+func queryPostEndpoint(ctx context.Context, client interface {
+	Do(req *fhttp.Request) (*fhttp.Response, error)
+}, url string, payload []byte) endpointResult {
+	req, err := fhttp.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
+	if err != nil {
+		return endpointResult{}
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
@@ -135,8 +156,11 @@ func queryPostEndpoint(client interface{ Do(req *fhttp.Request) (*fhttp.Response
 		log.Printf("端点查询异常 [%s]: %s", endpointLabel(url), scrubURLs(err.Error()))
 		return endpointResult{}
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if err != nil {
+		return endpointResult{}
+	}
 	return checkEndpointResponse(url, resp.StatusCode, body)
 }
 
@@ -184,5 +208,3 @@ func (r *Registrar) parseUsage(body []byte) map[string]interface{} {
 		"credit_used": totalUsed, "credit_limit": totalLimit,
 	}
 }
-
-

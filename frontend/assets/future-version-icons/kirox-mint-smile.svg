@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">KiroX - Mint Smile</title>
+  <desc id="desc">A smiling white ghost with rosy cheeks and a soft scalloped tail on a mint green rounded square.</desc>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#69DCC5"/>
+  <path d="M16 360C126 405 366 445 496 343V384C496 445.856 445.856 496 384 496H128C66.144 496 16 445.856 16 384V360Z" fill="#54CDB5"/>
+  <ellipse cx="262" cy="419" rx="129" ry="22" fill="#32A88E" fill-opacity=".24"/>
+  <path d="M256 104C328 104 382 157 382 230C382 292 369 346 343 382C323 410 301 426 280 422C263 419 253 406 247 390C224 410 194 422 172 416C147 410 136 391 142 366C120 375 104 371 101 356C97 343 109 327 118 303C128 282 125 255 129 224C134 152 184 104 256 104Z" fill="#279E86" fill-opacity=".2"/>
+  <path d="M256 94C328 94 382 147 382 220C382 282 369 336 343 372C323 400 301 416 280 412C263 409 253 396 247 380C224 400 194 412 172 406C147 400 136 381 142 356C120 365 104 361 101 346C97 333 109 317 118 293C128 272 125 245 129 214C134 142 184 94 256 94Z" fill="#FEFFFC"/>
+  <path d="M355 163C373 196 370 253 357 294C345 333 326 373 292 389C275 397 260 389 247 380C253 396 263 409 280 412C301 416 323 400 343 372C369 336 382 282 382 220C382 198 375 178 355 163Z" fill="#DDF4E9"/>
+  <path d="M157 189C168 151 196 129 229 122" stroke="white" stroke-width="13" stroke-linecap="round"/>
+  <ellipse cx="204" cy="208" rx="16" ry="24" fill="#193B37"/>
+  <ellipse cx="276" cy="208" rx="16" ry="24" fill="#193B37"/>
+  <ellipse cx="199" cy="200" rx="4.5" ry="6" fill="white"/>
+  <ellipse cx="271" cy="200" rx="4.5" ry="6" fill="white"/>
+  <ellipse cx="174" cy="242" rx="19" ry="10" fill="#F8ADA8"/>
+  <ellipse cx="306" cy="242" rx="19" ry="10" fill="#F8ADA8"/>
+  <path d="M227 246C232 257 245 259 253 247" stroke="#193B37" stroke-width="7" stroke-linecap="round"/>
+</svg>

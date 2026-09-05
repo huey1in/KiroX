@@ -155,14 +155,7 @@ func startTask(req StartTaskRequest) map[string]interface{} {
 	}
 
 	// 初始化状态
-	Manager.running = true
-	Manager.stopCh = make(chan struct{})
-	Manager.total = req.Count
-	Manager.completed = 0
-	Manager.success = 0
-	Manager.failed = 0
-	Manager.results = nil
-	Manager.startTime = time.Now()
+	batch := Manager.beginBatchLocked(req.Count)
 	Manager.mu.Unlock()
 
 	// 清空日志
@@ -171,52 +164,27 @@ func startTask(req StartTaskRequest) map[string]interface{} {
 	Manager.logsMu.Unlock()
 
 	// 后台执行
-	go runBatch(req, emailProvider, outlookAccounts, icloudAccounts)
+	go runBatch(batch, req, emailProvider, outlookAccounts, icloudAccounts)
 
 	return map[string]interface{}{"status": "started"}
 }
 
 // StopTask 停止任务（强制取消所有 HTTP 请求）
 func StopTask(force bool) map[string]interface{} {
-	Manager.mu.Lock()
-	if !Manager.running {
-		Manager.mu.Unlock()
+	if !Manager.stopBatch() {
 		return map[string]interface{}{"error": "没有正在运行的任务"}
 	}
-
-	select {
-	case <-Manager.stopCh:
-	default:
-		close(Manager.stopCh)
-	}
-
-	// 强制取消所有进行中的 HTTP 请求
-	if Manager.cancelFunc != nil {
-		Manager.cancelFunc()
-	}
-
-	Manager.running = false
-	log.Println("[Kiro] 任务已强制停止，所有请求已取消")
-	Manager.mu.Unlock()
+	log.Println("[Kiro] 已请求停止任务，正在取消请求并等待任务退出")
 	return map[string]interface{}{"status": "force_stopped"}
 }
 
 // runBatch 执行批量注册
-func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []email.OutlookAccount, icloudAccounts []email.ICloudAccount) {
-	// 创建可取消的 context，停止时立即中断所有 HTTP 请求
-	taskCtx, taskCancel := context.WithCancel(context.Background())
-	defer taskCancel()
-
-	Manager.mu.Lock()
-	Manager.cancelFunc = taskCancel
-	Manager.mu.Unlock()
-
-	defer func() {
-		Manager.mu.Lock()
-		Manager.running = false
-		Manager.cancelFunc = nil
-		Manager.mu.Unlock()
-	}()
+func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outlookAccounts []email.OutlookAccount, icloudAccounts []email.ICloudAccount) {
+	taskCtx := batch.ctx
+	defer Manager.finishBatch(batch)
+	if taskCtx.Err() != nil {
+		return
+	}
 
 	outDir := req.OutputPath
 	if outDir == "" {
@@ -244,9 +212,6 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 
 		if len(moemailDomainPool) == 0 || len(moemailDomainConfigs) == 0 {
 			log.Println("[Kiro] MoeMail 域名或配置为空，任务终止")
-			Manager.mu.Lock()
-			Manager.running = false
-			Manager.mu.Unlock()
 			return
 		}
 
@@ -267,9 +232,6 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 
 		if len(cloudmailDomainPool) == 0 || len(cloudmailDomainConfigs) == 0 {
 			log.Println("[Kiro] cloud-mail 域名或配置为空，任务终止")
-			Manager.mu.Lock()
-			Manager.running = false
-			Manager.mu.Unlock()
 			return
 		}
 
@@ -350,10 +312,8 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 	// send-otp 400 熔断：任一任务遇到该错误即终止全部并发任务（只触发一次）
 	var otpKillOnce sync.Once
 	doTask := func(i int) {
-		select {
-		case <-Manager.stopCh:
+		if taskCtx.Err() != nil {
 			return
-		default:
 		}
 
 		taskCfg := *taskConfig
@@ -388,7 +348,7 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 			log.Printf("[Kiro][%d/%d] 创建 MoeMail 邮箱: %s@%s (配置: %s)", i+1, req.Count, emailName, domain, config.Name)
 
 			// 创建 MoeMail 提供商
-			provider, err := email.NewMoeMailProvider(config, emailName, expiryTime, domain)
+			provider, err := email.NewMoeMailProviderContext(taskCtx, config, emailName, expiryTime, domain)
 			if err != nil {
 				log.Printf("[Kiro][%d/%d] 生成 MoeMail 邮箱失败: %v", i+1, req.Count, err)
 				Manager.mu.Lock()
@@ -406,7 +366,7 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 
 			log.Printf("[Kiro][%d/%d] 创建 cloud-mail 邮箱: %s@%s (配置: %s)", i+1, req.Count, emailName, domain, config.Name)
 
-			provider, err := email.NewCloudMailProvider(config, emailName, domain)
+			provider, err := email.NewCloudMailProviderContext(taskCtx, config, emailName, domain)
 			if err != nil {
 				log.Printf("[Kiro][%d/%d] 生成 cloud-mail 邮箱失败: %v", i+1, req.Count, err)
 				Manager.mu.Lock()
@@ -422,7 +382,7 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 			currentEmail = provider.GetAddress()
 		} else if emailProvider == "mailnest" {
 			config := req.MailNestConfig
-			provider := email.NewMailNestProvider(config)
+			provider := email.NewMailNestProviderContext(taskCtx, config)
 			address, err := provider.GetAddress()
 			if err != nil {
 				log.Printf("[Kiro][%d/%d] 生成 mailenest 邮箱失败: %v", i+1, req.Count, err)
@@ -461,18 +421,14 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 	retryLoop:
 		for attempt := 0; attempt < maxAttempts; attempt++ {
 			// 每次重试前检查停止信号
-			select {
-			case <-Manager.stopCh:
+			if taskCtx.Err() != nil {
 				return
-			default:
 			}
 
 			if attempt > 0 {
 				log.Printf("[Kiro][%d/%d] 第 %d 次重试", i+1, req.Count, attempt)
-				select {
-				case <-Manager.stopCh:
+				if !waitTaskDelay(taskCtx, time.Duration(2+attempt)*time.Second) {
 					return
-				case <-time.After(time.Duration(2+attempt) * time.Second):
 				}
 			}
 
@@ -496,7 +452,7 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 			if isKillSwitchError(errorMsg) {
 				otpKillOnce.Do(func() {
 					log.Printf("[Kiro] ⚠️ 检测到熔断级错误(%s)，立即终止所有注册任务", errorMsg)
-					go StopTask(true)
+					batch.cancel()
 				})
 				break
 			}
@@ -608,39 +564,10 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 
 	if req.Concurrency > 1 {
 		log.Printf("[Kiro] 启动并发任务: %d 个任务，并发数 %d", req.Count, req.Concurrency)
-		sem := make(chan struct{}, req.Concurrency)
-		var wg sync.WaitGroup
-	loop:
-		for i := 0; i < req.Count; i++ {
-			select {
-			case <-Manager.stopCh:
-				break loop
-			default:
-			}
-			wg.Add(1)
-			sem <- struct{}{}
-			go func(idx int) {
-				defer wg.Done()
-				defer func() { <-sem }()
-				doTask(idx)
-			}(i)
-		}
-		wg.Wait()
 	} else {
 		log.Printf("[Kiro] 启动串行任务: %d 个任务", req.Count)
-		for i := 0; i < req.Count; i++ {
-			select {
-			case <-Manager.stopCh:
-				log.Println("任务已停止")
-				return
-			default:
-			}
-			doTask(i)
-			if req.Delay > 0 && i < req.Count-1 {
-				time.Sleep(time.Duration(req.Delay) * time.Second)
-			}
-		}
 	}
+	runTasks(taskCtx, req.Count, req.Concurrency, time.Duration(req.Delay)*time.Second, doTask)
 
 	totalDuration := time.Since(taskStartTime).Seconds()
 
@@ -686,6 +613,75 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 		log.Printf("[Kiro] 成功结果: %s", outDir)
 	}
 	log.Println("[Kiro] ═══════════════════════════════")
+}
+
+func waitTaskDelay(ctx context.Context, delay time.Duration) bool {
+	if ctx.Err() != nil {
+		return false
+	}
+	if delay <= 0 {
+		return true
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return ctx.Err() == nil
+	}
+}
+
+func runTasks(ctx context.Context, count, concurrency int, delay time.Duration, run func(int)) {
+	if count <= 0 || ctx.Err() != nil {
+		return
+	}
+	if concurrency <= 1 {
+		for i := 0; i < count; i++ {
+			if ctx.Err() != nil {
+				return
+			}
+			run(i)
+			if i < count-1 && !waitTaskDelay(ctx, delay) {
+				return
+			}
+		}
+		return
+	}
+
+	if concurrency > count {
+		concurrency = count
+	}
+	jobs := make(chan int)
+	var workers sync.WaitGroup
+	for i := 0; i < concurrency; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case index, ok := <-jobs:
+					if !ok || ctx.Err() != nil {
+						return
+					}
+					run(index)
+				}
+			}
+		}()
+	}
+
+dispatch:
+	for i := 0; i < count; i++ {
+		select {
+		case <-ctx.Done():
+			break dispatch
+		case jobs <- i:
+		}
+	}
+	close(jobs)
+	workers.Wait()
 }
 
 // classifyError 根据错误信息粗分类，用于统计展示。

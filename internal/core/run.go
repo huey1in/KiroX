@@ -20,6 +20,9 @@ func scrubURLs(s string) string {
 
 // formatError 将技术错误转换为用户友好的错误信息
 func (r *Registrar) formatError(step string, err error) string {
+	if r.ctxCancelled() {
+		return "任务已取消"
+	}
 	errMsg := scrubURLs(err.Error())
 
 	// 网络连接错误
@@ -110,7 +113,6 @@ func (r *Registrar) formatError(step string, err error) string {
 	return friendlyStep + "失败: " + errMsg
 }
 
-
 // ctxCancelled 检查 context 是否已取消
 func (r *Registrar) ctxCancelled() bool {
 	return r.Ctx != nil && r.Ctx.Err() != nil
@@ -118,14 +120,16 @@ func (r *Registrar) ctxCancelled() bool {
 
 // Run 执行完整注册流程
 func (r *Registrar) Run() map[string]interface{} {
+	if r.Client != nil {
+		defer r.Client.CloseIdleConnections()
+	}
 	// 入口处立即检查 context
 	if r.ctxCancelled() {
 		return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email}
 	}
 
-	// 预热 XXTEA 密钥 / TES 版本: 从 app.js 拉取最新配置 (与任务一致的 UA/TLS)。
-	// sync.Once 保证仅首次真正下载, 并发任务不串行阻塞。
-	crypto.RefreshAppJSConfig(r.Cfg.Proxy, r.Identity.ChromeVer, r.Identity.UA, r.Identity.SecUA)
+	// Overlap shared config loading with initialization; wait before fingerprint work.
+	crypto.WarmAppJSConfig(r.Cfg.Proxy, r.Identity.ChromeVer, r.Identity.UA, r.Identity.SecUA)
 
 	steps := []struct {
 		name string
@@ -146,6 +150,11 @@ func (r *Registrar) Run() map[string]interface{} {
 	for _, s := range steps {
 		if r.ctxCancelled() {
 			return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email}
+		}
+		if s.name == "Portal" {
+			if err := crypto.RefreshAppJSConfigContext(r.context(), r.Cfg.Proxy, r.Identity.ChromeVer, r.Identity.UA, r.Identity.SecUA); err != nil {
+				return map[string]interface{}{"status": "failed", "error": r.formatError(s.name, err), "email": r.Email}
+			}
 		}
 		if err := s.fn(); err != nil {
 			friendlyErr := r.formatError(s.name, err)
@@ -239,15 +248,8 @@ func (r *Registrar) Run() map[string]interface{} {
 		}
 	}
 
-	// 可中断的等待
-	if r.Ctx != nil {
-		select {
-		case <-r.Ctx.Done():
-			return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
-		case <-time.After(2 * time.Second):
-		}
-	} else {
-		time.Sleep(2 * time.Second)
+	if err := r.wait(2 * time.Second); err != nil {
+		return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
 	}
 
 	// 步骤13-15: 获取令牌（账号已注册，失败时重试而不是重新注册）
@@ -259,7 +261,9 @@ func (r *Registrar) Run() map[string]interface{} {
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			log.Printf("%s [13] 重试获取登录凭证 (%d/3)", prefix, attempt)
-			time.Sleep(2 * time.Second)
+			if err := r.wait(2 * time.Second); err != nil {
+				return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
+			}
 		}
 		var err error
 		awsToken, err = r.Step13SSOToken()
@@ -281,7 +285,9 @@ func (r *Registrar) Run() map[string]interface{} {
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			log.Printf("%s [14] 重试授权Kiro访问 (%d/3)", prefix, attempt)
-			time.Sleep(2 * time.Second)
+			if err := r.wait(2 * time.Second); err != nil {
+				return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
+			}
 		}
 		var err error
 		kiroCode, err = r.Step14KiroAuthorize()
@@ -299,7 +305,9 @@ func (r *Registrar) Run() map[string]interface{} {
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			log.Printf("%s [15] 重试获取访问令牌 (%d/3)", prefix, attempt)
-			time.Sleep(2 * time.Second)
+			if err := r.wait(2 * time.Second); err != nil {
+				return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
+			}
 		}
 		var err error
 		kiroTokens, err = r.Step15KiroExchange(kiroCode)
@@ -314,6 +322,9 @@ func (r *Registrar) Run() map[string]interface{} {
 	}
 
 	verify := r.VerifyAlive(awsToken)
+	if r.ctxCancelled() {
+		return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
+	}
 	if suspended, _ := verify["suspended"].(bool); suspended {
 		log.Printf("%s 账号已被封禁", prefix)
 		return map[string]interface{}{"status": "failed", "error": "suspended", "email": r.Email, "passwordSet": true}

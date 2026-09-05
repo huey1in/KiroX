@@ -23,7 +23,7 @@ type githubRelease struct {
 
 // GetCurrentVersion returns the version embedded in the application.
 func GetCurrentVersion() string {
-	return "v1.0.3"
+	return "v1.0.4"
 }
 
 func semverGreater(a, b string) bool {

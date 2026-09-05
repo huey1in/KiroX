@@ -126,6 +126,20 @@
   font-weight: 700;
   color: var(--text);
 }
+.db-detail-title-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.db-detail-title-icon svg {
+  width: 16px;
+  height: 16px;
+}
 .db-detail-actions {
   display: flex;
   align-items: center;

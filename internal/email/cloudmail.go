@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ type CloudMailConfig struct {
 
 // CloudMailClient cloud-mail HTTP 客户端
 type CloudMailClient struct {
+	ctx     context.Context
 	config  CloudMailConfig
 	client  *http.Client
 	token   string
@@ -54,7 +56,12 @@ type cloudMailResp struct {
 
 // NewCloudMailClient 创建客户端
 func NewCloudMailClient(config CloudMailConfig) *CloudMailClient {
+	return newCloudMailClient(context.Background(), config)
+}
+
+func newCloudMailClient(ctx context.Context, config CloudMailConfig) *CloudMailClient {
 	return &CloudMailClient{
+		ctx:    ctx,
 		config: config,
 		client: &http.Client{Timeout: 20 * time.Second},
 	}
@@ -67,7 +74,7 @@ func (c *CloudMailClient) GenToken() error {
 		"password": c.config.Password,
 	})
 	url := strings.TrimRight(c.config.URL, "/") + "/api/public/genToken"
-	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(c.ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -79,7 +86,10 @@ func (c *CloudMailClient) GenToken() error {
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("genToken 读取响应失败: %w", err)
+	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("genToken HTTP %d: %s", resp.StatusCode, string(respBody))
 	}
@@ -125,7 +135,7 @@ func (c *CloudMailClient) doAuthorized(path string, payload interface{}) ([]byte
 	doOnce := func() (*http.Response, []byte, error) {
 		body, _ := json.Marshal(payload)
 		url := strings.TrimRight(c.config.URL, "/") + path
-		req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+		req, err := http.NewRequestWithContext(c.ctx, "POST", url, bytes.NewReader(body))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -139,8 +149,8 @@ func (c *CloudMailClient) doAuthorized(path string, payload interface{}) ([]byte
 			return nil, nil, err
 		}
 		defer resp.Body.Close()
-		bs, _ := io.ReadAll(resp.Body)
-		return resp, bs, nil
+		bs, err := io.ReadAll(resp.Body)
+		return resp, bs, err
 	}
 
 	resp, respBody, err := doOnce()
@@ -228,7 +238,7 @@ func (c *CloudMailClient) GetWebsiteConfig() ([]string, error) {
 	url := strings.TrimRight(c.config.URL, "/") + "/api/setting/websiteConfig"
 
 	fetch := func(withToken bool) ([]string, error) {
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequestWithContext(c.ctx, "GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +255,10 @@ func (c *CloudMailClient) GetWebsiteConfig() ([]string, error) {
 			return nil, fmt.Errorf("websiteConfig 请求失败: %w", err)
 		}
 		defer resp.Body.Close()
-		bs, _ := io.ReadAll(resp.Body)
+		bs, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("websiteConfig 读取响应失败: %w", err)
+		}
 		if resp.StatusCode != 200 {
 			return nil, fmt.Errorf("websiteConfig HTTP %d: %s", resp.StatusCode, string(bs))
 		}
@@ -288,6 +301,9 @@ func (c *CloudMailClient) GetWebsiteConfig() ([]string, error) {
 			return d2, nil
 		}
 	}
+	if c.ctx.Err() != nil {
+		return nil, c.ctx.Err()
+	}
 	return domains, nil
 }
 
@@ -316,7 +332,11 @@ type CloudMailProvider struct {
 
 // NewCloudMailProvider 创建一个 cloud-mail 邮箱（执行 addUser）
 func NewCloudMailProvider(config CloudMailConfig, name, domain string) (*CloudMailProvider, error) {
-	client := NewCloudMailClient(config)
+	return NewCloudMailProviderContext(context.Background(), config, name, domain)
+}
+
+func NewCloudMailProviderContext(ctx context.Context, config CloudMailConfig, name, domain string) (*CloudMailProvider, error) {
+	client := newCloudMailClient(ctx, config)
 
 	if domain == "" {
 		if len(config.Domains) > 0 {
@@ -341,6 +361,9 @@ func NewCloudMailProvider(config CloudMailConfig, name, domain string) (*CloudMa
 
 	var baseline int64
 	msgs, err := client.EmailList(addr, 5)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		log.Printf("[CloudMail] 获取初始邮件失败: %v，基线设为 0", err)
 	} else {
@@ -364,6 +387,10 @@ func (p *CloudMailProvider) GetAddress() string { return p.address }
 
 // WaitForCode 轮询等待 6 位数字验证码
 func (p *CloudMailProvider) WaitForCode(timeout, interval int) (string, error) {
+	ctx := p.client.ctx
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if interval <= 0 {
 		interval = 3
 	}
@@ -375,12 +402,20 @@ func (p *CloudMailProvider) WaitForCode(timeout, interval int) (string, error) {
 	log.Printf("[CloudMail] 开始等待验证码 %s，基线 emailId=%d", p.address, p.initialMaxEmailID)
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		msgs, err := p.client.EmailList(p.address, 20)
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		if err != nil {
 			if attempt%5 == 0 {
 				log.Printf("[CloudMail] 获取邮件失败: %v，重试中...", err)
 			}
-			time.Sleep(time.Duration(interval) * time.Second)
+			if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+				return "", err
+			}
 			continue
 		}
 
@@ -405,7 +440,9 @@ func (p *CloudMailProvider) WaitForCode(timeout, interval int) (string, error) {
 		if attempt%5 == 0 {
 			log.Printf("[CloudMail] [%d/%d] 暂无新邮件...", attempt, maxRetries)
 		}
-		time.Sleep(time.Duration(interval) * time.Second)
+		if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+			return "", err
+		}
 	}
 
 	return "", fmt.Errorf("等待验证码超时 (%ds)", timeout)

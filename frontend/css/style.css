@@ -72,6 +72,41 @@ iframe::-webkit-scrollbar {
   100% { background-position: -200% 0; }
 }
 
+.ip-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.ip-type-residential {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.24);
+}
+.ip-type-mobile {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+.ip-type-datacenter {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.22);
+}
+.ip-type-unknown {
+  color: var(--text-muted);
+  background: rgba(107, 114, 128, 0.12);
+  border-color: rgba(107, 114, 128, 0.2);
+}
+[data-theme="dark"] .ip-type-residential { color: #34d399; }
+[data-theme="dark"] .ip-type-mobile { color: #fbbf24; }
+[data-theme="dark"] .ip-type-datacenter { color: #f87171; }
+
 /* ===== Status Dot ===== */
 .status-dot {
   display: inline-block;

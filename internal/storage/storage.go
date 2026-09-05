@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -358,56 +359,80 @@ func GetAccountsPath() string {
 // ===== Accounts 内存缓存（消除并发文件 I/O 瓶颈）=====
 
 var (
-	_accountsCache  []map[string]interface{}
-	_accountsMu     sync.RWMutex
-	_accountsLoaded bool
-	_accountsDirty  bool
-	_flushTimer     *time.Timer
+	_accountsCache   []map[string]interface{}
+	_accountsMu      sync.RWMutex
+	_accountsLoadMu  sync.Mutex
+	_accountsFlushMu sync.Mutex
+	_accountsLoaded  bool
+	_accountsDirty   bool
+	_accountsVersion uint64
+	_flushTimer      *time.Timer
 )
 
 func loadAccountsCache() {
-	if _accountsLoaded {
+	_accountsMu.RLock()
+	loaded := _accountsLoaded
+	_accountsMu.RUnlock()
+	if loaded {
 		return
 	}
-	data, err := loadJSON(GetAccountsPath())
-	if err != nil {
-		_accountsCache = []map[string]interface{}{}
-	} else {
-		_accountsCache = data
+	_accountsLoadMu.Lock()
+	defer _accountsLoadMu.Unlock()
+	_accountsMu.RLock()
+	loaded = _accountsLoaded
+	_accountsMu.RUnlock()
+	if loaded {
+		return
 	}
-	_accountsLoaded = true
+
+	data, err := LoadJSON(GetAccountsPath())
+	if err != nil {
+		data = []map[string]interface{}{}
+	}
+	_accountsMu.Lock()
+	// A replacement made while disk I/O was running already owns the cache.
+	if !_accountsLoaded {
+		_accountsCache = data
+		_accountsLoaded = true
+	}
+	_accountsMu.Unlock()
+}
+
+func cloneAccounts(accounts []map[string]interface{}) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(accounts))
+	for i, account := range accounts {
+		// Account fields are scalar values; copy each map to isolate readers.
+		result[i] = maps.Clone(account)
+	}
+	return result
 }
 
 // GetAccountsCached 获取账号列表（从内存缓存）
 func GetAccountsCached() []map[string]interface{} {
-	_accountsMu.Lock()
-	if !_accountsLoaded {
-		loadAccountsCache()
-	}
-	result := make([]map[string]interface{}, len(_accountsCache))
-	copy(result, _accountsCache)
-	_accountsMu.Unlock()
-	return result
+	loadAccountsCache()
+	_accountsMu.RLock()
+	defer _accountsMu.RUnlock()
+	return cloneAccounts(_accountsCache)
 }
 
 // SetAccountsCached 替换账号列表并触发异步刷盘
 func SetAccountsCached(accounts []map[string]interface{}) {
 	_accountsMu.Lock()
-	_accountsCache = accounts
+	_accountsCache = cloneAccounts(accounts)
 	_accountsLoaded = true
 	_accountsDirty = true
+	_accountsVersion++
 	scheduleFlush()
 	_accountsMu.Unlock()
 }
 
 // ModifyAccountsCached 原子修改账号列表（回调在锁内执行，高效无文件 I/O）
 func ModifyAccountsCached(fn func([]map[string]interface{}) []map[string]interface{}) {
+	loadAccountsCache()
 	_accountsMu.Lock()
-	if !_accountsLoaded {
-		loadAccountsCache()
-	}
 	_accountsCache = fn(_accountsCache)
 	_accountsDirty = true
+	_accountsVersion++
 	scheduleFlush()
 	_accountsMu.Unlock()
 }
@@ -420,19 +445,22 @@ func scheduleFlush() {
 }
 
 func flushAccountsToDisk() {
+	// Serialize snapshots as well as writes so an older flush cannot win last.
+	_accountsFlushMu.Lock()
+	defer _accountsFlushMu.Unlock()
 	_accountsMu.RLock()
 	if !_accountsDirty {
 		_accountsMu.RUnlock()
 		return
 	}
-	data := make([]map[string]interface{}, len(_accountsCache))
-	copy(data, _accountsCache)
+	data := cloneAccounts(_accountsCache)
+	version := _accountsVersion
 	_accountsMu.RUnlock()
 
 	err := SaveJSON(GetAccountsPath(), data)
 
 	_accountsMu.Lock()
-	if err == nil {
+	if err == nil && _accountsVersion == version {
 		_accountsDirty = false
 	}
 	_accountsMu.Unlock()
@@ -440,9 +468,12 @@ func flushAccountsToDisk() {
 
 // FlushAccountsSync 同步刷盘（程序退出前调用）
 func FlushAccountsSync() {
+	_accountsMu.Lock()
 	if _flushTimer != nil {
 		_flushTimer.Stop()
+		_flushTimer = nil
 	}
+	_accountsMu.Unlock()
 	flushAccountsToDisk()
 }
 

@@ -6,8 +6,25 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 	"time"
 )
+
+var accountsFileMutexes sync.Map
+
+func accountsFileMutex(path string) *sync.RWMutex {
+	if absolute, err := filepath.Abs(path); err == nil {
+		path = absolute
+	}
+	path = filepath.Clean(path)
+	if runtime.GOOS == "windows" {
+		path = strings.ToLower(path)
+	}
+	mu, _ := accountsFileMutexes.LoadOrStore(path, &sync.RWMutex{})
+	return mu.(*sync.RWMutex)
+}
 
 // SaveKiroSuccess 以明文 JSON 数组形式把成功注册的账号写入 outDir/accounts.json。
 // 同邮箱以最新一条覆盖；仅处理成功记录（失败/封号不落盘，只留在运行日志）。
@@ -43,6 +60,10 @@ func SaveKiroSuccess(result map[string]interface{}, outDir string) error {
 		return fmt.Errorf("创建输出目录失败: %w", err)
 	}
 	path := filepath.Join(outDir, "accounts.json")
+	// Keep the full read-merge-write operation exclusive for this output file.
+	mu := accountsFileMutex(path)
+	mu.Lock()
+	defer mu.Unlock()
 
 	existing, err := loadJSONArray(path)
 	if err != nil {
@@ -67,12 +88,19 @@ func SaveKiroSuccess(result map[string]interface{}, outDir string) error {
 
 // LoadAccounts 读取 outDir/accounts.json 中保存的账号列表（按写入顺序返回）。
 func LoadAccounts(outDir string) ([]map[string]interface{}, error) {
-	return loadJSONArray(filepath.Join(outDir, "accounts.json"))
+	path := filepath.Join(outDir, "accounts.json")
+	mu := accountsFileMutex(path)
+	mu.RLock()
+	defer mu.RUnlock()
+	return loadJSONArray(path)
 }
 
 // DeleteAccount 从 outDir/accounts.json 中移除指定邮箱的账号；返回是否实际删除。
 func DeleteAccount(outDir, email string) (bool, error) {
 	path := filepath.Join(outDir, "accounts.json")
+	mu := accountsFileMutex(path)
+	mu.Lock()
+	defer mu.Unlock()
 	existing, err := loadJSONArray(path)
 	if err != nil || len(existing) == 0 {
 		return false, err

@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ type MoeMailConfig struct {
 
 // MoeMailClient MoeMail API 客户端
 type MoeMailClient struct {
+	ctx    context.Context
 	config MoeMailConfig
 	client *http.Client
 }
@@ -60,7 +62,12 @@ type MoeMailMessagesResponse struct {
 
 // NewMoeMailClient 创建 MoeMail 客户端
 func NewMoeMailClient(config MoeMailConfig) *MoeMailClient {
+	return newMoeMailClient(context.Background(), config)
+}
+
+func newMoeMailClient(ctx context.Context, config MoeMailConfig) *MoeMailClient {
 	return &MoeMailClient{
+		ctx:    ctx,
 		config: config,
 		client: &http.Client{Timeout: 15 * time.Second},
 	}
@@ -69,7 +76,7 @@ func NewMoeMailClient(config MoeMailConfig) *MoeMailClient {
 // request 发送 HTTP 请求
 func (c *MoeMailClient) request(method, path string, body io.Reader) (*http.Response, error) {
 	url := strings.TrimRight(c.config.URL, "/") + path
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequestWithContext(c.ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -215,10 +222,17 @@ func GenerateEmailName(taskIndex int) string {
 
 // NewMoeMailProvider 创建 MoeMail 提供商
 func NewMoeMailProvider(config MoeMailConfig, name string, expiryTime int64, domain string) (*MoeMailProvider, error) {
-	client := NewMoeMailClient(config)
+	return NewMoeMailProviderContext(context.Background(), config, name, expiryTime, domain)
+}
+
+func NewMoeMailProviderContext(ctx context.Context, config MoeMailConfig, name string, expiryTime int64, domain string) (*MoeMailProvider, error) {
+	client := newMoeMailClient(ctx, config)
 
 	// 实时获取可用域名列表，验证域名是否可用
 	sysConfig, err := client.GetSystemConfig()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		log.Printf("[MoeMail] 警告：无法获取系统配置: %v，尝试直接使用域名", err)
 	} else {
@@ -252,6 +266,9 @@ func NewMoeMailProvider(config MoeMailConfig, name string, expiryTime int64, dom
 	// 立即记录初始邮件数量
 	initialCount := 0
 	initialMessages, err := client.GetMessages(email.ID, "")
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		log.Printf("[MoeMail] 获取初始邮件列表失败: %v，假设为0", err)
 	} else if initialMessages != nil {
@@ -274,6 +291,13 @@ func (p *MoeMailProvider) GetAddress() string {
 
 // WaitForCode 轮询等待验证码
 func (p *MoeMailProvider) WaitForCode(timeout, interval int) (string, error) {
+	ctx := p.client.ctx
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if interval <= 0 {
+		interval = 3
+	}
 	maxRetries := timeout / interval
 	codeRegex := regexp.MustCompile(`\b(\d{6})\b`)
 
@@ -282,13 +306,21 @@ func (p *MoeMailProvider) WaitForCode(timeout, interval int) (string, error) {
 	log.Printf("[MoeMail] 开始等待验证码，初始邮件数: %d", beforeCount)
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		// 获取邮件列表
 		messages, err := p.client.GetMessages(p.emailID, "")
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		if err != nil {
 			if attempt%5 == 0 {
 				log.Printf("[MoeMail] 获取邮件失败: %v, 重试中...", err)
 			}
-			time.Sleep(time.Duration(interval) * time.Second)
+			if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+				return "", err
+			}
 			continue
 		}
 
@@ -297,7 +329,9 @@ func (p *MoeMailProvider) WaitForCode(timeout, interval int) (string, error) {
 			if attempt%5 == 0 {
 				log.Printf("[MoeMail] [%d/%d] 暂无新邮件 (当前%d封)...", attempt, maxRetries, currentCount)
 			}
-			time.Sleep(time.Duration(interval) * time.Second)
+			if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+				return "", err
+			}
 			continue
 		}
 
@@ -330,7 +364,9 @@ func (p *MoeMailProvider) WaitForCode(timeout, interval int) (string, error) {
 		if attempt%5 == 0 {
 			log.Printf("[MoeMail] [%d/%d] 新邮件中未找到验证码...", attempt, maxRetries)
 		}
-		time.Sleep(time.Duration(interval) * time.Second)
+		if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+			return "", err
+		}
 	}
 
 	return "", fmt.Errorf("等待验证码超时 (%ds)", timeout)

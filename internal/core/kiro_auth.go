@@ -57,6 +57,7 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 	authURL := r.Cfg.OIDCBase + "/authorize?" + params.Encode()
 
 	noRedirect := httputil.NewNoRedirectTLSClient(r.Cfg.Proxy, r.Identity.ChromeVer)
+	defer noRedirect.CloseIdleConnections()
 	navHeaders := map[string]string{
 		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 		"User-Agent":                r.Identity.UA,
@@ -69,7 +70,10 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 		"sec-fetch-user":            "?1",
 		"upgrade-insecure-requests": "1",
 	}
-	req1, _ := fhttp.NewRequest("GET", authURL, nil)
+	req1, err := fhttp.NewRequestWithContext(r.context(), "GET", authURL, nil)
+	if err != nil {
+		return "", err
+	}
 	httputil.SetHeaders(req1, navHeaders)
 	resp1, err := noRedirect.Do(req1)
 	if err != nil {
@@ -91,7 +95,10 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 
 	// 4. POST /authentication_result -> 拿到第一段 resume URL
 	authResultBody, _ := json.Marshal(map[string]string{"orchestrator_id": orchID})
-	req2, _ := fhttp.NewRequest("POST", r.Cfg.OIDCBase+"/authentication_result", bytes.NewReader(authResultBody))
+	req2, err := fhttp.NewRequestWithContext(r.context(), "POST", r.Cfg.OIDCBase+"/authentication_result", bytes.NewReader(authResultBody))
+	if err != nil {
+		return "", err
+	}
 	httputil.SetHeaders(req2, map[string]string{
 		"Accept":                 "application/json, text/plain, */*",
 		"Content-Type":           "application/json",
@@ -108,12 +115,16 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 		"sec-fetch-site":         "cross-site",
 	})
 	client := httputil.NewTLSClient(r.Cfg.Proxy, true, r.Identity.ChromeVer)
+	defer client.CloseIdleConnections()
 	resp2, err := client.Do(req2)
 	if err != nil {
 		return "", err
 	}
-	body2, _ := io.ReadAll(resp2.Body)
+	body2, err := io.ReadAll(resp2.Body)
 	resp2.Body.Close()
+	if err != nil {
+		return "", err
+	}
 	if resp2.StatusCode != 200 {
 		return "", fmt.Errorf("authentication_result 失败 %d: %s", resp2.StatusCode, string(body2))
 	}
@@ -125,7 +136,10 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 	}
 
 	// 5. GET resumeURL1（不跟随）-> Location 含 authorizationResumptionContext
-	req3, _ := fhttp.NewRequest("GET", resumeURL1, nil)
+	req3, err := fhttp.NewRequestWithContext(r.context(), "GET", resumeURL1, nil)
+	if err != nil {
+		return "", err
+	}
 	httputil.SetHeaders(req3, navHeaders)
 	resp3, err := noRedirect.Do(req3)
 	if err != nil {
@@ -146,7 +160,10 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 		"authorizationResumptionContext": ctx,
 		"userSessionId":                  r.SSOToken,
 	})
-	req4, _ := fhttp.NewRequest("POST", r.Cfg.OIDCBase+"/device_authorization/associate_token", bytes.NewReader(consentBody))
+	req4, err := fhttp.NewRequestWithContext(r.context(), "POST", r.Cfg.OIDCBase+"/device_authorization/associate_token", bytes.NewReader(consentBody))
+	if err != nil {
+		return "", err
+	}
 	httputil.SetHeaders(req4, map[string]string{
 		"Accept":             "application/json, text/plain, */*",
 		"Content-Type":       "application/json",
@@ -164,8 +181,11 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	body4, _ := io.ReadAll(resp4.Body)
+	body4, err := io.ReadAll(resp4.Body)
 	resp4.Body.Close()
+	if err != nil {
+		return "", err
+	}
 	if resp4.StatusCode != 200 {
 		return "", fmt.Errorf("associate_token 失败 %d: %s", resp4.StatusCode, string(body4))
 	}
@@ -177,7 +197,10 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 	}
 
 	// 7. GET resumeURL2（不跟随）-> Location 含 code
-	req5, _ := fhttp.NewRequest("GET", resumeURL2, nil)
+	req5, err := fhttp.NewRequestWithContext(r.context(), "GET", resumeURL2, nil)
+	if err != nil {
+		return "", err
+	}
 	httputil.SetHeaders(req5, navHeaders)
 	resp5, err := noRedirect.Do(req5)
 	if err != nil {

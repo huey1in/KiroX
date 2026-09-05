@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,7 @@ type MailNestResponse[T any] struct {
 
 // MailNestClient MailNest API 客户端
 type MailNestClient struct {
+	ctx    context.Context
 	config MailNestConfig
 	client *http.Client
 }
@@ -56,12 +58,17 @@ type MailNestMailData struct {
 
 // NewMailNestClient 创建 MailNest 客户端
 func NewMailNestClient(config MailNestConfig) *MailNestClient {
+	return newMailNestClient(context.Background(), config)
+}
+
+func newMailNestClient(ctx context.Context, config MailNestConfig) *MailNestClient {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
 	}
 	return &MailNestClient{
+		ctx:    ctx,
 		config: config,
 		client: &http.Client{
 			Timeout:   15 * time.Second,
@@ -72,13 +79,16 @@ func NewMailNestClient(config MailNestConfig) *MailNestClient {
 
 // NewMailNestProvider 创建 MailNest
 func NewMailNestProvider(config MailNestConfig) *MailNestProvider {
-	provide := &MailNestProvider{client: NewMailNestClient(config)}
-	return provide
+	return NewMailNestProviderContext(context.Background(), config)
+}
+
+func NewMailNestProviderContext(ctx context.Context, config MailNestConfig) *MailNestProvider {
+	return &MailNestProvider{client: newMailNestClient(ctx, config)}
 }
 
 // request 发送 HTTP 请求
 func (c *MailNestClient) request(method, url string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequestWithContext(c.ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +154,10 @@ func (p *MailNestProvider) WaitForCode(timeout, interval int) (string, error) {
 	if p == nil || p.client == nil {
 		return "", fmt.Errorf("MailNestProvider 未初始化")
 	}
+	ctx := p.client.ctx
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if interval <= 0 {
 		interval = 3
 	}
@@ -156,12 +170,20 @@ func (p *MailNestProvider) WaitForCode(timeout, interval int) (string, error) {
 	}
 	log.Printf("[MailNest] 开始等待验证码 %s", p.address)
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		mails, err := p.client.EmailList(p.address)
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		if err != nil {
 			if attempt%5 == 0 {
 				log.Printf("[MailNest] 获取邮件失败: %v，重试中...", err)
 			}
-			time.Sleep(time.Duration(interval) * time.Second)
+			if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+				return "", err
+			}
 			continue
 		}
 		for _, m := range mails {
@@ -173,7 +195,9 @@ func (p *MailNestProvider) WaitForCode(timeout, interval int) (string, error) {
 		if attempt%5 == 0 {
 			log.Printf("[MailNest] [%d/%d] 暂无新邮件...", attempt, maxRetries)
 		}
-		time.Sleep(time.Duration(interval) * time.Second)
+		if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+			return "", err
+		}
 	}
 	return "", fmt.Errorf("等待验证码超时 (%ds)", timeout)
 }

@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"hash/crc32"
@@ -18,16 +19,15 @@ import (
 )
 
 const (
-	delta      uint32 = 0x9E3779B9
-	fallbackVer       = "4.0.0"
-	identifier        = "ECdITeCs"
+	delta       uint32 = 0x9E3779B9
+	fallbackVer        = "4.0.0"
+	identifier         = "ECdITeCs"
 )
 
 var (
 	fallbackKey = [4]uint32{1888420705, 2576816180, 2347232058, 874813317}
 
-	configOnce sync.Once
-	configPtr  atomic.Pointer[xxteaConfig]
+	appJSConfig = newAppJSConfigLoader()
 )
 
 // xxteaConfig 是密钥/TES 版本/identifier 的不可变快照。
@@ -38,12 +38,44 @@ type xxteaConfig struct {
 	Identifier string
 }
 
-// RefreshAppJSConfig 从 app.js 刷新 XXTEA 密钥和 TES 版本。
-// 首次调用由 sync.Once 保证只有一个 goroutine 拉取 app.js,
-// 网络请求期间不再持有任何锁, 后续调用零开销直接返回。
-// (旧实现把整个下载过程放在全局互斥锁内, 导致所有并发注册流程在启动时串行排队)
-func RefreshAppJSConfig(proxy, chromeVer, userAgent, secUA string) {
-	configOnce.Do(func() {
+type appJSConfigLoader struct {
+	once  sync.Once
+	ready chan struct{}
+	cfg   atomic.Pointer[xxteaConfig]
+}
+
+func newAppJSConfigLoader() *appJSConfigLoader {
+	return &appJSConfigLoader{ready: make(chan struct{})}
+}
+
+func (l *appJSConfigLoader) start(load func() xxteaConfig) {
+	l.once.Do(func() {
+		go func() {
+			cfg := load()
+			l.cfg.Store(&cfg)
+			close(l.ready)
+		}()
+	})
+}
+
+func (l *appJSConfigLoader) wait(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-l.ready:
+		return ctx.Err()
+	}
+}
+
+// WarmAppJSConfig starts the shared download without blocking registration setup.
+func WarmAppJSConfig(proxy, chromeVer, userAgent, secUA string) {
+	appJSConfig.start(func() xxteaConfig {
 		cfg := xxteaConfig{
 			Version:    fallbackVer,
 			Identifier: identifier,
@@ -66,26 +98,40 @@ func RefreshAppJSConfig(proxy, chromeVer, userAgent, secUA string) {
 			log.Println("[xxtea] 使用 fallback 密钥")
 			cfg.Key = fallbackKey
 		}
-		configPtr.Store(&cfg)
+		return cfg
 	})
 }
 
+// RefreshAppJSConfigContext waits for a complete snapshot before it is used.
+// One cancelled caller must not cancel initialization for other registrations.
+func RefreshAppJSConfigContext(ctx context.Context, proxy, chromeVer, userAgent, secUA string) error {
+	if ctx != nil && ctx.Err() != nil {
+		return ctx.Err()
+	}
+	WarmAppJSConfig(proxy, chromeVer, userAgent, secUA)
+	return appJSConfig.wait(ctx)
+}
+
+func RefreshAppJSConfig(proxy, chromeVer, userAgent, secUA string) {
+	_ = RefreshAppJSConfigContext(context.Background(), proxy, chromeVer, userAgent, secUA)
+}
+
 func GetTESVersion() string {
-	if cfg := configPtr.Load(); cfg != nil {
+	if cfg := appJSConfig.cfg.Load(); cfg != nil {
 		return cfg.Version
 	}
 	return fallbackVer
 }
 
 func GetIdentifier() string {
-	if cfg := configPtr.Load(); cfg != nil {
+	if cfg := appJSConfig.cfg.Load(); cfg != nil {
 		return cfg.Identifier
 	}
 	return identifier
 }
 
 func GetActiveKey() [4]uint32 {
-	if cfg := configPtr.Load(); cfg != nil {
+	if cfg := appJSConfig.cfg.Load(); cfg != nil {
 		return cfg.Key
 	}
 	return fallbackKey
@@ -146,32 +192,45 @@ func xxteaEncrypt(plaintext string, key [4]uint32) []byte {
 	return result
 }
 
-// appJSFetchTimeout 首次下载 app.js 的最长等待时间。
-// 并发批次启动前由 main 预热, 这里兜底防止慢代理把整批任务卡在启动阶段。
+// The deadline covers both receiving headers and reading the response body.
 const appJSFetchTimeout = 15 * time.Second
 
 func fetchAppJS(proxy, chromeVer, userAgent, secUA string) string {
-	ch := make(chan string, 1)
-	go func() {
-		client := httputil.NewTLSClient(proxy, true, chromeVer)
-		req, _ := fhttp.NewRequest("GET", "https://us-east-1.signin.aws/assets/js/app.js", nil)
-		httputil.SetHeaders(req, appJSRequestHeaders(chromeVer, userAgent, secUA))
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Printf("[xxtea] 下载 app.js 失败: %v", err)
-			return
-		}
-		defer resp.Body.Close()
-		b, _ := io.ReadAll(resp.Body)
-		ch <- string(b)
-	}()
-	select {
-	case js := <-ch:
-		return js
-	case <-time.After(appJSFetchTimeout):
-		log.Printf("[xxtea] 下载 app.js 超时 (%s), 使用 fallback 密钥", appJSFetchTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), appJSFetchTimeout)
+	defer cancel()
+	client := httputil.NewTLSClient(proxy, true, chromeVer)
+	defer client.CloseIdleConnections()
+	js, err := downloadAppJS(ctx, client, appJSRequestHeaders(chromeVer, userAgent, secUA))
+	if err != nil {
+		log.Printf("[xxtea] 下载 app.js 失败: %v", err)
 		return ""
 	}
+	return js
+}
+
+type appJSClient interface {
+	Do(*fhttp.Request) (*fhttp.Response, error)
+}
+
+func downloadAppJS(ctx context.Context, client appJSClient, headers map[string]string) (string, error) {
+	req, err := fhttp.NewRequestWithContext(ctx, "GET", "https://us-east-1.signin.aws/assets/js/app.js", nil)
+	if err != nil {
+		return "", err
+	}
+	httputil.SetHeaders(req, headers)
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != fhttp.StatusOK {
+		return "", fmt.Errorf("app.js HTTP %d", resp.StatusCode)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func appJSRequestHeaders(chromeVer, userAgent, secUA string) map[string]string {

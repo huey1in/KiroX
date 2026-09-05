@@ -227,7 +227,6 @@ async function stopTask() {
       showToast(result.error, 'error'); 
       return; 
     }
-    updateUIStatus(false);
     showToast(_tkT('toast.taskStopping', '正在停止任务...'));
   } catch(e) {
     showToast(_tkT('toast.taskStopFailed', '停止失败') + ': ' + (e.message || e), 'error');

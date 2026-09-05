@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">KiroX - Purple Mochi</title>
+  <desc id="desc">A round white ghost with rosy cheeks and a little wave on a violet app tile.</desc>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#8660DE"/>
+  <path d="M60 392C138 429 351 457 468 375V384C468 430 430 468 384 468H128C98 468 73 451 60 425Z" fill="#7250C9" opacity=".45"/>
+  <g transform="rotate(-5 256 256)">
+    <path d="M130 307C133 270 124 222 140 181C158 133 194 111 252 111C332 111 378 165 378 239C393 228 399 204 415 212C438 224 427 263 401 283L386 294C383 354 369 404 338 423C319 435 299 423 288 406C269 431 239 436 220 415C195 437 160 432 150 407C126 416 100 409 101 385C103 361 127 335 130 307Z" fill="#6243B3"/>
+    <path d="M122 291C125 254 116 206 132 165C150 117 186 95 244 95C324 95 370 149 370 223C385 212 391 188 407 196C430 208 419 247 393 267L378 278C375 338 361 388 330 407C311 419 291 407 280 390C261 415 231 420 212 399C187 421 152 416 142 391C118 400 92 393 93 369C95 345 119 319 122 291Z" fill="#FFFEFF" stroke="#4A346F" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M133 325C131 353 145 371 165 367C170 392 193 392 214 377C235 395 260 392 282 369C300 391 325 390 346 367C340 384 336 394 328 399C310 410 293 396 280 380C257 407 233 407 213 389C190 407 161 408 148 381C133 386 117 386 112 377C106 364 126 340 133 325Z" fill="#EDE6FA"/>
+    <path d="M156 167C172 138 198 126 221 125" fill="none" stroke="#F4EFFC" stroke-width="12" stroke-linecap="round"/>
+    <ellipse cx="201" cy="223" rx="19" ry="28" fill="#352347"/>
+    <ellipse cx="284" cy="223" rx="19" ry="28" fill="#352347"/>
+    <ellipse cx="195" cy="214" rx="6" ry="8" fill="#FFFFFF"/>
+    <ellipse cx="278" cy="214" rx="6" ry="8" fill="#FFFFFF"/>
+    <ellipse cx="169" cy="258" rx="22" ry="12" fill="#F8A6BD"/>
+    <ellipse cx="315" cy="258" rx="22" ry="12" fill="#F8A6BD"/>
+    <path d="M228 265Q242 282 257 265" fill="none" stroke="#352347" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

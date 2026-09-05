@@ -25,12 +25,20 @@ function toggleDropdown(triggerEl, ev) {
     if (o) {
       // 用 fixed 定位（对齐 selected 视口坐标），避免被 modal 的 overflow 裁剪
       var r = (t || wrap).getBoundingClientRect();
+      var placement = wrap.getAttribute('data-dropdown-placement');
       o.style.position = 'fixed';
-      o.style.top = (r.bottom + 4) + 'px';
       o.style.left = r.left + 'px';
       o.style.width = r.width + 'px';
       o.style.right = 'auto';
-      o.style.maxHeight = 'min(320px, calc(100vh - ' + (r.bottom + 8) + 'px))';
+      if (placement === 'top') {
+        o.style.top = 'auto';
+        o.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+        o.style.maxHeight = Math.min(320, Math.max(80, r.top - 8)) + 'px';
+      } else {
+        o.style.top = (r.bottom + 4) + 'px';
+        o.style.bottom = 'auto';
+        o.style.maxHeight = 'min(320px, calc(100vh - ' + (r.bottom + 8) + 'px))';
+      }
       o.style.overflowY = 'auto';
       o.classList.add('show');
     }
@@ -42,10 +50,14 @@ function selectDropdownOption(el, ev) {
   var wrap = el.closest('.custom-dropdown');
   if (!wrap) return;
   var val = el.getAttribute('data-value') || '';
-  var label = (el.textContent || '').trim();
+  var labelEl = el.querySelector('[data-dropdown-label]');
+  var label = ((labelEl || el).textContent || '').trim();
   wrap.dataset.value = val;
   var txt = wrap.querySelector('.dropdown-selected-text');
-  if (txt) txt.textContent = label;
+  if (txt) {
+    if (wrap.hasAttribute('data-rich-options')) txt.innerHTML = el.innerHTML;
+    else txt.textContent = label;
+  }
   wrap.querySelectorAll('.dropdown-option').forEach(function(o) {
     o.classList.toggle('selected', o === el);
   });
@@ -68,6 +80,7 @@ function closeAllDropdowns() {
       // 清理 fixed 定位内联样式，还原为相对定位默认
       o.style.position = '';
       o.style.top = '';
+      o.style.bottom = '';
       o.style.left = '';
       o.style.width = '';
       o.style.right = '';
@@ -92,7 +105,10 @@ function setDropdownValue(wrap, val) {
   wrap.dataset.value = val;
   var txt = wrap.querySelector('.dropdown-selected-text');
   if (opt) {
-    if (txt) txt.textContent = (opt.textContent || '').trim();
+    if (txt) {
+      if (wrap.hasAttribute('data-rich-options')) txt.innerHTML = opt.innerHTML;
+      else txt.textContent = (opt.textContent || '').trim();
+    }
   } else {
     if (txt && val !== '') txt.textContent = val;
   }

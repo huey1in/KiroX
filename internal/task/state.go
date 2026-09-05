@@ -8,22 +8,63 @@ import (
 
 // State 任务状态（从原 App 脱离为独立单例）
 type State struct {
-	mu         sync.Mutex
-	running    bool
-	stopCh     chan struct{}
-	cancelFunc context.CancelFunc // 强制取消所有 HTTP 请求
-	total      int
-	completed  int
-	success    int
-	failed     int
-	results    []map[string]interface{}
-	startTime  time.Time
-	logs       []string
-	logsMu     sync.Mutex
+	mu        sync.Mutex
+	running   bool
+	batch     *taskBatch
+	total     int
+	completed int
+	success   int
+	failed    int
+	results   []map[string]interface{}
+	startTime time.Time
+	logs      []string
+	logsMu    sync.Mutex
+}
+
+type taskBatch struct {
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 var Manager = &State{
 	logs: make([]string, 0),
+}
+
+// beginBatchLocked publishes cancellation before the background worker starts.
+func (s *State) beginBatchLocked(count int) *taskBatch {
+	ctx, cancel := context.WithCancel(context.Background())
+	batch := &taskBatch{ctx: ctx, cancel: cancel}
+	s.batch = batch
+	s.running = true
+	s.total = count
+	s.completed = 0
+	s.success = 0
+	s.failed = 0
+	s.results = nil
+	s.startTime = time.Now()
+	return batch
+}
+
+func (s *State) stopBatch() bool {
+	s.mu.Lock()
+	if !s.running || s.batch == nil {
+		s.mu.Unlock()
+		return false
+	}
+	batch := s.batch
+	s.mu.Unlock()
+	batch.cancel()
+	return true
+}
+
+func (s *State) finishBatch(batch *taskBatch) {
+	batch.cancel()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.batch == batch {
+		s.running = false
+		s.batch = nil
+	}
 }
 
 // AppendLog 追加日志，最多保留 500 条

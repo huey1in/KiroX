@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/assets/appicon.png" width="100" height="100" alt="KiroX">
+  <img src="frontend/assets/app.svg" width="100" height="100" alt="KiroX">
 </p>
 
 <h1 align="center">KiroX | Kiro Protocol Registration Tool</h1>
@@ -22,7 +22,7 @@
 
 ## Overview
 
-KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and implemented entirely over HTTP/TLS protocols. It completes account registration, email verification, authorization, and Kiro token exchange directly through protocol requests. It supports an Outlook mailbox pool, MoeMail disposable mail, MailNest temporary mail, and self-hosted Cloud-Mail, with concurrency control and proxy support.
+KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and implemented entirely over HTTP/TLS protocols. It completes account registration, email verification, authorization, and Kiro token exchange directly through protocol requests. It supports Outlook, MoeMail, Cloud-Mail, MailNest, and iCloud email sources, with batch scheduling, concurrency control, proxy management, and live logs.
 
 ---
 
@@ -45,26 +45,34 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
 ## Features
 
 **Kiro registration flow**
-- Full 15-step protocol-based registration flow (OIDC signup → device authorization → email verification → password setup → SSO → Kiro token exchange)
+- Protocol-based registration flow (OIDC signup → device authorization → email verification → password setup → SSO → Kiro token exchange)
 - Liveness check on each account after registration
-- Batch mode with configurable count, concurrency, and per-task interval
+- Batch mode with configurable count and concurrency; the delay applies between registrations in serial mode
+- Create tasks from Overview, monitor progress in Logs, and stop the active batch
 
 **Email sources**
-- **Outlook mailbox pool** — import accounts in `email----password----clientID----RefreshToken` format; verification codes are fetched via IMAP
+- **Outlook mailbox pool** — import accounts in `email----password----clientID----RefreshToken[----imap/graph]` format; supports IMAP and Microsoft Graph, with IMAP as the default
 - **MoeMail disposable mail** — multi-domain configurations with auto-rotation; random / all / specific domain modes
 - **Cloud-Mail (self-hosted)** — integrates with [cloud-mail](https://github.com/jiangrungen/cloud-mail); domains can be pulled from the server automatically; random / round-robin / specific modes
+- **MailNest temporary mail** — configure an API key and project code, with a connection and balance check before saving
+- **iCloud mailbox pool** — import `email----messages URL` entries; verification codes are fetched from a compatible message-list page
 
 **Pure protocol and networking**
 - HTTP/TLS client and request parameter configuration via `tls-client`
 
 **Data management**
 - Successful accounts written as plain JSON to a configurable output directory
-- Outlook account info stored locally as JSON
+- Mailbox pool entries stored locally as JSON
 - Custom data directory and result directory supported
 
 **Proxy**
-- Global proxy supporting HTTP / HTTPS / SOCKS5
-- Accepts both `scheme://user:pass@host:port` and the shorthand `host:port:user:pass`
+- Manage a proxy pool on the IPs page, including batch import, testing, enabling / disabling, and deletion
+- Select an enabled HTTP / HTTPS / SOCKS5 proxy for a registration batch, or use a direct connection
+- Use standard proxy URLs such as `scheme://user:pass@host:port`
+
+**Desktop interface**
+- Chinese, English, and Japanese interfaces with light and dark themes
+- Overview statistics and live registration logs
 
 **Version updates**
 - Checks the latest GitHub Release (semantic-version comparison)
@@ -89,24 +97,30 @@ These directions will be delivered incrementally as development progresses. The 
 
 ### Use a release
 
-Download the latest `kirox.exe` (or the matching macOS / Linux binary) from [Releases](https://github.com/huey1in/kirox/releases/latest) and run it.
+Download the archive matching your operating system and architecture from [Releases](https://github.com/huey1in/kirox/releases/latest), extract it, and run the application. Releases use `.zip` or `.tar.gz` archives; for example, Windows x64 uses `kiro-reg-windows-amd64.exe.zip`.
 
 ### Build from source
 
 **Requirements**
-- Go 1.24+
+- Go 1.24.1+ (`go.mod` specifies the Go 1.24.4 toolchain)
 - Node.js 20+
-- Wails CLI
+- Wails CLI v2.11.0 and the platform dependencies reported by `wails doctor`
 
 ```bash
 # Install the Wails CLI
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
 
 # Clone
 git clone https://github.com/huey1in/kirox.git
 cd kirox
 
-# Dev mode (hot-reload)
+# Check the local environment
+wails doctor
+
+# Prepare the application icon
+node -e "require('fs').copyFileSync('frontend/assets/appicon.png', 'build/appicon.png')"
+
+# Dev mode
 wails dev
 
 # Production build
@@ -114,6 +128,10 @@ wails build
 ```
 
 The output binary is located under `build/bin/`.
+
+On Linux, install the required GTK 3 and WebKitGTK development packages. If your system uses WebKitGTK 4.1, run `wails dev -tags webkit2_41` or `wails build -tags webkit2_41`.
+
+The frontend uses vanilla HTML / CSS / JavaScript with no third-party npm dependencies. Wails runs its build command automatically; `node frontend/build.js` only copies static assets into `frontend/dist/` and does not start a web server. Application functions require the Wails bridge, so use `wails dev` to run the desktop app.
 
 ---
 
@@ -123,26 +141,44 @@ The output binary is located under `build/bin/`.
 
 **Outlook mailbox pool** (recommended)
 
-On the Mailbox Pool page, import accounts — one per line:
+On the Emails page, import accounts, one per line:
 ```
-email----password----clientID----RefreshToken
+email----password----clientID----RefreshToken----imap
+email----password----clientID----RefreshToken----graph
 ```
-Batch import from `.txt` / `.csv` files is supported; you can also paste manually.
+The fifth field is optional and defaults to `imap`. Batch import from `.txt` / `.csv` files is supported; you can also paste manually.
 
 **MoeMail disposable mail**
 
-On the Mailbox Pool page, add a MoeMail configuration with its API URL and API key, test the connection, and save. During registration you can pick random, all, or specific domains.
+On the Emails page, add a MoeMail configuration with its API URL and API key, test the connection, and save. During registration you can pick random, all, or specific domains.
 
 **Cloud-Mail (self-hosted)**
 
-On the Mailbox Pool page, add a Cloud-Mail configuration with its base URL, admin email, and password. The domain field is optional — if empty, KiroX fetches `/api/setting/websiteConfig` from the server to populate it automatically.
+On the Emails page, add a Cloud-Mail configuration with its base URL, admin email, and password. Test the connection and save. KiroX fetches domains automatically from `/api/setting/websiteConfig`; the configuration form has no domain input. During registration, choose random, round-robin, or a specific domain.
+
+**MailNest temporary mail**
+
+On the Emails page, enter the MailNest API key and project code. Both are required; `aws001` is only an example placeholder, not a default project code. Saving first tests the connection and checks the balance.
+
+**iCloud mailbox pool**
+
+In the iCloud section of the Emails page, import one entry per line:
+
+```text
+email----messages URL
+```
+
+Paste entries or import a `.txt` / `.csv` file. Each URL must provide a compatible message-list page from which KiroX can read verification emails. A normal iCloud web login URL is not sufficient.
 
 ### 2. Start registration
 
-Switch to the Register page:
-- Set the count, concurrency (1–5 recommended), and per-task interval (seconds)
-- Choose the email source
-- Click "Start"
+On the Overview page, click "New task" to open the registration dialog:
+- Set the count, concurrency (1–5 recommended), and delay in seconds; the delay only applies between registrations when concurrency is 1
+- Choose the email source and its available domain options
+- Select an enabled proxy or a direct connection for this batch
+- Click "Start" and follow progress on the Logs page; use "Stop" to stop the active batch
+
+Only one batch can run at a time.
 
 ### 3. View results
 
@@ -151,24 +187,32 @@ Successful accounts are streamed to the output directory (default `~/Documents/K
 ```json
 [
   {
+    "refreshToken": "...",
+    "provider": "BuilderId",
+    "clientId": "...",
+    "clientSecret": "...",
+    "region": "us-east-1",
     "email": "xxx@outlook.com",
-    "password": "...",
-    "access_token": "...",
-    "refresh_token": "...",
-    "registered_at": "2026-05-31T12:00:00Z"
+    "time": "2026-09-05 12:00:00",
+    "creditUsed": 0,
+    "creditLimit": 0
   }
 ]
 ```
 
+The credit values above are examples; `creditUsed` and `creditLimit` depend on the account check and may be absent or `null`. A new successful record replaces the previous record for the same email. Passwords and access tokens are not written to this file; failed or banned accounts remain in the logs.
+
+Change the result directory in Settings. The separate application data directory defaults to `os.UserConfigDir()/kirox` (`%APPDATA%\kirox` on Windows) and can also be changed in Settings. Its mailbox pool file is also named `accounts.json`, so keep the data and result directories separate. Directory and language settings are stored as key-value text in `storage.conf` in the default configuration directory. Changing the result directory does not move existing result files.
+
 ### 4. Proxy
 
-On the Settings page, enter a proxy in any of:
+On the IPs page, add proxies individually or in batches, test them, and enable those you want to use. Supported formats include:
 ```
 http://user:pass@host:port
 socks5://host:port
-host:port:user:pass
+http://host:8080
 ```
-Leave blank for a direct connection.
+In the New task dialog, choose an enabled proxy or a direct connection. Registration requests use the selected proxy for that batch.
 
 ---
 
@@ -180,29 +224,28 @@ kirox/
 ├── app.go                     # App struct; methods bound to Wails
 ├── internal/
 │   ├── core/                  # Kiro registration core
-│   │   ├── registrar.go       # Registrar struct; HTTP client
+│   │   ├── registrar.go       # Registrar; HTTP client; steps 1–5
 │   │   ├── run.go             # Step orchestration
-│   │   ├── auth.go            # Steps 1–5
-│   │   ├── signup_flow.go     # Steps 6–9
-│   │   ├── signup_password.go # Steps 10–12
-│   │   ├── kiro_auth.go       # Steps 13–14
+│   │   ├── auth.go            # SSO workflow; token retrieval
+│   │   ├── signup_flow.go     # Signup flow; email verification codes
+│   │   ├── signup_password.go # Identity creation; password setup
+│   │   ├── kiro_auth.go       # Kiro authorization
 │   │   ├── kiro_exchange.go   # Step 15
 │   │   └── verify.go          # Liveness check
 │   ├── browser/               # Protocol request identity parameters
-│   ├── email/                 # Email providers (Outlook / MoeMail / MailNest / Cloud-Mail)
+│   ├── email/                 # Outlook / MoeMail / Cloud-Mail / MailNest / iCloud
 │   ├── crypto/                # JWE encryption; XXTEA
 │   ├── storage/               # Account storage; config persistence
 │   ├── task/                  # Batch scheduling; concurrency
 │   ├── data/                  # Result I/O
-│   ├── proxy/                 # Egress IP / geo detection
-│   ├── subscription/          # Subscription links: token refresh + listAvailableSubscriptions / CreateSubscriptionToken / setUserPreference
+│   ├── proxy/                 # Proxy pool; connectivity / egress IP / geo detection
 │   ├── updater/               # Version checks
 │   └── http/                  # TLS-client helpers
 └── frontend/
     ├── index.html             # Single-page entry
-    ├── js/                    # Per-page logic (overview / accounts / moemail / cloudmail / task / subscription / app / ui / i18n)
-    ├── css/                   # Styles (layout / components / style)
-    └── build.js               # Frontend build script
+    ├── js/                    # overview / accounts / moemail / cloudmail / mailnest / task / ip / app / ui / i18n / dropdown
+    ├── css/                   # layout / components / style / dashboard
+    └── build.js               # Copies static assets to dist/
 ```
 
 ---
@@ -211,13 +254,13 @@ kirox/
 
 | Layer | Technology |
 |----|------|
-| Desktop framework | [Wails v2](https://wails.io) |
-| Backend | Go 1.24 |
+| Desktop framework | [Wails v2.11.0](https://wails.io) |
+| Backend | Go 1.24.1+; Go 1.24.4 toolchain |
 | HTTP client | [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) |
 | Frontend | Vanilla HTML / CSS / JavaScript |
 | Crypto | RSA-OAEP-256 + AES-256-GCM (JWE) |
 
-The current release is still a Wails desktop application; the architecture may move toward WebUI in a future refactor.
+The frontend calls Go methods through `window.go.main.App` and polls task status and logs. The current release is a Wails desktop application; standalone WebUI and 2API services are not implemented yet.
 
 ---
 

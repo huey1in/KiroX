@@ -80,6 +80,28 @@
   background: var(--bg); 
 }
 
+.email-provider-value,
+.email-provider-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.email-provider-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+[data-theme="dark"] .email-provider-icon-mailnest {
+  filter: brightness(0) invert(1);
+}
+
 /* ===== Table ===== */
 table { 
   width: 100%; 
@@ -162,6 +184,61 @@ tbody td a:hover {
   scrollbar-width: none;
   -ms-overflow-style: none;
   transition: max-width 0.28s ease;
+}
+
+.modal-close-btn {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  flex: 0 0 34px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.modal-close-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--bg-subtle);
+  opacity: 0;
+  transform: scale(0.35);
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.modal-close-btn:is(:hover, :focus-visible) {
+  color: var(--text);
+}
+
+.modal-close-btn:is(:hover, :focus-visible)::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.modal-close-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-close-btn,
+  .modal-close-btn::before {
+    transition-duration: 0.01ms;
+  }
 }
 
 /* 新建任务模态框右栏（邮箱具体选项）展开/收起动画 */

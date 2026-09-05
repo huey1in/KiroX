@@ -21,7 +21,7 @@ func (r *Registrar) Step12_8SSOWorkflow() error {
 	loginURL := fmt.Sprintf("%s/login?directory_id=view&redirect_url=%s", r.Cfg.PortalBase, redirectURL)
 
 	h := map[string]string{
-		"Accept":              "*/*",
+		"Accept":             "*/*",
 		"User-Agent":         r.Identity.UA,
 		"Origin":             r.Cfg.ViewBase,
 		"Referer":            r.Cfg.ViewBase + "/",
@@ -133,11 +133,11 @@ func (r *Registrar) completeSSOWorkflow(wh string) error {
 	startURL := r.Cfg.ViewBase + "/start/?" + params.Encode()
 
 	h2 := map[string]string{
-		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		"User-Agent":      r.Identity.UA,
-		"Referer":         r.Cfg.SigninBase + "/",
-		"sec-fetch-dest":  "document",
-		"sec-fetch-mode":  "navigate",
+		"Accept":         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"User-Agent":     r.Identity.UA,
+		"Referer":        r.Cfg.SigninBase + "/",
+		"sec-fetch-dest": "document",
+		"sec-fetch-mode": "navigate",
 	}
 	var cookieParts []string
 	if v, ok := r.Cookies["loginCsrfToken"]; ok {
@@ -162,19 +162,19 @@ func (r *Registrar) Step13SSOToken() (map[string]interface{}, error) {
 	}
 
 	h := map[string]string{
-		"Accept":                "application/json, text/plain, */*",
-		"Content-Type":          "application/x-www-form-urlencoded",
-		"User-Agent":            r.Identity.UA,
-		"Origin":                r.Cfg.ViewBase,
-		"Referer":               r.Cfg.ViewBase + "/",
+		"Accept":               "application/json, text/plain, */*",
+		"Content-Type":         "application/x-www-form-urlencoded",
+		"User-Agent":           r.Identity.UA,
+		"Origin":               r.Cfg.ViewBase,
+		"Referer":              r.Cfg.ViewBase + "/",
 		"x-amz-sso-csrf-token": csrf,
-		"sec-ch-ua":             r.Identity.SecUA,
-		"sec-ch-ua-mobile":      "?0",
-		"sec-ch-ua-platform":    `"Windows"`,
-		"sec-fetch-dest":        "empty",
-		"sec-fetch-mode":        "cors",
-		"sec-fetch-site":        "cross-site",
-		"priority":              "u=1, i",
+		"sec-ch-ua":            r.Identity.SecUA,
+		"sec-ch-ua-mobile":     "?0",
+		"sec-ch-ua-platform":   `"Windows"`,
+		"sec-fetch-dest":       "empty",
+		"sec-fetch-mode":       "cors",
+		"sec-fetch-site":       "cross-site",
+		"priority":             "u=1, i",
 	}
 
 	formData := url.Values{
@@ -184,17 +184,24 @@ func (r *Registrar) Step13SSOToken() (map[string]interface{}, error) {
 	}
 
 	client := httputil.NewTLSClient(r.Cfg.Proxy, true, r.Identity.ChromeVer)
+	defer client.CloseIdleConnections()
 
 	for retry := 0; retry < 5; retry++ {
-		req, _ := fhttp.NewRequest("POST", r.Cfg.PortalBase+"/auth/sso-token",
+		req, err := fhttp.NewRequestWithContext(r.context(), "POST", r.Cfg.PortalBase+"/auth/sso-token",
 			strings.NewReader(formData.Encode()))
+		if err != nil {
+			return nil, err
+		}
 		httputil.SetHeaders(req, h)
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
 
 		var data map[string]interface{}
 		json.Unmarshal(body, &data)
@@ -204,7 +211,9 @@ func (r *Registrar) Step13SSOToken() (map[string]interface{}, error) {
 			break
 		}
 		if errMsg, _ := data["errorMessage"].(string); strings.Contains(strings.ToLower(errMsg), "not authorized") {
-			time.Sleep(3 * time.Second)
+			if err := r.wait(3 * time.Second); err != nil {
+				return nil, err
+			}
 			continue
 		}
 		return nil, fmt.Errorf("SSO Token 失败: %s", string(body))
@@ -243,7 +252,9 @@ func (r *Registrar) Step13SSOToken() (map[string]interface{}, error) {
 			json.Unmarshal(body, &result)
 			return result, nil
 		}
-		time.Sleep(2 * time.Second)
+		if err := r.wait(2 * time.Second); err != nil {
+			return nil, err
+		}
 	}
 	return nil, fmt.Errorf("Token 轮询超时")
 }
