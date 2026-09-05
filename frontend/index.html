@@ -267,8 +267,10 @@
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                 <span data-i18n="overview.liveStatus">实时状态</span>
               </div>
-              <div class="db-sub-row"><span data-i18n="overview.progress">进度</span><span id="st-progress" style="font-weight:600;">0/0</span></div>
-              <div style="margin:6px 0;"><div class="db-progress-track"><div id="progress-bar" class="db-progress-fill"></div></div></div>
+              <div class="db-sub-row"><span id="st-progress-label" data-i18n="overview.progress">进度</span><span id="st-progress" style="font-weight:600;">0/0</span></div>
+              <div id="progress-track" class="db-progress-track" role="progressbar" aria-labelledby="st-progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="progress-bar" class="db-progress-fill"></div>
+              </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
                 <div class="db-sub-row"><span data-i18n="overview.success">成功</span><span class="db-num-green" id="st-success">0</span></div>
                 <div class="db-sub-row"><span data-i18n="overview.failed">失败</span><span class="db-num-red" id="st-failed">0</span></div>

@@ -244,21 +244,56 @@
 
 /* 进度条 */
 .db-progress-track {
+  --progress-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'%3E%3Cpath d='M0 5C5.5 2 14.5 2 20 5S34.5 8 40 5' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E");
+  position: relative;
   width: 100%;
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
+  height: 10px;
+  margin: 6px 0;
   overflow: hidden;
 }
+.db-progress-track::before,
 .db-progress-fill {
-  height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  transition: width 0.4s ease;
-  width: 0;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: #cbd5e1;
 }
-[data-theme="dark"] .db-progress-track {
-  background: rgba(255,255,255,0.08);
+.db-progress-track::before {
+  content: "";
+  right: 0;
+}
+.db-progress-fill {
+  width: 0;
+  background: #3b82f6;
+  transition: width 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+.db-progress-track.is-running::before,
+.db-progress-track.is-running .db-progress-fill {
+  top: 0;
+  height: 100%;
+  transform: none;
+  border-radius: 0;
+  -webkit-mask: var(--progress-wave) left center / 40px 10px repeat-x;
+  mask: var(--progress-wave) left center / 40px 10px repeat-x;
+  animation: db-progress-wave 1s linear infinite;
+}
+[data-theme="dark"] .db-progress-track::before {
+  background: rgba(255,255,255,0.22);
+}
+@keyframes db-progress-wave {
+  to {
+    -webkit-mask-position: 40px center;
+    mask-position: 40px center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-progress-track.is-running::before,
+  .db-progress-track.is-running .db-progress-fill {
+    animation: none;
+  }
 }
 
 /* 详情底部 */

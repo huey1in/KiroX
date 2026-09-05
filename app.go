@@ -53,6 +53,14 @@ func (a *App) OpenURL(url string) {
 	runtime.BrowserOpenURL(a.ctx, url)
 }
 
+// ShowDesktopNotification displays a native desktop notification when supported.
+func (a *App) ShowDesktopNotification(title, message string) map[string]interface{} {
+	if err := showDesktopNotification(title, message); err != nil {
+		return map[string]interface{}{"success": false, "error": err.Error()}
+	}
+	return map[string]interface{}{"success": true}
+}
+
 // logWriter 自定义日志写入器，根据运行状态路由日志
 type logWriter struct {
 	app *App
