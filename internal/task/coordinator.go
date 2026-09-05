@@ -10,9 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"reg_go/internal/browser"
 	"reg_go/internal/core"
 	"reg_go/internal/data"
 	"reg_go/internal/email"
+	httputil "reg_go/internal/http"
 	"reg_go/internal/storage"
 )
 
@@ -34,7 +36,8 @@ type StartTaskRequest struct {
 	MailNestConfig email.MailNestConfig `json:"mailNestConfig"`
 
 	// Proxy 本次任务使用的代理（用户在新建任务时选择，空=直连）
-	Proxy string `json:"proxy"`
+	Proxy           string `json:"proxy"`
+	ProxyConfigured bool   `json:"proxyConfigured"`
 }
 
 // StartTask 公开方法（包装器）
@@ -44,6 +47,22 @@ func StartTask(req StartTaskRequest) map[string]interface{} {
 
 // startTask 启动注册任务（私有方法）
 func startTask(req StartTaskRequest) map[string]interface{} {
+	settings := storage.GetAppSettings()
+	if req.Count <= 0 {
+		req.Count = settings.DefaultCount
+	}
+	if req.Concurrency <= 0 {
+		req.Concurrency = settings.DefaultConcurrency
+	}
+	if req.Delay < 0 {
+		req.Delay = settings.DefaultDelay
+	}
+	if req.EmailProvider == "" {
+		req.EmailProvider = settings.DefaultEmailProvider
+	}
+	if !req.ProxyConfigured {
+		req.Proxy = settings.DefaultTaskProxy
+	}
 	Manager.mu.Lock()
 	if Manager.running {
 		Manager.mu.Unlock()
@@ -181,6 +200,9 @@ func StopTask(force bool) map[string]interface{} {
 // runBatch 执行批量注册
 func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outlookAccounts []email.OutlookAccount, icloudAccounts []email.ICloudAccount) {
 	taskCtx := batch.ctx
+	settings := storage.GetAppSettings()
+	httputil.SetRequestTimeoutSeconds(settings.RequestTimeoutSeconds)
+	browser.SetIdentityCacheTTLHours(settings.FingerprintTTLHours)
 	defer Manager.finishBatch(batch)
 	if taskCtx.Err() != nil {
 		return
@@ -193,8 +215,28 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	os.MkdirAll(outDir, 0755)
 
 	taskConfig := core.NewConfig()
+	taskConfig.OIDCBase = settings.OIDCBase
+	taskConfig.SigninBase = settings.SigninBase
+	taskConfig.ProfileBase = settings.ProfileBase
+	taskConfig.ViewBase = settings.ViewBase
+	taskConfig.PortalBase = settings.PortalBase
+	taskConfig.StartURL = settings.StartURL
+	taskConfig.KiroBase = settings.KiroBase
+	taskConfig.KiroRedirectURI = settings.KiroRedirectURI
+	taskConfig.DirectoryID = settings.DirectoryID
+	taskConfig.OTPTimeout = settings.OTPTimeoutSeconds
+	taskConfig.TelemetryEnabled = settings.TelemetryEnabled
+	taskConfig.HTTPRetries = map[string]int{"fast": 0, "standard": 2, "stable": 3}[settings.RetryProfile]
+	taskConfig.FingerprintAlgorithm = settings.FingerprintAlgorithm
+	taskConfig.FingerprintOffsets = append([]int(nil), settings.FingerprintOffsets...)
 	taskConfig.EmailProvider = emailProvider
 	taskConfig.Proxy = req.Proxy
+	switch settings.EmailProxyMode {
+	case "follow-task":
+		taskConfig.EmailProxy = req.Proxy
+	case "custom":
+		taskConfig.EmailProxy = settings.EmailProxy
+	}
 	if taskConfig.Proxy != "" {
 		log.Printf("[Kiro] 已启用代理")
 	}
@@ -342,13 +384,12 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 			// 生成完全随机的邮箱名
 			emailName := email.GenerateEmailName(i)
 
-			// 使用 1 小时有效期
-			expiryTime := int64(3600000) // 1 小时（毫秒）
+			expiryTime := int64(settings.MoeMailExpiryMinutes) * 60 * 1000
 
 			log.Printf("[Kiro][%d/%d] 创建 MoeMail 邮箱: %s@%s (配置: %s)", i+1, req.Count, emailName, domain, config.Name)
 
 			// 创建 MoeMail 提供商
-			provider, err := email.NewMoeMailProviderContext(taskCtx, config, emailName, expiryTime, domain)
+			provider, err := email.NewMoeMailProviderContextWithProxy(taskCtx, config, emailName, expiryTime, domain, taskConfig.EmailProxy)
 			if err != nil {
 				log.Printf("[Kiro][%d/%d] 生成 MoeMail 邮箱失败: %v", i+1, req.Count, err)
 				Manager.mu.Lock()
@@ -366,7 +407,7 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 
 			log.Printf("[Kiro][%d/%d] 创建 cloud-mail 邮箱: %s@%s (配置: %s)", i+1, req.Count, emailName, domain, config.Name)
 
-			provider, err := email.NewCloudMailProviderContext(taskCtx, config, emailName, domain)
+			provider, err := email.NewCloudMailProviderContextWithProxy(taskCtx, config, emailName, domain, taskConfig.EmailProxy)
 			if err != nil {
 				log.Printf("[Kiro][%d/%d] 生成 cloud-mail 邮箱失败: %v", i+1, req.Count, err)
 				Manager.mu.Lock()
@@ -382,7 +423,7 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 			currentEmail = provider.GetAddress()
 		} else if emailProvider == "mailnest" {
 			config := req.MailNestConfig
-			provider := email.NewMailNestProviderContext(taskCtx, config)
+			provider := email.NewMailNestProviderContextWithProxy(taskCtx, config, taskConfig.EmailProxy)
 			address, err := provider.GetAddress()
 			if err != nil {
 				log.Printf("[Kiro][%d/%d] 生成 mailenest 邮箱失败: %v", i+1, req.Count, err)
@@ -415,7 +456,10 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 		log.Printf("[Kiro][%d/%d] 开始注册", i+1, req.Count)
 		itemStart := time.Now()
 
-		const maxAttempts = 2
+		maxAttempts := map[string]int{"fast": 1, "standard": 2, "stable": 3}[settings.RetryProfile]
+		if maxAttempts == 0 {
+			maxAttempts = 2
+		}
 
 		var result map[string]interface{}
 	retryLoop:
@@ -449,7 +493,7 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 
 			// AWS 熔断：任一任务遇到 400/BLOCKED/IP-flagged 类错误就终止全部
 			// 触发后继续跑只会烧邮箱、烧代理额度
-			if isKillSwitchError(errorMsg) {
+			if settings.StopOnRisk && isKillSwitchError(errorMsg) {
 				otpKillOnce.Do(func() {
 					log.Printf("[Kiro] ⚠️ 检测到熔断级错误(%s)，立即终止所有注册任务", errorMsg)
 					batch.cancel()

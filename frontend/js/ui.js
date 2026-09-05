@@ -66,14 +66,17 @@ function toggleTheme(e) {
     var isDark = html.getAttribute('data-theme') === 'dark';
     if (isDark) {
       html.removeAttribute('data-theme');
-      localStorage.setItem('kiro-theme', 'light');
+      if (window.appSettings) window.appSettings.theme = 'light';
       document.getElementById('theme-icon-light').style.display = '';
       document.getElementById('theme-icon-dark').style.display = 'none';
     } else {
       html.setAttribute('data-theme', 'dark');
-      localStorage.setItem('kiro-theme', 'dark');
+      if (window.appSettings) window.appSettings.theme = 'dark';
       document.getElementById('theme-icon-light').style.display = 'none';
       document.getElementById('theme-icon-dark').style.display = '';
+    }
+    if (window.appSettings && window.go && window.go.main && window.go.main.App && window.go.main.App.SaveAppSettings) {
+      window.go.main.App.SaveAppSettings(window.appSettings).catch(function() {});
     }
   };
 
@@ -111,18 +114,6 @@ function toggleTheme(e) {
   });
 }
 
-// 恢复主题
-(function() {
-  var saved = localStorage.getItem('kiro-theme');
-  if (saved === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    var light = document.getElementById('theme-icon-light');
-    var dark = document.getElementById('theme-icon-dark');
-    if (light) light.style.display = 'none';
-    if (dark) dark.style.display = '';
-  }
-})();
-
 // 快捷键
 document.addEventListener('keydown', function(e) {
   // Ctrl+Enter 开始任务
@@ -152,8 +143,8 @@ function escapeHtml(text) {
 
 // 初始化邮箱提供商选择（页面加载时调用）
 function initEmailProviderSelection() {
-  // 默认选中 Outlook
-  selectEmailProvider('outlook');
+  let provider = (window.appSettings && window.appSettings.defaultEmailProvider) || 'outlook';
+  selectEmailProvider(provider);
 }
 
 // 选择邮箱提供商
@@ -261,7 +252,7 @@ async function loadMoeMailDomainsToList() {
     html += '</div>';
 
     listDiv.innerHTML = html;
-    selectedMoeMailDomains = ['__random__'];
+    selectedMoeMailDomains = [(window.appSettings && window.appSettings.defaultDomainMode === 'round-robin') ? '__all__' : '__random__'];
     updateDomainOptionStyles();
 
   } catch (e) {
@@ -376,7 +367,7 @@ async function loadCloudMailDomainsToList() {
 
     html += '</div>';
     listDiv.innerHTML = html;
-    selectedCloudMailDomains = ['__random__'];
+    selectedCloudMailDomains = [(window.appSettings && window.appSettings.defaultDomainMode === 'round-robin') ? '__all__' : '__random__'];
     updateCloudMailDomainStyles();
   } catch (e) {
     console.error('加载 Cloud-Mail 域名失败:', e);

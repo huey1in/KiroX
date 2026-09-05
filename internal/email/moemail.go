@@ -226,7 +226,12 @@ func NewMoeMailProvider(config MoeMailConfig, name string, expiryTime int64, dom
 }
 
 func NewMoeMailProviderContext(ctx context.Context, config MoeMailConfig, name string, expiryTime int64, domain string) (*MoeMailProvider, error) {
+	return NewMoeMailProviderContextWithProxy(ctx, config, name, expiryTime, domain, "")
+}
+
+func NewMoeMailProviderContextWithProxy(ctx context.Context, config MoeMailConfig, name string, expiryTime int64, domain, proxyURL string) (*MoeMailProvider, error) {
 	client := newMoeMailClient(ctx, config)
+	client.client = httpClientWithProxy(proxyURL, 15*time.Second)
 
 	// 实时获取可用域名列表，验证域名是否可用
 	sysConfig, err := client.GetSystemConfig()

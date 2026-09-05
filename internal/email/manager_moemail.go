@@ -12,7 +12,7 @@ import (
 
 // getMoeMailConfigPath 获取 MoeMail 配置文件路径
 func getMoeMailConfigPath() string {
-	return filepath.Join(storage.GetDataDir(), "moemail.dat")
+	return filepath.Join(storage.GetDataDir(), "moemail.json")
 }
 
 // GetMoeMailConfigs 获取 MoeMail 配置列表

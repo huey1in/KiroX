@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.3-6366f1?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v1.0.4-6366f1?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078d4?style=flat-square" alt="platform">
   <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go" alt="go">
   <img src="https://img.shields.io/badge/Wails-v2-red?style=flat-square" alt="wails">
@@ -182,7 +182,7 @@ Only one batch can run at a time.
 
 ### 3. View results
 
-Successful accounts are streamed to the output directory (default `~/Documents/Kirox`) as `accounts.json`:
+Successful accounts are streamed to the output directory (default `~/Documents/KiroX`) as `accounts.json`:
 
 ```json
 [
@@ -202,7 +202,9 @@ Successful accounts are streamed to the output directory (default `~/Documents/K
 
 The credit values above are examples; `creditUsed` and `creditLimit` depend on the account check and may be absent or `null`. A new successful record replaces the previous record for the same email. Passwords and access tokens are not written to this file; failed or banned accounts remain in the logs.
 
-Change the result directory in Settings. The separate application data directory defaults to `os.UserConfigDir()/kirox` (`%APPDATA%\kirox` on Windows) and can also be changed in Settings. Its mailbox pool file is also named `accounts.json`, so keep the data and result directories separate. Directory and language settings are stored as key-value text in `storage.conf` in the default configuration directory. Changing the result directory does not move existing result files.
+Installed builds keep runtime files under `%LOCALAPPDATA%\KiroX` by default. `settings.json` stores task defaults, network policies, interface settings, and advanced overrides; `data` stores mailbox pools, mail service settings, and the proxy pool; `cache` stores rebuildable browser identity data; and `logs` stores optional redacted runtime logs. The business data directory can be changed in Settings, while settings and cache remain in local app data. On first launch, data from the old `%APPDATA%\kirox` layout is copied into the new layout without deleting sources or overwriting existing destination files.
+
+Both the business data directory and result output directory contain a file named `accounts.json`, but they have different formats and purposes, so keep the directories separate. Changing the result directory does not move existing result files.
 
 ### 4. Proxy
 

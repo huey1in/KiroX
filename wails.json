@@ -11,7 +11,7 @@
   "info": {
     "companyName": "Kiro",
     "productName": "KiroX",
-    "productVersion": "1.0.3",
+    "productVersion": "1.0.4",
     "copyright": "Copyright © 2026",
     "comments": "AWS Builder ID 自动注册工具",
     "icon": "build/appicon.png"

@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.3-6366f1?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v1.0.4-6366f1?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078d4?style=flat-square" alt="platform">
   <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go" alt="go">
   <img src="https://img.shields.io/badge/Wails-v2-red?style=flat-square" alt="wails">
@@ -195,7 +195,7 @@ URL は本プロジェクトの取得処理に対応するメッセージ一覧�
 
 ### 3. 結果を確認
 
-成功したアカウントは結果出力ディレクトリ（デフォルト `~/Documents/Kirox`）に `accounts.json` として書き込まれます。出力ディレクトリは「設定」で変更できます。保存形式の例：
+成功したアカウントは結果出力ディレクトリ（デフォルト `~/Documents/KiroX`）に `accounts.json` として書き込まれます。出力ディレクトリは「設定」で変更できます。保存形式の例：
 
 ```json
 [
@@ -215,7 +215,7 @@ URL は本プロジェクトの取得処理に対応するメッセージ一覧�
 
 同じメールアドレスの成功記録は最新の内容で置き換えます。`creditUsed` / `creditLimit` の値は例で、検証結果によって項目が省略されたり `null` になったりします。パスワードとアクセストークンはこのファイルに保存されません。
 
-アプリデータのデフォルト保存先は `os.UserConfigDir()/kirox`（Windows では `%APPDATA%\kirox`）です。メールボックスプールやメールサービス設定は平文 JSON、保存先などの設定を持つ `storage.conf` はキーと値のテキスト形式です。
+インストール版の実行時ファイルは、デフォルトで `%LOCALAPPDATA%\KiroX` に保存されます。`settings.json` はタスク既定値、ネットワークポリシー、画面設定、詳細設定、`data` はメールボックス、メールサービス設定、プロキシプール、`cache` は再生成可能なブラウザ ID、`logs` は任意で有効化できる機密情報を隠した実行ログを保存します。業務データの保存先は「設定」で変更できますが、設定とキャッシュはローカルアプリデータに固定されます。初回起動時に旧 `%APPDATA%\kirox` のデータを新構成へコピーし、移行元は削除せず、既存の移行先ファイルも上書きしません。
 
 データディレクトリにもメールボックスプール用の `accounts.json` があり、結果出力ディレクトリの同名ファイルとは用途と形式が異なります。2 つのディレクトリは別々に設定してください。結果出力先を変更しても既存の結果ファイルは自動移行されません。
 

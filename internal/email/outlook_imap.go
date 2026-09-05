@@ -104,6 +104,11 @@ func (a OutlookAccount) mailMode() string {
 
 // RefreshOutlookToken 用 refresh_token 获取 access_token（优先走全局代理，失败时降级直连）
 func RefreshOutlookToken(acc OutlookAccount) (string, error) {
+	return RefreshOutlookTokenWithProxy(acc, storage.GetProxy())
+}
+
+// RefreshOutlookTokenWithProxy refreshes a token using the explicit mailbox proxy policy.
+func RefreshOutlookTokenWithProxy(acc OutlookAccount, proxyURL string) (string, error) {
 	form := url.Values{
 		"client_id":     {acc.ClientID},
 		"refresh_token": {acc.RefreshToken},
@@ -111,7 +116,6 @@ func RefreshOutlookToken(acc OutlookAccount) (string, error) {
 		"scope":         {"https://outlook.office.com/IMAP.AccessAsUser.All offline_access"},
 	}
 
-	proxyURL := storage.GetProxy()
 	tryPost := func(p string) (resp *http.Response, err error) {
 		client := httpClientWithProxy(p, 30*time.Second)
 		return client.Post(
@@ -121,10 +125,6 @@ func RefreshOutlookToken(acc OutlookAccount) (string, error) {
 		)
 	}
 	resp, err := tryPost(proxyURL)
-	if err != nil && proxyURL != "" {
-		log.Printf("[Outlook OAuth] 代理请求失败，降级直连：%v", err)
-		resp, err = tryPost("")
-	}
 	if err != nil {
 		return "", fmt.Errorf("请求失败: %v", err)
 	}
@@ -159,13 +159,12 @@ type imapClient struct {
 
 // newIMAPClient 连接 Outlook IMAP（优先走全局代理，代理被封端口时自动降级直连）
 func newIMAPClient() (*imapClient, error) {
+	return newIMAPClientWithProxy(storage.GetProxy())
+}
+
+func newIMAPClientWithProxy(proxyURL string) (*imapClient, error) {
 	const target = "outlook.office365.com:993"
-	proxyURL := storage.GetProxy()
 	rawConn, err := dialThroughProxy(proxyURL, "tcp", target, 15*time.Second)
-	if err != nil && proxyURL != "" {
-		log.Printf("[IMAP] 代理拨号失败，降级直连：%v", err)
-		rawConn, err = dialThroughProxy("", "tcp", target, 15*time.Second)
-	}
 	if err != nil {
 		return nil, fmt.Errorf("连接失败: %v", err)
 	}
@@ -362,14 +361,19 @@ func (c *imapClient) fetchLatestBody(seq int) (string, error) {
 
 // WaitForOTP 通过 IMAP 轮询等待 AWS 验证码
 func WaitForOTP(acc OutlookAccount, beforeCount, timeout, interval int) (string, error) {
+	return WaitForOTPWithProxy(acc, beforeCount, timeout, interval, storage.GetProxy())
+}
+
+// WaitForOTPWithProxy polls Outlook through the selected mailbox network policy.
+func WaitForOTPWithProxy(acc OutlookAccount, beforeCount, timeout, interval int, proxyURL string) (string, error) {
 	codeRegex := regexp.MustCompile(`\b(\d{6})\b`)
 	if acc.mailMode() == "graph" {
 		log.Printf("[Outlook Graph] 等待验证码, 邮箱=%s, 发送前邮件数=%d", acc.Email, beforeCount)
-		return waitForOTPGraph(acc, beforeCount, timeout, interval, codeRegex)
+		return waitForOTPGraph(acc, beforeCount, timeout, interval, codeRegex, proxyURL)
 	}
 
 	log.Printf("[Outlook IMAP] 等待验证码, 邮箱=%s, 发送前邮件数=%d", acc.Email, beforeCount)
-	accessToken, err := RefreshOutlookToken(acc)
+	accessToken, err := RefreshOutlookTokenWithProxy(acc, proxyURL)
 	if err != nil {
 		return "", fmt.Errorf("刷新 Outlook Token 失败: %v", err)
 	}
@@ -378,7 +382,7 @@ func WaitForOTP(acc OutlookAccount, beforeCount, timeout, interval int) (string,
 	consecutiveSelectFail := 0
 	maxConsecutiveSelectFail := 3 // 连续 3 次 SELECT 失败则提前放弃，避免单账号卡住整批
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		client, err := newIMAPClient()
+		client, err := newIMAPClientWithProxy(proxyURL)
 		if err != nil {
 			if attempt%5 == 0 {
 				log.Printf("[Outlook IMAP] 连接失败: %v, 重试中...", err)
@@ -389,7 +393,7 @@ func WaitForOTP(acc OutlookAccount, beforeCount, timeout, interval int) (string,
 
 		if err := client.authenticate(acc.Email, accessToken); err != nil {
 			client.close()
-			accessToken, _ = RefreshOutlookToken(acc)
+			accessToken, _ = RefreshOutlookTokenWithProxy(acc, proxyURL)
 			time.Sleep(time.Duration(interval) * time.Second)
 			continue
 		}
@@ -441,10 +445,15 @@ func WaitForOTP(acc OutlookAccount, beforeCount, timeout, interval int) (string,
 
 // GetInboxCount 获取收件箱当前邮件数量（带完整重连重试）
 func GetInboxCount(acc OutlookAccount) (int, error) {
+	return GetInboxCountWithProxy(acc, storage.GetProxy())
+}
+
+// GetInboxCountWithProxy reads the baseline count through the explicit mailbox proxy.
+func GetInboxCountWithProxy(acc OutlookAccount, proxyURL string) (int, error) {
 	if acc.mailMode() == "graph" {
-		return getInboxCountGraph(acc)
+		return getInboxCountGraph(acc, proxyURL)
 	}
-	accessToken, err := RefreshOutlookToken(acc)
+	accessToken, err := RefreshOutlookTokenWithProxy(acc, proxyURL)
 	if err != nil {
 		return 0, fmt.Errorf("刷新 Outlook Token 失败: %v", err)
 	}
@@ -454,7 +463,7 @@ func GetInboxCount(acc OutlookAccount) (int, error) {
 		if attempt > 0 {
 			time.Sleep(time.Duration(1+attempt) * time.Second)
 		}
-		client, err := newIMAPClient()
+		client, err := newIMAPClientWithProxy(proxyURL)
 		if err != nil {
 			lastErr = fmt.Errorf("连接 IMAP 失败: %v", err)
 			continue

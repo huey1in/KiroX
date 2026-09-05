@@ -27,6 +27,9 @@ import (
 // metricName 形如 "IsFingerprintGenerated:Success"; operation 形如
 // "AWSSignin:FingerprintMetrics:start"。
 func (r *Registrar) PostFingerprintMetric(metricName, value, operation string) error {
+	if !r.Cfg.TelemetryEnabled {
+		return nil
+	}
 	api := r.Cfg.SigninBase + "/metrics/fingerprint"
 	ref := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
@@ -59,6 +62,9 @@ func (r *Registrar) PostFingerprintMetricSafe(metricName, value, operation strin
 // SendUserEvent 上报页面事件 (signin.aws 页面加载/提交行为)。
 // 对照 HAR entry 97: PAGE_LOAD / CREDENTIAL_COLLECTION。
 func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage int64) error {
+	if !r.Cfg.TelemetryEnabled {
+		return nil
+	}
 	api := r.Cfg.SigninBase + "/platform/user-event/send-event"
 	ref := fmt.Sprintf("%s/platform/%s/signup?registrationCode=%s&state=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.RegCode, r.SignState)
@@ -103,6 +109,9 @@ func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage in
 // PostD2CEvent 上报 D2C 遥测事件 (timeTakenToFetchVID)。
 // 对照 HAR entries 37/66。
 func (r *Registrar) PostD2CEvent(pageURL string, fetchDuration time.Duration) error {
+	if !r.Cfg.TelemetryEnabled {
+		return nil
+	}
 	const api = "https://d2c.aws.amazon.com/csds/collector/v1/events/batch"
 
 	origin := r.Cfg.SigninBase
@@ -241,6 +250,9 @@ type katalGroup struct {
 
 // PostKatalNexus 上报一批 katal 指标 (失败仅日志)。
 func (r *Registrar) PostKatalNexus(groups []katalGroup) {
+	if !r.Cfg.TelemetryEnabled {
+		return
+	}
 	if len(groups) == 0 {
 		return
 	}

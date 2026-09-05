@@ -5,19 +5,257 @@ import (
 	"fmt"
 	"log"
 	"maps"
+	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	keyDataDir         = "data_dir"
-	keyResultOutputDir = "result_output_dir"
-	keyProxy           = "proxy"
-	keyLanguage        = "language"
+	settingsSchemaVersion = 3
+	keyDataDir            = "data_dir"
+	keyResultOutputDir    = "result_output_dir"
+	keyProxy              = "proxy"
+	keyLanguage           = "language"
 )
+
+type fileMigration struct {
+	Destination string
+	Sources     []string
+}
+
+var businessDataMigrations = []fileMigration{
+	{Destination: "accounts.json", Sources: []string{"accounts.json", "accounts.dat"}},
+	{Destination: "moemail.json", Sources: []string{"moemail.json", "moemail.dat"}},
+	{Destination: "cloudmail.json", Sources: []string{"cloudmail.json", "cloudmail.dat"}},
+	{Destination: "mailnest.json", Sources: []string{"mailnest.json", "mailnest.dat"}},
+	{Destination: "proxy_pool.json", Sources: []string{"proxy_pool.json"}},
+}
+
+type settingsFile struct {
+	SchemaVersion   int         `json:"schemaVersion"`
+	DataDir         string      `json:"dataDir,omitempty"`
+	ResultOutputDir string      `json:"resultOutputDir,omitempty"`
+	Proxy           string      `json:"proxy,omitempty"`
+	Language        string      `json:"language,omitempty"`
+	Runtime         AppSettings `json:"runtime"`
+}
+
+// AppSettings contains user-facing runtime defaults and advanced service overrides.
+// Directory settings stay at the root of settings.json because they are needed before
+// the rest of the application is initialized.
+type AppSettings struct {
+	DefaultCount          int    `json:"defaultCount"`
+	DefaultConcurrency    int    `json:"defaultConcurrency"`
+	DefaultDelay          int    `json:"defaultDelay"`
+	DefaultEmailProvider  string `json:"defaultEmailProvider"`
+	DefaultTaskProxy      string `json:"defaultTaskProxy"`
+	DefaultDomainMode     string `json:"defaultDomainMode"`
+	EmailProxyMode        string `json:"emailProxyMode"`
+	EmailProxy            string `json:"emailProxy"`
+	OTPTimeoutSeconds     int    `json:"otpTimeoutSeconds"`
+	RetryProfile          string `json:"retryProfile"`
+	StopOnRisk            bool   `json:"stopOnRisk"`
+	SoundEnabled          bool   `json:"soundEnabled"`
+	DesktopNotifications  bool   `json:"desktopNotifications"`
+	SoundVolume           int    `json:"soundVolume"`
+	AutoCheckUpdates      bool   `json:"autoCheckUpdates"`
+	Theme                 string `json:"theme"`
+	Language              string `json:"language"`
+	PersistentLogs        bool   `json:"persistentLogs"`
+	LogRetentionDays      int    `json:"logRetentionDays"`
+	AutoProbeProxies      bool   `json:"autoProbeProxies"`
+	MoeMailExpiryMinutes  int    `json:"moeMailExpiryMinutes"`
+	AWSRegion             string `json:"awsRegion"`
+	RequestTimeoutSeconds int    `json:"requestTimeoutSeconds"`
+	FingerprintTTLHours   int    `json:"fingerprintTTLHours"`
+	FingerprintAlgorithm  string `json:"fingerprintAlgorithm"`
+	FingerprintOffsets    []int  `json:"fingerprintOffsets"`
+	TelemetryEnabled      bool   `json:"telemetryEnabled"`
+	OIDCBase              string `json:"oidcBase"`
+	SigninBase            string `json:"signinBase"`
+	ProfileBase           string `json:"profileBase"`
+	ViewBase              string `json:"viewBase"`
+	PortalBase            string `json:"portalBase"`
+	StartURL              string `json:"startURL"`
+	KiroBase              string `json:"kiroBase"`
+	KiroRedirectURI       string `json:"kiroRedirectURI"`
+	DirectoryID           string `json:"directoryID"`
+}
+
+func DefaultAppSettings() AppSettings {
+	return AppSettings{
+		DefaultCount:          1,
+		DefaultConcurrency:    1,
+		DefaultDelay:          1,
+		DefaultEmailProvider:  "outlook",
+		DefaultDomainMode:     "random",
+		EmailProxyMode:        "follow-task",
+		OTPTimeoutSeconds:     120,
+		RetryProfile:          "standard",
+		StopOnRisk:            true,
+		SoundEnabled:          true,
+		DesktopNotifications:  true,
+		SoundVolume:           70,
+		AutoCheckUpdates:      true,
+		Theme:                 "system",
+		LogRetentionDays:      7,
+		AutoProbeProxies:      true,
+		MoeMailExpiryMinutes:  60,
+		AWSRegion:             "us-east-1",
+		RequestTimeoutSeconds: 60,
+		FingerprintTTLHours:   6,
+		FingerprintAlgorithm:  "balanced",
+		FingerprintOffsets:    []int{0, 0, 0, 15, 100},
+		TelemetryEnabled:      true,
+		OIDCBase:              "https://oidc.us-east-1.amazonaws.com",
+		SigninBase:            "https://us-east-1.signin.aws",
+		ProfileBase:           "https://profile.aws.amazon.com",
+		ViewBase:              "https://view.awsapps.com",
+		PortalBase:            "https://portal.sso.us-east-1.amazonaws.com",
+		StartURL:              "https://view.awsapps.com/start",
+		KiroBase:              "https://app.kiro.dev",
+		KiroRedirectURI:       "https://app.kiro.dev/signin/oauth",
+		DirectoryID:           "d-9067642ac7",
+	}
+}
+
+func normalizeAppSettings(s AppSettings) AppSettings {
+	d := DefaultAppSettings()
+	s.DefaultCount = clampDefault(s.DefaultCount, 1, 100, d.DefaultCount)
+	s.DefaultConcurrency = clampDefault(s.DefaultConcurrency, 1, 10, d.DefaultConcurrency)
+	s.DefaultDelay = clampDefault(s.DefaultDelay, 0, 300, d.DefaultDelay)
+	if !oneOf(s.DefaultEmailProvider, "outlook", "moemail", "cloudmail", "mailnest", "icloud") {
+		s.DefaultEmailProvider = d.DefaultEmailProvider
+	}
+	if !oneOf(s.DefaultDomainMode, "random", "round-robin") {
+		s.DefaultDomainMode = d.DefaultDomainMode
+	}
+	if !oneOf(s.EmailProxyMode, "direct", "follow-task", "custom") {
+		s.EmailProxyMode = d.EmailProxyMode
+	}
+	s.DefaultTaskProxy = NormalizeProxyAddress(strings.TrimSpace(s.DefaultTaskProxy))
+	s.EmailProxy = NormalizeProxyAddress(strings.TrimSpace(s.EmailProxy))
+	if s.EmailProxyMode != "custom" {
+		s.EmailProxy = ""
+	}
+	if !oneOf(fmt.Sprint(s.OTPTimeoutSeconds), "60", "120", "180", "300") {
+		s.OTPTimeoutSeconds = d.OTPTimeoutSeconds
+	}
+	if !oneOf(s.RetryProfile, "fast", "standard", "stable") {
+		s.RetryProfile = d.RetryProfile
+	}
+	s.SoundVolume = clampDefault(s.SoundVolume, 0, 100, d.SoundVolume)
+	if !oneOf(s.Theme, "system", "light", "dark") {
+		s.Theme = d.Theme
+	}
+	if s.Language != "" && !oneOf(s.Language, "zh", "en", "ja") {
+		s.Language = ""
+	}
+	s.LogRetentionDays = clampDefault(s.LogRetentionDays, 1, 90, d.LogRetentionDays)
+	s.MoeMailExpiryMinutes = clampDefault(s.MoeMailExpiryMinutes, 10, 1440, d.MoeMailExpiryMinutes)
+	s.RequestTimeoutSeconds = clampDefault(s.RequestTimeoutSeconds, 10, 180, d.RequestTimeoutSeconds)
+	s.FingerprintTTLHours = clampDefault(s.FingerprintTTLHours, 1, 168, d.FingerprintTTLHours)
+	if !oneOf(s.FingerprintAlgorithm, "stable", "balanced", "fresh", "custom") {
+		s.FingerprintAlgorithm = d.FingerprintAlgorithm
+	}
+	s.FingerprintOffsets = normalizeFingerprintOffsets(s.FingerprintOffsets, s.FingerprintAlgorithm)
+	s.FingerprintAlgorithm = fingerprintCurvePreset(s.FingerprintOffsets)
+	if strings.TrimSpace(s.AWSRegion) == "" {
+		s.AWSRegion = d.AWSRegion
+	}
+	if strings.TrimSpace(s.OIDCBase) == "" {
+		s.OIDCBase = d.OIDCBase
+	}
+	if strings.TrimSpace(s.SigninBase) == "" {
+		s.SigninBase = d.SigninBase
+	}
+	if strings.TrimSpace(s.ProfileBase) == "" {
+		s.ProfileBase = d.ProfileBase
+	}
+	if strings.TrimSpace(s.ViewBase) == "" {
+		s.ViewBase = d.ViewBase
+	}
+	if strings.TrimSpace(s.PortalBase) == "" {
+		s.PortalBase = d.PortalBase
+	}
+	if strings.TrimSpace(s.StartURL) == "" {
+		s.StartURL = d.StartURL
+	}
+	if strings.TrimSpace(s.KiroBase) == "" {
+		s.KiroBase = d.KiroBase
+	}
+	if strings.TrimSpace(s.KiroRedirectURI) == "" {
+		s.KiroRedirectURI = d.KiroRedirectURI
+	}
+	if strings.TrimSpace(s.DirectoryID) == "" {
+		s.DirectoryID = d.DirectoryID
+	}
+	return s
+}
+
+func clampDefault(value, minValue, maxValue, fallback int) int {
+	if value < minValue || value > maxValue {
+		return fallback
+	}
+	return value
+}
+
+func normalizeFingerprintOffsets(values []int, legacyAlgorithm string) []int {
+	if len(values) != 5 {
+		switch legacyAlgorithm {
+		case "stable":
+			values = []int{0, 0, 0, 0, 0}
+		case "fresh":
+			values = []int{100, 100, 100, 100, 100}
+		default:
+			values = []int{0, 0, 0, 15, 100}
+		}
+	}
+	normalized := make([]int, 5)
+	for i, value := range values {
+		if value < 0 {
+			value = 0
+		} else if value > 100 {
+			value = 100
+		}
+		normalized[i] = value
+	}
+	return normalized
+}
+
+func fingerprintCurvePreset(values []int) string {
+	presets := map[string][]int{
+		"stable":   {0, 0, 0, 0, 0},
+		"balanced": {0, 0, 0, 15, 100},
+		"fresh":    {100, 100, 100, 100, 100},
+	}
+	for name, preset := range presets {
+		matched := len(values) == len(preset)
+		for i := range preset {
+			if !matched || values[i] != preset[i] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return name
+		}
+	}
+	return "custom"
+}
+
+func oneOf(value string, allowed ...string) bool {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return true
+		}
+	}
+	return false
+}
 
 var (
 	_dataDir          string
@@ -28,26 +266,68 @@ var (
 	_proxyOnce        sync.Once
 	_language         string
 	_languageOnce     sync.Once
+
+	layoutOnce sync.Once
+	layoutErr  error
+	settingsMu sync.Mutex
+
+	localDataBaseResolver = func() (string, error) {
+		if runtime.GOOS == "windows" {
+			return os.UserCacheDir()
+		}
+		return os.UserConfigDir()
+	}
+	configBaseResolver = os.UserConfigDir
 )
 
-// GetDefaultDataDir 获取默认应用数据目录
+// GetAppRootDir 获取安装版的应用根目录。Windows 下为 %LOCALAPPDATA%\KiroX。
+func GetAppRootDir() string {
+	baseDir, err := localDataBaseResolver()
+	if err != nil {
+		baseDir = "."
+	}
+	return filepath.Join(baseDir, "KiroX")
+}
+
+// GetDefaultDataDir 获取默认业务数据目录。
 func GetDefaultDataDir() string {
-	configDir, err := os.UserConfigDir()
+	return filepath.Join(GetAppRootDir(), "data")
+}
+
+// GetCacheDir 获取可安全重建的缓存目录。
+func GetCacheDir() string {
+	dir := filepath.Join(GetAppRootDir(), "cache")
+	_ = os.MkdirAll(dir, 0o755)
+	return dir
+}
+
+// GetLogsDir 获取应用日志目录。
+func GetLogsDir() string {
+	dir := filepath.Join(GetAppRootDir(), "logs")
+	_ = os.MkdirAll(dir, 0o755)
+	return dir
+}
+
+func getSettingsFilePath() string {
+	return filepath.Join(GetAppRootDir(), "settings.json")
+}
+
+func getLegacyRootDir() string {
+	configDir, err := configBaseResolver()
 	if err != nil {
 		configDir = "."
 	}
 	return filepath.Join(configDir, "kirox")
 }
 
-// getConfigFilePath 获取配置文件路径（始终在默认目录下）
-func getConfigFilePath() string {
-	return filepath.Join(GetDefaultDataDir(), "storage.conf")
+func getLegacyConfigFilePath() string {
+	return filepath.Join(getLegacyRootDir(), "storage.conf")
 }
 
-// loadConfigMap 解析 storage.conf 为 KV；兼容旧版（整文件即 data_dir 路径）
-func loadConfigMap() map[string]string {
+// loadLegacyConfigMap 解析旧版 storage.conf；兼容整文件仅保存 data_dir 的格式。
+func loadLegacyConfigMap() map[string]string {
 	m := map[string]string{}
-	data, err := os.ReadFile(getConfigFilePath())
+	data, err := os.ReadFile(getLegacyConfigFilePath())
 	if err != nil {
 		return m
 	}
@@ -77,25 +357,166 @@ func loadConfigMap() map[string]string {
 	return m
 }
 
-func saveConfigMap(m map[string]string) error {
-	os.MkdirAll(GetDefaultDataDir(), 0755)
-	var b strings.Builder
-	for _, k := range []string{keyDataDir, keyResultOutputDir, keyProxy, keyLanguage} {
-		if v := strings.TrimSpace(m[k]); v != "" {
-			b.WriteString(k)
-			b.WriteByte('=')
-			b.WriteString(v)
-			b.WriteByte('\n')
+// migrateLegacyLayout copies data from the portable/Roaming layout once. Source
+// files are deliberately retained so an upgrade can be rolled back safely.
+func migrateLegacyLayout() error {
+	settingsPath := getSettingsFilePath()
+	if _, err := os.Stat(settingsPath); err == nil {
+		settings := readSettingsFile()
+		return writeSettingsFile(settings)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	legacy := loadLegacyConfigMap()
+	legacyRoot := getLegacyRootDir()
+	dataDir := GetDefaultDataDir()
+	sourceDir := legacyRoot
+	if custom := strings.TrimSpace(legacy[keyDataDir]); custom != "" {
+		custom = filepath.Clean(custom)
+		if info, err := os.Stat(custom); err == nil && info.IsDir() {
+			dataDir = custom
+			sourceDir = custom
 		}
 	}
-	return os.WriteFile(getConfigFilePath(), []byte(b.String()), 0600)
+
+	migrated, err := migrateData(sourceDir, dataDir)
+	if err != nil {
+		return fmt.Errorf("迁移旧业务数据失败: %w", err)
+	}
+	cacheMigrated, err := migrateFiles(sourceDir, GetCacheDir(), []fileMigration{
+		{Destination: "identities.json", Sources: []string{"identities.json", "identities.dat"}},
+	})
+	if err != nil {
+		return fmt.Errorf("迁移旧缓存失败: %w", err)
+	}
+
+	settings := settingsFile{
+		SchemaVersion:   settingsSchemaVersion,
+		ResultOutputDir: strings.TrimSpace(legacy[keyResultOutputDir]),
+		Proxy:           strings.TrimSpace(legacy[keyProxy]),
+		Language:        strings.TrimSpace(legacy[keyLanguage]),
+		Runtime:         DefaultAppSettings(),
+	}
+	settings.Runtime.Language = settings.Language
+	if dataDir != GetDefaultDataDir() {
+		settings.DataDir = dataDir
+	}
+	if err := writeSettingsFile(settings); err != nil {
+		return fmt.Errorf("写入新设置文件失败: %w", err)
+	}
+	if migrated+cacheMigrated > 0 {
+		log.Printf("[存储] 已从旧版目录复制 %d 个文件", migrated+cacheMigrated)
+	}
+	return nil
+}
+
+func readSettingsFile() settingsFile {
+	settings := settingsFile{SchemaVersion: settingsSchemaVersion, Runtime: DefaultAppSettings()}
+	data, err := os.ReadFile(getSettingsFilePath())
+	if err != nil {
+		return settings
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		log.Printf("[存储] settings.json 格式无效: %v", err)
+		return settingsFile{SchemaVersion: settingsSchemaVersion, Runtime: DefaultAppSettings()}
+	}
+	if settings.SchemaVersion < 3 {
+		settings.Runtime = DefaultAppSettings()
+		settings.Runtime.Language = settings.Language
+	}
+	settings.Runtime = normalizeAppSettings(settings.Runtime)
+	settings.SchemaVersion = settingsSchemaVersion
+	return settings
+}
+
+func writeSettingsFile(settings settingsFile) error {
+	settings.SchemaVersion = settingsSchemaVersion
+	settings.Runtime = normalizeAppSettings(settings.Runtime)
+	settings.Language = settings.Runtime.Language
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(GetAppRootDir(), 0o755); err != nil {
+		return err
+	}
+	tmp := getSettingsFilePath() + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, getSettingsFilePath())
+}
+
+// GetAppSettings returns a normalized copy of all runtime settings.
+func GetAppSettings() AppSettings {
+	return loadSettings().Runtime
+}
+
+// SaveAppSettings validates and atomically persists runtime settings.
+func SaveAppSettings(appSettings AppSettings) (AppSettings, error) {
+	appSettings = normalizeAppSettings(appSettings)
+	for name, value := range map[string]string{
+		"OIDC Base": appSettings.OIDCBase, "Signin Base": appSettings.SigninBase,
+		"Profile Base": appSettings.ProfileBase, "View Base": appSettings.ViewBase,
+		"Portal Base": appSettings.PortalBase, "Start URL": appSettings.StartURL,
+		"Kiro Base": appSettings.KiroBase, "Kiro Redirect URI": appSettings.KiroRedirectURI,
+	} {
+		parsed, err := url.ParseRequestURI(value)
+		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			return AppSettings{}, fmt.Errorf("%s 必须是有效的 HTTP(S) URL", name)
+		}
+	}
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.Runtime = appSettings
+		settings.Language = appSettings.Language
+	}); err != nil {
+		return AppSettings{}, err
+	}
+	_language = appSettings.Language
+	_languageOnce = sync.Once{}
+	_languageOnce.Do(func() {})
+	return appSettings, nil
+}
+
+func ensureStorageLayout() error {
+	layoutOnce.Do(func() {
+		for _, dir := range []string{GetAppRootDir(), GetDefaultDataDir(), GetCacheDir(), GetLogsDir()} {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				layoutErr = err
+				return
+			}
+		}
+		layoutErr = migrateLegacyLayout()
+	})
+	return layoutErr
+}
+
+func loadSettings() settingsFile {
+	if err := ensureStorageLayout(); err != nil {
+		log.Printf("[存储] 初始化目录失败: %v", err)
+	}
+	settingsMu.Lock()
+	defer settingsMu.Unlock()
+	return readSettingsFile()
+}
+
+func updateSettings(update func(*settingsFile)) error {
+	if err := ensureStorageLayout(); err != nil {
+		return err
+	}
+	settingsMu.Lock()
+	defer settingsMu.Unlock()
+	settings := readSettingsFile()
+	update(&settings)
+	return writeSettingsFile(settings)
 }
 
 // GetDataDir 获取应用数据目录（优先使用自定义目录）
 func GetDataDir() string {
 	_dataDirOnce.Do(func() {
-		m := loadConfigMap()
-		custom := strings.TrimSpace(m[keyDataDir])
+		settings := loadSettings()
+		custom := strings.TrimSpace(settings.DataDir)
 		if custom != "" {
 			if info, err := os.Stat(custom); err == nil && info.IsDir() {
 				_dataDir = custom
@@ -109,14 +530,18 @@ func GetDataDir() string {
 	return _dataDir
 }
 
-// SetDataDirPath 设置自定义存储目录（自动迁移 accounts.dat）
+// SetDataDirPath 设置自定义存储目录并迁移全部业务数据文件。
 func SetDataDirPath(dir string) (string, error) {
-	if dir == "" {
+	dir = filepath.Clean(strings.TrimSpace(dir))
+	if dir == "" || dir == "." {
 		return "", fmt.Errorf("目录不能为空")
 	}
+	_accountsLocationMu.Lock()
+	defer _accountsLocationMu.Unlock()
+	flushAccountsSyncLocked()
 	oldDir := GetDataDir()
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("创建目录失败: %w", err)
 	}
 
@@ -130,48 +555,58 @@ func SetDataDirPath(dir string) (string, error) {
 		}
 	}
 
-	m := loadConfigMap()
-	m[keyDataDir] = dir
-	if err := saveConfigMap(m); err != nil {
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.DataDir = dir
+	}); err != nil {
 		return "", fmt.Errorf("保存配置失败: %w", err)
 	}
 
 	_dataDir = dir
 	_dataDirOnce = sync.Once{}
 	_dataDirOnce.Do(func() {})
+	resetAccountsCache()
 
 	return dir, nil
 }
 
 // ResetDataDirPath 重置为默认存储目录（自动迁移数据回默认目录）
-func ResetDataDirPath() string {
+func ResetDataDirPath() (string, error) {
+	_accountsLocationMu.Lock()
+	defer _accountsLocationMu.Unlock()
+	flushAccountsSyncLocked()
 	oldDir := GetDataDir()
 	defaultDir := GetDefaultDataDir()
 
 	if oldDir != "" && oldDir != defaultDir {
-		migrated, _ := migrateData(oldDir, defaultDir)
+		migrated, err := migrateData(oldDir, defaultDir)
+		if err != nil {
+			return "", fmt.Errorf("数据迁移失败: %w", err)
+		}
 		if migrated > 0 {
 			log.Printf("已迁移 %d 个数据文件: %s → %s", migrated, oldDir, defaultDir)
 		}
 	}
 
-	m := loadConfigMap()
-	delete(m, keyDataDir)
-	_ = saveConfigMap(m)
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.DataDir = ""
+	}); err != nil {
+		return "", fmt.Errorf("保存配置失败: %w", err)
+	}
 
-	os.MkdirAll(defaultDir, 0755)
+	os.MkdirAll(defaultDir, 0o755)
 	_dataDir = defaultDir
 	_dataDirOnce = sync.Once{}
 	_dataDirOnce.Do(func() {})
+	resetAccountsCache()
 
-	return defaultDir
+	return defaultDir, nil
 }
 
-// getDefaultResultOutputDir 默认输出目录：用户文档目录下的 Kirox 文件夹。
+// getDefaultResultOutputDir 默认输出目录：用户文档目录下的 KiroX 文件夹。
 // 若无法解析用户主目录，回落到可执行文件所在目录下的 output。
 func getDefaultResultOutputDir() string {
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, "Documents", "Kirox")
+		return filepath.Join(home, "Documents", "KiroX")
 	}
 	base := "."
 	if exe, err := os.Executable(); err == nil {
@@ -185,11 +620,11 @@ func getDefaultResultOutputDir() string {
 	return filepath.Join(base, "output")
 }
 
-// GetResultOutputDir 获取注册结果输出目录（默认为用户文档目录下的 Kirox）
+// GetResultOutputDir 获取注册结果输出目录（默认为用户文档目录下的 KiroX）
 func GetResultOutputDir() string {
 	_resultOutputOnce.Do(func() {
-		m := loadConfigMap()
-		if custom := strings.TrimSpace(m[keyResultOutputDir]); custom != "" {
+		settings := loadSettings()
+		if custom := strings.TrimSpace(settings.ResultOutputDir); custom != "" {
 			_resultOutputDir = custom
 		} else {
 			_resultOutputDir = getDefaultResultOutputDir()
@@ -207,9 +642,9 @@ func SetResultOutputDir(dir string) (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("创建目录失败: %w", err)
 	}
-	m := loadConfigMap()
-	m[keyResultOutputDir] = dir
-	if err := saveConfigMap(m); err != nil {
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.ResultOutputDir = dir
+	}); err != nil {
 		return "", fmt.Errorf("保存配置失败: %w", err)
 	}
 	_resultOutputDir = dir
@@ -218,25 +653,29 @@ func SetResultOutputDir(dir string) (string, error) {
 	return dir, nil
 }
 
-// ResetResultOutputDir 重置为默认输出目录（用户文档目录下的 Kirox）
-func ResetResultOutputDir() string {
-	m := loadConfigMap()
-	delete(m, keyResultOutputDir)
-	_ = saveConfigMap(m)
+// ResetResultOutputDir 重置为默认输出目录（用户文档目录下的 KiroX）
+func ResetResultOutputDir() (string, error) {
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.ResultOutputDir = ""
+	}); err != nil {
+		return "", err
+	}
 
 	defaultDir := getDefaultResultOutputDir()
-	os.MkdirAll(defaultDir, 0755)
+	if err := os.MkdirAll(defaultDir, 0o755); err != nil {
+		return "", fmt.Errorf("创建默认输出目录失败: %w", err)
+	}
 	_resultOutputDir = defaultDir
 	_resultOutputOnce = sync.Once{}
 	_resultOutputOnce.Do(func() {})
-	return defaultDir
+	return defaultDir, nil
 }
 
 // GetProxy 返回当前全局代理 URL（空字符串表示直连）。
 func GetProxy() string {
 	_proxyOnce.Do(func() {
-		m := loadConfigMap()
-		_proxy = strings.TrimSpace(m[keyProxy])
+		settings := loadSettings()
+		_proxy = strings.TrimSpace(settings.Proxy)
 	})
 	return _proxy
 }
@@ -244,13 +683,9 @@ func GetProxy() string {
 // SetProxy 设置全局代理 URL（会自动归一化常见简写格式）。
 func SetProxy(raw string) (string, error) {
 	normalized := NormalizeProxyAddress(strings.TrimSpace(raw))
-	m := loadConfigMap()
-	if normalized == "" {
-		delete(m, keyProxy)
-	} else {
-		m[keyProxy] = normalized
-	}
-	if err := saveConfigMap(m); err != nil {
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.Proxy = normalized
+	}); err != nil {
 		return "", err
 	}
 	_proxy = normalized
@@ -261,9 +696,9 @@ func SetProxy(raw string) (string, error) {
 
 // ResetProxy 清空代理配置，恢复直连。
 func ResetProxy() {
-	m := loadConfigMap()
-	delete(m, keyProxy)
-	_ = saveConfigMap(m)
+	_ = updateSettings(func(settings *settingsFile) {
+		settings.Proxy = ""
+	})
 	_proxy = ""
 	_proxyOnce = sync.Once{}
 	_proxyOnce.Do(func() {})
@@ -272,8 +707,8 @@ func ResetProxy() {
 // GetLanguage 返回当前界面语言代码（"zh"/"en"/"ja"），未设置时返回空字符串。
 func GetLanguage() string {
 	_languageOnce.Do(func() {
-		m := loadConfigMap()
-		_language = strings.TrimSpace(m[keyLanguage])
+		settings := loadSettings()
+		_language = strings.TrimSpace(settings.Language)
 	})
 	return _language
 }
@@ -284,9 +719,10 @@ func SetLanguage(lang string) error {
 	if lang != "zh" && lang != "en" && lang != "ja" {
 		return fmt.Errorf("不支持的语言: %s", lang)
 	}
-	m := loadConfigMap()
-	m[keyLanguage] = lang
-	if err := saveConfigMap(m); err != nil {
+	if err := updateSettings(func(settings *settingsFile) {
+		settings.Language = lang
+		settings.Runtime.Language = lang
+	}); err != nil {
 		return err
 	}
 	_language = lang
@@ -323,30 +759,46 @@ func NormalizeProxyAddress(s string) string {
 	return s
 }
 
-// migrateData 将旧目录中的数据文件迁移到新目录
+// migrateData 将旧目录中的全部业务数据文件复制到新目录。
 func migrateData(oldDir, newDir string) (int, error) {
+	return migrateFiles(oldDir, newDir, businessDataMigrations)
+}
+
+func migrateFiles(oldDir, newDir string, migrations []fileMigration) (int, error) {
+	if err := os.MkdirAll(newDir, 0o755); err != nil {
+		return 0, err
+	}
 	migrated := 0
-	items := []string{"accounts.json", "accounts.dat"}
-
-	for _, item := range items {
-		src := filepath.Join(oldDir, item)
-		dst := filepath.Join(newDir, "accounts.json")
-
-		if _, err := os.Stat(src); err != nil {
-			continue
-		}
+	for _, migration := range migrations {
+		dst := filepath.Join(newDir, migration.Destination)
 		if _, err := os.Stat(dst); err == nil {
 			continue
-		}
-		data, err := os.ReadFile(src)
-		if err != nil {
+		} else if !os.IsNotExist(err) {
 			return migrated, err
 		}
-		os.MkdirAll(filepath.Dir(dst), 0755)
-		if err := os.WriteFile(dst, data, 0600); err != nil {
-			return migrated, err
+
+		for _, sourceName := range migration.Sources {
+			src := filepath.Join(oldDir, sourceName)
+			info, err := os.Stat(src)
+			if os.IsNotExist(err) {
+				continue
+			}
+			if err != nil {
+				return migrated, err
+			}
+			if !info.Mode().IsRegular() {
+				continue
+			}
+			data, err := os.ReadFile(src)
+			if err != nil {
+				return migrated, err
+			}
+			if err := os.WriteFile(dst, data, 0o600); err != nil {
+				return migrated, err
+			}
+			migrated++
+			break
 		}
-		migrated++
 	}
 	return migrated, nil
 }
@@ -359,15 +811,33 @@ func GetAccountsPath() string {
 // ===== Accounts 内存缓存（消除并发文件 I/O 瓶颈）=====
 
 var (
-	_accountsCache   []map[string]interface{}
-	_accountsMu      sync.RWMutex
-	_accountsLoadMu  sync.Mutex
-	_accountsFlushMu sync.Mutex
-	_accountsLoaded  bool
-	_accountsDirty   bool
-	_accountsVersion uint64
-	_flushTimer      *time.Timer
+	_accountsCache      []map[string]interface{}
+	_accountsLocationMu sync.RWMutex
+	_accountsMu         sync.RWMutex
+	_accountsLoadMu     sync.Mutex
+	_accountsFlushMu    sync.Mutex
+	_accountsLoaded     bool
+	_accountsDirty      bool
+	_accountsVersion    uint64
+	_flushTimer         *time.Timer
 )
+
+func resetAccountsCache() {
+	_accountsLoadMu.Lock()
+	defer _accountsLoadMu.Unlock()
+	_accountsFlushMu.Lock()
+	defer _accountsFlushMu.Unlock()
+	_accountsMu.Lock()
+	defer _accountsMu.Unlock()
+	if _flushTimer != nil {
+		_flushTimer.Stop()
+	}
+	_accountsCache = nil
+	_accountsLoaded = false
+	_accountsDirty = false
+	_accountsVersion = 0
+	_flushTimer = nil
+}
 
 func loadAccountsCache() {
 	_accountsMu.RLock()
@@ -409,6 +879,8 @@ func cloneAccounts(accounts []map[string]interface{}) []map[string]interface{} {
 
 // GetAccountsCached 获取账号列表（从内存缓存）
 func GetAccountsCached() []map[string]interface{} {
+	_accountsLocationMu.RLock()
+	defer _accountsLocationMu.RUnlock()
 	loadAccountsCache()
 	_accountsMu.RLock()
 	defer _accountsMu.RUnlock()
@@ -417,6 +889,8 @@ func GetAccountsCached() []map[string]interface{} {
 
 // SetAccountsCached 替换账号列表并触发异步刷盘
 func SetAccountsCached(accounts []map[string]interface{}) {
+	_accountsLocationMu.RLock()
+	defer _accountsLocationMu.RUnlock()
 	_accountsMu.Lock()
 	_accountsCache = cloneAccounts(accounts)
 	_accountsLoaded = true
@@ -428,6 +902,8 @@ func SetAccountsCached(accounts []map[string]interface{}) {
 
 // ModifyAccountsCached 原子修改账号列表（回调在锁内执行，高效无文件 I/O）
 func ModifyAccountsCached(fn func([]map[string]interface{}) []map[string]interface{}) {
+	_accountsLocationMu.RLock()
+	defer _accountsLocationMu.RUnlock()
 	loadAccountsCache()
 	_accountsMu.Lock()
 	_accountsCache = fn(_accountsCache)
@@ -445,6 +921,12 @@ func scheduleFlush() {
 }
 
 func flushAccountsToDisk() {
+	_accountsLocationMu.RLock()
+	defer _accountsLocationMu.RUnlock()
+	flushAccountsToDiskLocked()
+}
+
+func flushAccountsToDiskLocked() {
 	// Serialize snapshots as well as writes so an older flush cannot win last.
 	_accountsFlushMu.Lock()
 	defer _accountsFlushMu.Unlock()
@@ -468,13 +950,19 @@ func flushAccountsToDisk() {
 
 // FlushAccountsSync 同步刷盘（程序退出前调用）
 func FlushAccountsSync() {
+	_accountsLocationMu.RLock()
+	defer _accountsLocationMu.RUnlock()
+	flushAccountsSyncLocked()
+}
+
+func flushAccountsSyncLocked() {
 	_accountsMu.Lock()
 	if _flushTimer != nil {
 		_flushTimer.Stop()
 		_flushTimer = nil
 	}
 	_accountsMu.Unlock()
-	flushAccountsToDisk()
+	flushAccountsToDiskLocked()
 }
 
 // ===== JSON 存储读写 =====

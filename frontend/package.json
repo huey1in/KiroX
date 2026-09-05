@@ -1,6 +1,6 @@
 {
   "name": "kirox",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "scripts": {
     "dev": "node build.js",
     "build": "node build.js"

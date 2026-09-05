@@ -386,15 +386,53 @@
     <div class="page" id="page-settings">
       <div class="page-scroll" style="padding:28px 32px 40px;max-width:800px;margin:0 auto;">
 
+        <div class="settings-page-header">
+          <div>
+            <div class="settings-page-title" data-i18n="settings.title">设置</div>
+            <div class="settings-page-subtitle" data-i18n="settings.subtitle">配置默认任务、通知和运行策略</div>
+          </div>
+          <button type="button" class="btn btn-dark" onclick="saveAppSettings()" data-i18n="settings.save">保存设置</button>
+        </div>
+
+        <div class="card settings-card">
+          <div class="settings-group">
+            <div class="settings-group-title" data-i18n="settings.taskDefaults">注册默认值</div>
+            <div class="settings-grid">
+              <label class="settings-field"><span data-i18n="settings.defaultCount">默认注册数量</span><input id="setting-default-count" class="form-input" type="number" min="1" max="100"></label>
+              <label class="settings-field"><span data-i18n="settings.defaultConcurrency">默认并发数</span><input id="setting-default-concurrency" class="form-input" type="number" min="1" max="10"></label>
+              <label class="settings-field"><span data-i18n="settings.defaultDelay">默认串行间隔（秒）</span><input id="setting-default-delay" class="form-input" type="number" min="0" max="300"></label>
+              <div class="settings-field"><span data-i18n="settings.defaultProvider">默认邮箱提供商</span><div id="setting-default-provider" class="custom-dropdown" data-value="outlook"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text">Outlook</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="outlook">Outlook</div><div class="dropdown-option" data-value="moemail">MoeMail</div><div class="dropdown-option" data-value="cloudmail">Cloud-Mail</div><div class="dropdown-option" data-value="mailnest">MailNest</div><div class="dropdown-option" data-value="icloud">iCloud</div></div></div></div>
+              <div class="settings-field"><span data-i18n="settings.defaultProxy">默认任务代理</span><div id="setting-default-proxy" class="custom-dropdown" data-value=""><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="ip.direct">直连</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="" data-i18n="ip.direct">直连</div></div></div></div>
+              <div class="settings-field"><span data-i18n="settings.domainMode">默认域名模式</span><div id="setting-domain-mode" class="custom-dropdown" data-value="random"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="settings.random">随机</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="random" data-i18n="settings.random">随机</div><div class="dropdown-option" data-value="round-robin" data-i18n="settings.roundRobin">轮询</div></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="settings-group">
+            <div class="settings-group-title" data-i18n="settings.networkResilience">邮箱与容错</div>
+            <div class="settings-grid">
+              <div class="settings-field"><span data-i18n="settings.emailProxyMode">邮箱取件网络</span><div id="setting-email-proxy-mode" class="custom-dropdown" data-value="follow-task" data-onchange="syncEmailProxyField"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="settings.followTask">跟随任务代理</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="direct" data-i18n="settings.direct">直连</div><div class="dropdown-option" data-value="follow-task" data-i18n="settings.followTask">跟随任务代理</div><div class="dropdown-option" data-value="custom" data-i18n="settings.customProxy">自定义代理</div></div></div></div>
+              <label class="settings-field"><span data-i18n="settings.emailProxy">邮箱自定义代理</span><input id="setting-email-proxy" class="form-input" placeholder="socks5://127.0.0.1:1080"></label>
+              <div class="settings-field"><span data-i18n="settings.otpTimeout">验证码等待时间</span><div id="setting-otp-timeout" class="custom-dropdown" data-value="120"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text">120 秒</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="60">60 秒</div><div class="dropdown-option" data-value="120">120 秒</div><div class="dropdown-option" data-value="180">180 秒</div><div class="dropdown-option" data-value="300">300 秒</div></div></div></div>
+              <div class="settings-field"><span data-i18n="settings.retryProfile">重试策略</span><div id="setting-retry-profile" class="custom-dropdown" data-value="standard"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="settings.retryStandard">标准（1 次）</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="fast" data-i18n="settings.retryFast">快速（不重试）</div><div class="dropdown-option" data-value="standard" data-i18n="settings.retryStandard">标准（1 次）</div><div class="dropdown-option" data-value="stable" data-i18n="settings.retryStable">稳定（2 次）</div></div></div></div>
+            </div>
+            <div class="settings-item settings-inline-item">
+              <div><div class="settings-item-title" data-i18n="settings.stopOnRisk">风控错误时停止整批任务</div><div class="settings-item-desc" data-i18n="settings.stopOnRiskDesc">避免继续消耗邮箱和代理额度</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="setting-stop-on-risk"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
         <!-- 常规 -->
-        <div class="card" style="margin-bottom:20px;">
+        <div class="card settings-card">
           <div class="settings-group">
             <div class="settings-group-title" data-i18n="settings.general">常规</div>
 
             <div class="settings-item">
               <div class="settings-item-main">
                 <div class="settings-item-title" data-i18n="settings.dataDir">存储目录</div>
-                <div class="settings-item-desc" data-i18n="settings.dataDirDesc">Outlook 账号池等内部数据的本地存储位置</div>
+                <div class="settings-item-desc" data-i18n="settings.dataDirDesc">邮箱池、邮箱服务配置和代理池的存储位置；默认位于本机应用数据目录</div>
               </div>
               <div class="settings-item-action">
                 <div style="display:flex;gap:8px;width:100%;">
@@ -412,7 +450,7 @@
               </div>
               <div class="settings-item-action">
                 <div style="display:flex;gap:8px;width:100%;">
-                  <input type="text" id="cfg-result-output-dir" placeholder="默认：应用所在目录" data-i18n-placeholder="settings.outputDirPlaceholder" class="form-input" readonly style="flex:1;">
+                  <input type="text" id="cfg-result-output-dir" placeholder="默认：文档/KiroX" data-i18n-placeholder="settings.outputDirPlaceholder" class="form-input" readonly style="flex:1;">
                   <button onclick="selectResultOutputDir()" class="btn btn-secondary btn-sm" data-i18n="common.select">选择</button>
                   <button onclick="resetResultOutputDir()" class="btn btn-secondary btn-sm" data-i18n="common.reset">重置</button>
                 </div>
@@ -423,7 +461,7 @@
         </div>
 
         <!-- 通知 -->
-        <div class="card" style="margin-bottom:20px;">
+        <div class="card settings-card">
           <div class="settings-group">
             <div class="settings-group-title" data-i18n="settings.notification">通知</div>
 
@@ -435,11 +473,103 @@
               <div class="settings-item-action">
                 <label style="cursor:pointer;">
                   <div class="toggle-switch">
-                    <input type="checkbox" id="cfg-sound" checked>
+                    <input type="checkbox" id="cfg-sound">
                     <span class="toggle-slider"></span>
                   </div>
                 </label>
               </div>
+            </div>
+            <div class="settings-item settings-inline-item">
+              <div><div class="settings-item-title" data-i18n="settings.desktopNotification">桌面通知</div><div class="settings-item-desc" data-i18n="settings.desktopNotificationDesc">任务完成时发送 Windows 桌面通知</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="setting-desktop-notification"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-title" data-i18n="settings.soundVolume">提示音音量</div>
+              <div class="settings-range-row"><input type="range" id="setting-sound-volume" min="0" max="100" step="5" oninput="syncVolumeLabel()"><output id="setting-sound-volume-label">70%</output></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="settings-group">
+            <div class="settings-group-title" data-i18n="settings.appearance">外观与更新</div>
+            <div class="settings-grid">
+              <div class="settings-field"><span data-i18n="settings.theme">主题</span><div id="setting-theme" class="custom-dropdown" data-value="system"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="settings.themeSystem">跟随系统</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="system" data-i18n="settings.themeSystem">跟随系统</div><div class="dropdown-option" data-value="light" data-i18n="settings.themeLight">浅色</div><div class="dropdown-option" data-value="dark" data-i18n="settings.themeDark">深色</div></div></div></div>
+              <div class="settings-field"><span data-i18n="settings.language">界面语言</span><div id="setting-language" class="custom-dropdown" data-value="zh"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text">简体中文</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="zh">简体中文</div><div class="dropdown-option" data-value="en">English</div><div class="dropdown-option" data-value="ja">日本語</div></div></div></div>
+            </div>
+            <div class="settings-item settings-inline-item"><div><div class="settings-item-title" data-i18n="settings.autoUpdate">启动时自动检查更新</div></div><label class="toggle-switch"><input type="checkbox" id="setting-auto-update"><span class="toggle-slider"></span></label></div>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="settings-group">
+            <div class="settings-group-title" data-i18n="settings.maintenance">维护</div>
+            <div class="settings-grid">
+              <label class="settings-field"><span data-i18n="settings.logRetention">日志保留天数</span><input id="setting-log-retention" class="form-input" type="number" min="1" max="90"></label>
+              <label class="settings-field"><span data-i18n="settings.moeExpiry">MoeMail 有效期（分钟）</span><input id="setting-moe-expiry" class="form-input" type="number" min="10" max="1440"></label>
+            </div>
+            <div class="settings-item settings-inline-item"><div><div class="settings-item-title" data-i18n="settings.persistentLogs">持久化运行日志</div><div class="settings-item-desc" data-i18n="settings.persistentLogsDesc">落盘前自动遮蔽验证码与令牌</div></div><label class="toggle-switch"><input type="checkbox" id="setting-persistent-logs"><span class="toggle-slider"></span></label></div>
+            <div class="settings-item settings-inline-item"><div><div class="settings-item-title" data-i18n="settings.autoProbe">进入 IP 管理时探测新代理</div></div><label class="toggle-switch"><input type="checkbox" id="setting-auto-probe"><span class="toggle-slider"></span></label></div>
+            <div class="settings-maintenance-actions"><button class="btn btn-secondary btn-sm" onclick="openLogsDirectory()" data-i18n="settings.openLogs">打开日志目录</button><button class="btn btn-secondary btn-sm" onclick="clearPersistentLogs()" data-i18n="settings.clearLogs">清理日志</button><button class="btn btn-secondary btn-sm" onclick="clearFingerprintCache()" data-i18n="settings.clearFingerprint">清理指纹缓存</button></div>
+          </div>
+        </div>
+
+        <div class="card settings-card advanced-settings-card">
+          <button type="button" class="advanced-settings-trigger" onclick="requestAdvancedSettings()" aria-expanded="false" id="advanced-settings-trigger">
+            <span><strong data-i18n="settings.advanced">高级配置</strong><small data-i18n="settings.advancedDesc">服务端点与底层网络参数</small></span><span class="advanced-chevron">⌄</span>
+          </button>
+          <div id="advanced-settings-content" hidden>
+            <div class="advanced-warning" data-i18n="settings.advancedInlineWarning">这些参数直接影响注册协议，修改后请先用少量任务验证。</div>
+            <div class="fingerprint-curve-section">
+              <div class="fingerprint-curve-heading">
+                <div>
+                  <div class="settings-item-title" data-i18n="settings.fingerprintAlgorithm">指纹偏移曲线</div>
+                  <div class="settings-item-desc" data-i18n="settings.fingerprintAlgorithmDesc">控制各指纹域相对缓存身份的重采样强度</div>
+                </div>
+                <div class="fp-curve-presets" role="group" aria-label="指纹曲线预设" data-i18n-aria-label="settings.fpPresets">
+                  <button type="button" data-fp-preset="stable" onclick="applyFingerprintPreset('stable')" data-i18n="settings.fpStable">稳定</button>
+                  <button type="button" class="selected" data-fp-preset="balanced" onclick="applyFingerprintPreset('balanced')" data-i18n="settings.fpBalanced">均衡</button>
+                  <button type="button" data-fp-preset="fresh" onclick="applyFingerprintPreset('fresh')" data-i18n="settings.fpFresh">全新</button>
+                </div>
+              </div>
+              <input id="setting-fingerprint-algorithm" type="hidden" value="balanced">
+              <input id="setting-fingerprint-offsets" type="hidden" value="0,0,0,15,100">
+              <div id="fingerprint-curve-editor" class="fingerprint-curve-editor">
+                <div class="fp-curve-toolbar">
+                  <div class="fp-curve-channel"><span></span><strong data-i18n="settings.fpCompositeCurve">综合偏移</strong></div>
+                  <div class="fp-curve-meter"><span data-i18n="settings.fpAverageOffset">平均偏移</span><output id="fp-curve-average">23%</output></div>
+                </div>
+                <div class="fp-curve-stage">
+                  <svg id="fp-curve-svg" viewBox="0 0 600 260" preserveAspectRatio="none" role="group" aria-label="指纹偏移曲线" data-i18n-aria-label="settings.fingerprintAlgorithm">
+                    <g class="fp-curve-grid" aria-hidden="true">
+                      <line x1="56" y1="24" x2="568" y2="24"></line><line x1="56" y1="74" x2="568" y2="74"></line><line x1="56" y1="124" x2="568" y2="124"></line><line x1="56" y1="174" x2="568" y2="174"></line><line x1="56" y1="224" x2="568" y2="224"></line>
+                      <line x1="56" y1="24" x2="56" y2="224"></line><line x1="184" y1="24" x2="184" y2="224"></line><line x1="312" y1="24" x2="312" y2="224"></line><line x1="440" y1="24" x2="440" y2="224"></line><line x1="568" y1="24" x2="568" y2="224"></line>
+                    </g>
+                    <g class="fp-curve-scale" aria-hidden="true"><text x="12" y="28">100</text><text x="19" y="78">75</text><text x="19" y="128">50</text><text x="19" y="178">25</text><text x="27" y="228">0</text></g>
+                    <g class="fp-curve-density" aria-hidden="true">
+                      <rect x="65" y="190" width="14" height="34"></rect><rect x="85" y="176" width="14" height="48"></rect><rect x="105" y="185" width="14" height="39"></rect><rect x="125" y="162" width="14" height="62"></rect><rect x="145" y="171" width="14" height="53"></rect><rect x="165" y="148" width="14" height="76"></rect><rect x="185" y="157" width="14" height="67"></rect><rect x="205" y="138" width="14" height="86"></rect><rect x="225" y="151" width="14" height="73"></rect><rect x="245" y="126" width="14" height="98"></rect><rect x="265" y="142" width="14" height="82"></rect><rect x="285" y="116" width="14" height="108"></rect><rect x="305" y="133" width="14" height="91"></rect><rect x="325" y="104" width="14" height="120"></rect><rect x="345" y="122" width="14" height="102"></rect><rect x="365" y="94" width="14" height="130"></rect><rect x="385" y="113" width="14" height="111"></rect><rect x="405" y="81" width="14" height="143"></rect><rect x="425" y="101" width="14" height="123"></rect><rect x="445" y="67" width="14" height="157"></rect><rect x="465" y="87" width="14" height="137"></rect><rect x="485" y="55" width="14" height="169"></rect><rect x="505" y="74" width="14" height="150"></rect><rect x="525" y="43" width="14" height="181"></rect><rect x="545" y="62" width="14" height="162"></rect>
+                    </g>
+                    <path id="fp-curve-area" class="fp-curve-area" aria-hidden="true"></path>
+                    <path id="fp-curve-line" class="fp-curve-line" aria-hidden="true"></path>
+                    <g id="fp-curve-handles"></g>
+                  </svg>
+                  <div class="fp-curve-x-axis" aria-hidden="true"><span data-i18n="settings.fpBrowser">浏览器</span><span data-i18n="settings.fpHardware">硬件</span><span data-i18n="settings.fpDisplay">显示</span><span data-i18n="settings.fpRendering">渲染</span><span data-i18n="settings.fpSession">会话</span></div>
+                </div>
+                <div class="fp-curve-footer"><span><i class="fp-curve-low"></i><span data-i18n="settings.fpReuse">复用缓存</span></span><span><i class="fp-curve-high"></i><span data-i18n="settings.fpRegenerate">重新采样</span></span></div>
+              </div>
+            </div>
+            <div class="settings-grid">
+              <label class="settings-field"><span>AWS Region</span><input id="setting-aws-region" class="form-input" onchange="syncAWSRegionEndpoints()"></label>
+              <label class="settings-field"><span data-i18n="settings.requestTimeout">网络请求超时（秒）</span><input id="setting-request-timeout" class="form-input" type="number" min="10" max="180"></label>
+              <label class="settings-field"><span data-i18n="settings.fingerprintTTL">指纹缓存时长（小时）</span><input id="setting-fingerprint-ttl" class="form-input" type="number" min="1" max="168"></label>
+            </div>
+            <div class="settings-item settings-inline-item"><div class="settings-item-title" data-i18n="settings.telemetry">协议遥测</div><label class="toggle-switch"><input type="checkbox" id="setting-telemetry"><span class="toggle-slider"></span></label></div>
+            <div class="settings-grid advanced-endpoints">
+              <label class="settings-field"><span>OIDC Base</span><input id="setting-oidc-base" class="form-input"></label><label class="settings-field"><span>Signin Base</span><input id="setting-signin-base" class="form-input"></label>
+              <label class="settings-field"><span>Profile Base</span><input id="setting-profile-base" class="form-input"></label><label class="settings-field"><span>View Base</span><input id="setting-view-base" class="form-input"></label>
+              <label class="settings-field"><span>Portal Base</span><input id="setting-portal-base" class="form-input"></label><label class="settings-field"><span>Start URL</span><input id="setting-start-url" class="form-input"></label>
+              <label class="settings-field"><span>Kiro Base</span><input id="setting-kiro-base" class="form-input"></label><label class="settings-field"><span>Kiro Redirect URI</span><input id="setting-kiro-redirect" class="form-input"></label>
+              <label class="settings-field settings-field-full"><span>Directory ID</span><input id="setting-directory-id" class="form-input"></label>
             </div>
           </div>
         </div>

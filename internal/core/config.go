@@ -23,8 +23,14 @@ type Config struct {
 	Password string
 	FullName string
 
-	Proxy string
-	Debug bool
+	Proxy                string
+	Debug                bool
+	EmailProxy           string
+	OTPTimeout           int
+	TelemetryEnabled     bool
+	HTTPRetries          int
+	FingerprintAlgorithm string
+	FingerprintOffsets   []int
 
 	EmailProvider  string
 	UseOutlook     bool
@@ -42,9 +48,9 @@ type Config struct {
 	MailNestConfig   *email.MailNestConfig
 	MailNestProvider *email.MailNestProvider
 
-	UseICloud      bool
-	ICloudCSV      string
-	ICloudAccount  *email.ICloudAccount
+	UseICloud     bool
+	ICloudCSV     string
+	ICloudAccount *email.ICloudAccount
 
 	MoEmailBaseURL string
 	MoEmailAPIKey  string
@@ -53,17 +59,22 @@ type Config struct {
 // NewConfig 创建默认配置
 func NewConfig() *Config {
 	return &Config{
-		OIDCBase:        "https://oidc.us-east-1.amazonaws.com",
-		SigninBase:      "https://us-east-1.signin.aws",
-		ProfileBase:     "https://profile.aws.amazon.com",
-		ViewBase:        "https://view.awsapps.com",
-		PortalBase:      "https://portal.sso.us-east-1.amazonaws.com",
-		DirectoryID:     "d-9067642ac7",
-		StartURL:        "https://view.awsapps.com/start",
-		KiroBase:        "https://app.kiro.dev",
-		KiroRedirectURI: "https://app.kiro.dev/signin/oauth",
-		Password:        GenPassword(),
-		FullName:        "Test User",
+		OIDCBase:             "https://oidc.us-east-1.amazonaws.com",
+		SigninBase:           "https://us-east-1.signin.aws",
+		ProfileBase:          "https://profile.aws.amazon.com",
+		ViewBase:             "https://view.awsapps.com",
+		PortalBase:           "https://portal.sso.us-east-1.amazonaws.com",
+		DirectoryID:          "d-9067642ac7",
+		StartURL:             "https://view.awsapps.com/start",
+		KiroBase:             "https://app.kiro.dev",
+		KiroRedirectURI:      "https://app.kiro.dev/signin/oauth",
+		Password:             GenPassword(),
+		FullName:             "Test User",
+		OTPTimeout:           120,
+		TelemetryEnabled:     true,
+		HTTPRetries:          2,
+		FingerprintAlgorithm: "balanced",
+		FingerprintOffsets:   []int{0, 0, 0, 15, 100},
 	}
 }
 

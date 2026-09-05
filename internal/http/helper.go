@@ -8,11 +8,26 @@ import (
 	"math/rand"
 	"net/url"
 	"strings"
+	"sync/atomic"
 
 	fhttp "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
 )
+
+var requestTimeoutSeconds atomic.Int64
+
+func init() {
+	requestTimeoutSeconds.Store(60)
+}
+
+// SetRequestTimeoutSeconds changes the timeout used by newly created TLS clients.
+func SetRequestTimeoutSeconds(seconds int) {
+	if seconds < 10 || seconds > 180 {
+		seconds = 60
+	}
+	requestTimeoutSeconds.Store(int64(seconds))
+}
 
 const (
 	DefaultUA    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
@@ -76,7 +91,7 @@ func PKCE() (verifier, challenge string) {
 // chromeVer 可选，忽略（始终使用 Chrome_144 profile）
 func NewTLSClient(proxy string, followRedirect bool, chromeVer ...string) tls_client.HttpClient {
 	opts := []tls_client.HttpClientOption{
-		tls_client.WithTimeoutSeconds(60),
+		tls_client.WithTimeoutSeconds(int(requestTimeoutSeconds.Load())),
 		tls_client.WithClientProfile(profiles.Chrome_144),
 		tls_client.WithInsecureSkipVerify(),
 	}

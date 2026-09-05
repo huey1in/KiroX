@@ -56,7 +56,12 @@ function selectDropdownOption(el, ev) {
   var txt = wrap.querySelector('.dropdown-selected-text');
   if (txt) {
     if (wrap.hasAttribute('data-rich-options')) txt.innerHTML = el.innerHTML;
-    else txt.textContent = label;
+    else {
+      txt.textContent = label;
+      var i18nKey = el.getAttribute('data-i18n');
+      if (i18nKey) txt.setAttribute('data-i18n', i18nKey);
+      else txt.removeAttribute('data-i18n');
+    }
   }
   wrap.querySelectorAll('.dropdown-option').forEach(function(o) {
     o.classList.toggle('selected', o === el);
@@ -101,13 +106,20 @@ document.addEventListener('click', function(e) {
 // 设置某个 custom-dropdown 的选中值（val 匹配 data-value，找不到则忽略）
 function setDropdownValue(wrap, val) {
   if (!wrap) return;
-  var opt = wrap.querySelector('.dropdown-option[data-value="' + val + '"]');
+  var opt = Array.prototype.find.call(wrap.querySelectorAll('.dropdown-option'), function(option) {
+    return option.getAttribute('data-value') === String(val);
+  });
   wrap.dataset.value = val;
   var txt = wrap.querySelector('.dropdown-selected-text');
   if (opt) {
     if (txt) {
       if (wrap.hasAttribute('data-rich-options')) txt.innerHTML = opt.innerHTML;
-      else txt.textContent = (opt.textContent || '').trim();
+      else {
+        txt.textContent = (opt.textContent || '').trim();
+        var i18nKey = opt.getAttribute('data-i18n');
+        if (i18nKey) txt.setAttribute('data-i18n', i18nKey);
+        else txt.removeAttribute('data-i18n');
+      }
     }
   } else {
     if (txt && val !== '') txt.textContent = val;

@@ -336,7 +336,12 @@ func NewCloudMailProvider(config CloudMailConfig, name, domain string) (*CloudMa
 }
 
 func NewCloudMailProviderContext(ctx context.Context, config CloudMailConfig, name, domain string) (*CloudMailProvider, error) {
+	return NewCloudMailProviderContextWithProxy(ctx, config, name, domain, "")
+}
+
+func NewCloudMailProviderContextWithProxy(ctx context.Context, config CloudMailConfig, name, domain, proxyURL string) (*CloudMailProvider, error) {
 	client := newCloudMailClient(ctx, config)
+	client.client = httpClientWithProxy(proxyURL, 20*time.Second)
 
 	if domain == "" {
 		if len(config.Domains) > 0 {

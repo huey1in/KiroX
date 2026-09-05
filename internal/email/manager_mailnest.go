@@ -10,7 +10,7 @@ import (
 )
 
 func getMailNestConfigPath() string {
-	return filepath.Join(storage.GetDataDir(), "mailnest.dat")
+	return filepath.Join(storage.GetDataDir(), "mailnest.json")
 }
 
 func TestMailNestConnection(configJSON string) map[string]interface{} {

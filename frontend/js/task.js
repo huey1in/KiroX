@@ -174,7 +174,8 @@ function playCompletionChime() {
     filter.type = 'lowpass';
     filter.frequency.value = 3200;
     filter.Q.value = 0.7;
-    master.gain.value = 0.55;
+    var configuredVolume = window.appSettings && Number(window.appSettings.soundVolume);
+    master.gain.value = (Number.isFinite(configuredVolume) ? configuredVolume : 70) / 100 * 0.75;
     master.connect(filter);
     filter.connect(ctx.destination);
 
@@ -225,7 +226,10 @@ function notifyTaskComplete(taskName, success, failed, total) {
   var msg = _tkT('toast.taskCompleteMsg', { name: taskName, s: success, f: failed, t: total }, '{name} 任务完成！成功 {s} / 失败 {f} / 共 {t}');
   showToast(msg, success > 0 ? 'success' : 'error');
   var soundEnabled = document.getElementById('cfg-sound');
-  if (soundEnabled && soundEnabled.checked && playCompletionChime()) {
+  if (soundEnabled && soundEnabled.checked) {
+    playCompletionChime();
+  }
+  if (!window.appSettings || window.appSettings.desktopNotifications !== false) {
     showTaskDesktopNotification(msg);
   }
 }
@@ -233,10 +237,6 @@ function notifyTaskComplete(taskName, success, failed, total) {
 async function startTask() {
   try {
     var cfg = getFormConfig();
-
-    if (cfg.useOutlook) {
-      saveConfig();
-    }
 
     var result = await window.go.main.App.StartTask(cfg);
     if (result.error) {

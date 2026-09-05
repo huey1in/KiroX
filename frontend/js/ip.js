@@ -105,7 +105,7 @@ async function loadIpList() {
   }
   ipSelected = {};
   renderIpList();
-  probeAllIp(false);
+  if (!window.appSettings || window.appSettings.autoProbeProxies !== false) probeAllIp(false);
 }
 
 // 探测单个代理：显示骨架屏，结果写回持久化字段并重绘。返回完整上游结果。
@@ -546,5 +546,5 @@ async function loadProxyOptions() {
     html += '<div class="dropdown-option" data-value="' + _ipEscape(p.url) + '">' + _ipEscape(label) + '</div>';
   });
   box.innerHTML = html;
-  setDropdownValue(wrap, '');
+  setDropdownValue(wrap, (window.appSettings && window.appSettings.defaultTaskProxy) || '');
 }

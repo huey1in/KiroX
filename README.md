@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.3-6366f1?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v1.0.4-6366f1?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078d4?style=flat-square" alt="platform">
   <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go" alt="go">
   <img src="https://img.shields.io/badge/Wails-v2-red?style=flat-square" alt="wails">
@@ -182,7 +182,7 @@ wails build
 
 ### 3. 查看结果
 
-注册成功的账号写入结果输出目录，默认位置为 `~/Documents/Kirox/accounts.json`，可在「设置」中修改。保存格式如下（令牌和额度均为示例）：
+注册成功的账号写入结果输出目录，默认位置为 `~/Documents/KiroX/accounts.json`，可在「设置」中修改。保存格式如下（令牌和额度均为示例）：
 
 ```json
 [
@@ -202,7 +202,9 @@ wails build
 
 同一邮箱再次保存时覆盖旧记录。`creditUsed` / `creditLimit` 来自注册后的验证结果，可能缺失或为 `null`。结果文件不包含注册密码和访问令牌，失败记录仅保留在运行日志中。
 
-邮箱池与应用配置默认位于系统用户配置目录下的 `kirox`，Windows 为 `%APPDATA%\kirox`。邮箱池文件也叫 `accounts.json`，与结果文件用途不同，数据目录与结果目录应分开设置。目录和语言等设置以键值文本保存在默认配置目录的 `storage.conf` 中。修改结果目录不会迁移已有结果文件。
+安装版的运行时文件默认位于 `%LOCALAPPDATA%\KiroX`：`settings.json` 保存任务默认值、网络策略、界面与高级配置，`data` 保存邮箱池、邮箱服务配置和代理池，`cache` 保存可重建的浏览器指纹缓存，`logs` 保存可选的脱敏运行日志。可在「设置」中更改业务数据目录；缓存和设置仍固定在本机应用数据目录。旧版 `%APPDATA%\kirox` 数据会在首次启动时复制到新结构，源文件保留且不会覆盖已有目标文件。
+
+业务数据目录和结果输出目录中都有一个 `accounts.json`，两者用途与格式不同，应分开设置。修改结果目录不会迁移已有结果文件。
 
 ### 4. 代理配置
 

@@ -73,9 +73,8 @@ type Registrar struct {
 
 // NewRegistrar 创建注册器
 func NewRegistrar(cfg *Config) *Registrar {
-	// 按代理绑定稳定指纹：同一出口 IP 下短时间内重复使用同一硬件身份，
-	// 只有 lsubid 前缀 / webpackHash 等真实浏览器会话间也会变的字段每次刷新。
-	identity := browser.IdentityForProxy(cfg.Proxy)
+	// 每个曲线点控制一个指纹域相对缓存身份的重采样概率。
+	identity := browser.IdentityForOffsets(cfg.Proxy, cfg.FingerprintOffsets)
 	log.Printf("[指纹] Chrome: %s | GPU: %s | 内存: %dGB | 核心: %d | 分辨率: %dx%d (%d-bit)",
 		identity.ChromeVer, identity.GPUModel, identity.DeviceMemory, identity.HardwareConcurrency,
 		identity.Screen.Width, identity.Screen.Height, identity.Screen.ColorDepth)
@@ -114,6 +113,16 @@ func retryBackoff(attempt int) time.Duration {
 	return base + jitter
 }
 
+func (r *Registrar) maxHTTPRetries() int {
+	if r.Cfg == nil {
+		return 2
+	}
+	if r.Cfg.HTTPRetries < 0 || r.Cfg.HTTPRetries > 4 {
+		return 2
+	}
+	return r.Cfg.HTTPRetries
+}
+
 func (r *Registrar) context() context.Context {
 	if r.Ctx != nil {
 		return r.Ctx
@@ -138,7 +147,7 @@ func (r *Registrar) wait(delay time.Duration) error {
 
 // DoPost 发送 POST 请求（带自动重试）
 func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]string) ([]byte, map[string][]string, error) {
-	const maxRetries = 2
+	maxRetries := r.maxHTTPRetries()
 	var lastErr error
 	var payloadBytes []byte
 	if payload != nil {
@@ -182,7 +191,7 @@ func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]s
 
 // DoGet 发送 GET 请求，返回完整信息（带自动重试）
 func (r *Registrar) DoGet(url string, headers map[string]string) ([]byte, int, map[string][]string, error) {
-	const maxRetries = 2
+	maxRetries := r.maxHTTPRetries()
 	var lastErr error
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -238,7 +247,7 @@ func (r *Registrar) DoPostBodyRaw(url string, rawBody string, headers map[string
 
 // DoPostRaw 发送 POST 请求，返回状态码（带自动重试）
 func (r *Registrar) DoPostRaw(url string, payload interface{}, headers map[string]string) ([]byte, int, map[string][]string, error) {
-	const maxRetries = 2
+	maxRetries := r.maxHTTPRetries()
 	var lastErr error
 	var payloadBytes []byte
 	if payload != nil {

@@ -83,7 +83,15 @@ func NewMailNestProvider(config MailNestConfig) *MailNestProvider {
 }
 
 func NewMailNestProviderContext(ctx context.Context, config MailNestConfig) *MailNestProvider {
-	return &MailNestProvider{client: newMailNestClient(ctx, config)}
+	return NewMailNestProviderContextWithProxy(ctx, config, "")
+}
+
+func NewMailNestProviderContextWithProxy(ctx context.Context, config MailNestConfig, proxyURL string) *MailNestProvider {
+	client := newMailNestClient(ctx, config)
+	if proxyURL != "" {
+		client.client = httpClientWithProxy(proxyURL, 15*time.Second)
+	}
+	return &MailNestProvider{client: client}
 }
 
 // request 发送 HTTP 请求

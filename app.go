@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/url"
 	"os"
 	"reg_go/internal/browser"
 	"reg_go/internal/email"
@@ -34,6 +35,8 @@ func (a *App) startup(ctx context.Context) {
 
 	// 初始化代理池（按数据目录持久化）
 	proxy.InitPool(storage.GetDataDir())
+	settings := storage.GetAppSettings()
+	storage.ConfigurePersistentLogs(settings.PersistentLogs, settings.LogRetentionDays)
 
 	// 居中显示窗口
 	go func() {
@@ -69,6 +72,7 @@ type logWriter struct {
 func (w *logWriter) Write(p []byte) (int, error) {
 	msg := string(p)
 	task.Manager.AppendLog(msg)
+	storage.AppendPersistentLog(msg)
 	return os.Stderr.Write(p)
 }
 
@@ -309,12 +313,17 @@ func (a *App) SetDataDir(dir string) map[string]interface{} {
 	if err != nil {
 		return map[string]interface{}{"error": err.Error()}
 	}
+	proxy.InitPool(path)
 	return map[string]interface{}{"success": true, "path": path}
 }
 
 // ResetDataDir 重置为默认存储目录
 func (a *App) ResetDataDir() map[string]interface{} {
-	path := storage.ResetDataDirPath()
+	path, err := storage.ResetDataDirPath()
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	proxy.InitPool(path)
 	return map[string]interface{}{"success": true, "path": path}
 }
 
@@ -334,7 +343,10 @@ func (a *App) SetResultOutputDir(dir string) map[string]interface{} {
 
 // ResetResultOutputDir 重置为默认输出目录
 func (a *App) ResetResultOutputDir() map[string]interface{} {
-	path := storage.ResetResultOutputDir()
+	path, err := storage.ResetResultOutputDir()
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
 	return map[string]interface{}{"success": true, "path": path}
 }
 
@@ -372,6 +384,37 @@ func (a *App) ResetProxy() map[string]interface{} {
 // GetLanguage 获取当前界面语言代码，空字符串表示未设置（前端应回落到 OS 语言）
 func (a *App) GetLanguage() string {
 	return storage.GetLanguage()
+}
+
+// GetAppSettings returns the unified task, interface, notification and advanced settings.
+func (a *App) GetAppSettings() storage.AppSettings {
+	return storage.GetAppSettings()
+}
+
+// SaveAppSettings validates and persists all runtime settings atomically.
+func (a *App) SaveAppSettings(settings storage.AppSettings) map[string]interface{} {
+	saved, err := storage.SaveAppSettings(settings)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	storage.ConfigurePersistentLogs(saved.PersistentLogs, saved.LogRetentionDays)
+	return map[string]interface{}{"success": true, "settings": saved}
+}
+
+func (a *App) GetLogsDir() string {
+	return storage.GetLogsDir()
+}
+
+func (a *App) OpenLogsDir() {
+	path := storage.GetLogsDir()
+	runtime.BrowserOpenURL(a.ctx, (&url.URL{Scheme: "file", Path: path}).String())
+}
+
+func (a *App) ClearLogs() map[string]interface{} {
+	if err := storage.ClearLogs(); err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"success": true}
 }
 
 // SetLanguage 保存界面语言；仅接受 "zh"/"en"/"ja"

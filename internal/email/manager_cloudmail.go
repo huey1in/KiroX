@@ -12,7 +12,7 @@ import (
 
 // getCloudMailConfigPath 配置文件路径
 func getCloudMailConfigPath() string {
-	return filepath.Join(storage.GetDataDir(), "cloudmail.dat")
+	return filepath.Join(storage.GetDataDir(), "cloudmail.json")
 }
 
 // GetCloudMailConfigs 读取配置列表
