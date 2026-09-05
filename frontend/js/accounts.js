@@ -227,4 +227,134 @@ function stopOutlookAutoRefresh() {
 // 语言切换后重新渲染表格行（状态/操作链接等动态文本）
 window.addEventListener('i18n:changed', function() {
   try { if (typeof renderOutlookPage === 'function') renderOutlookPage(); } catch (e) {}
+  try { if (typeof renderICloudPage === 'function') renderICloudPage(); } catch (e) {}
 });
+
+// ===== iCloud 账号管理 =====
+
+var icloudAllAccounts = [];
+
+function openAddICloudModal() {
+  document.getElementById('add-icloud-modal').classList.add('show');
+}
+
+function closeAddICloudModal() {
+  document.getElementById('add-icloud-modal').classList.remove('show');
+  document.getElementById('cfg-icloud-data').value = '';
+}
+
+async function addICloudAccounts() {
+  var data = document.getElementById('cfg-icloud-data').value.trim();
+  if (!data) {
+    showToast(_accT('accounts.inputRequired', '请先输入 iCloud 账号数据'), 'error');
+    return;
+  }
+  try {
+    var result = await window.go.main.App.AddICloudAccounts(data);
+    if (result.error) {
+      showToast(result.error, 'error');
+      return;
+    }
+    closeAddICloudModal();
+    await loadICloudAccountsList();
+    showToast(_accT('accounts.addedSummary', { n: result.added, total: result.total }, '成功添加 {n} 个账号，当前共 {total} 个'));
+  } catch(e) {
+    showToast(_accT('toast.addFailed', '添加失败') + ': ' + e.message, 'error');
+  }
+}
+
+async function importICloudFile() {
+  try {
+    var filePath = await window.go.main.App.SelectICloudFile();
+    if (!filePath) return;
+    var result = await window.go.main.App.ImportICloudFile(filePath);
+    if (result.error) {
+      showToast(result.error, 'error');
+      return;
+    }
+    await loadICloudAccountsList();
+    closeAddICloudModal();
+    showToast(_accT('accounts.importSummary', { n: result.added, total: result.total }, '成功导入 {n} 个账号，当前共 {total} 个'));
+  } catch(e) {
+    showToast(_accT('accounts.importFailed', '导入失败') + ': ' + e.message, 'error');
+  }
+}
+
+async function loadICloudAccountsList() {
+  try {
+    var accounts = await window.go.main.App.GetICloudAccounts();
+    icloudAllAccounts = accounts || [];
+    renderICloudPage();
+  } catch(e) {
+    console.error('加载 iCloud 账号列表失败:', e);
+  }
+}
+
+function renderICloudPage() {
+  var accounts = icloudAllAccounts;
+  var tbody = document.getElementById('parsed-icloud-body');
+  var countEl = document.getElementById('icloud-count');
+  if (!tbody) return;
+
+  if (countEl) countEl.textContent = accounts ? accounts.length : 0;
+
+  if (accounts && accounts.length > 0) {
+    var html = '';
+    accounts.forEach(function(acc, i) {
+      var status = acc.registered
+        ? (acc.success ? _accT('status.success', '成功') : _accT('status.failed', '失败'))
+        : _accT('status.unregistered', '未注册');
+      var statusColor = acc.registered ? (acc.success ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)';
+      var addedTime = acc.addedAt ? acc.addedAt.substring(5, 16) : '-';
+      html += '<tr><td>' + (i+1) + '</td><td>' + acc.email + '</td>';
+      html += '<td style="color:' + statusColor + ';font-weight:600;">' + status + '</td>';
+      html += '<td style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">' + addedTime + '</td>';
+      html += '<td style="text-align:right;"><a href="javascript:void(0)" onclick="deleteICloudAccount(\'' + acc.email + '\')" style="color:var(--danger);">' + _accT('common.delete', '删除') + '</a></td></tr>';
+    });
+    tbody.innerHTML = html;
+  } else {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">' + _accT('accounts.emptyRow', '暂无 iCloud 账号') + '</td></tr>';
+  }
+}
+
+async function deleteICloudAccount(email) {
+  showConfirmModal(
+    _accT('accounts.deleteTitle', '删除账号'),
+    _accT('accounts.deleteMsg', { email: email }, '确认删除账号 {email} ?'),
+    _accT('accounts.deleteConfirm', '确认删除'),
+    async function() {
+      try {
+        var result = await window.go.main.App.DeleteICloudAccount(email);
+        if (result.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+        showToast(_accT('accounts.deletedOne', '账号已删除'));
+        await loadICloudAccountsList();
+      } catch(e) {
+        showToast(_accT('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
+      }
+    }
+  );
+}
+
+function clearAllICloudAccounts() {
+  showConfirmModal(
+    _accT('accounts.clearAllTitle', '清空 iCloud 邮箱'),
+    _accT('accounts.clearAllMsg', '确认清空所有 iCloud 邮箱账号？此操作不可恢复！'),
+    _accT('accounts.clearAllConfirm', '确认清空'),
+    async function() {
+      try {
+        var result = await window.go.main.App.ClearICloudAccounts();
+        if (result.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+        showToast(_accT('accounts.allCleared', '已清空所有账号'));
+        await loadICloudAccountsList();
+      } catch(e) {
+        showToast(_accT('toast.clearFailed', '清空失败') + ': ' + e.message, 'error');
+      }
+    }
+  );
+}

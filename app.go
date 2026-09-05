@@ -190,6 +190,28 @@ func (a *App) ImportOutlookFile(filePath string) map[string]interface{} {
 	return email.ImportOutlookFile(filePath)
 }
 
+// ---- iCloud ----
+
+func (a *App) AddICloudAccounts(data string) map[string]interface{} {
+	return email.AddICloudAccounts(data)
+}
+
+func (a *App) GetICloudAccounts() []map[string]interface{} {
+	return email.GetICloudAccounts()
+}
+
+func (a *App) DeleteICloudAccount(em string) map[string]interface{} {
+	return email.DeleteICloudAccount(em)
+}
+
+func (a *App) ClearICloudAccounts() map[string]interface{} {
+	return email.ClearICloudAccounts()
+}
+
+func (a *App) ImportICloudFile(filePath string) map[string]interface{} {
+	return email.ImportICloudFile(filePath)
+}
+
 // ---- MailNest ----
 
 func (a *App) TestMailNestConnection(configJSON string) map[string]interface{} {
@@ -228,6 +250,32 @@ func (a *App) SelectOutlookFile() string {
 			{
 				DisplayName: "CSV 文件 (*.csv)",
 				Pattern:     "*.csv",
+			},
+			{
+				DisplayName: "所有文件 (*.*)",
+				Pattern:     "*.*",
+			},
+		},
+	})
+	if err != nil {
+		log.Printf("选择文件失败: %v", err)
+		return ""
+	}
+	return path
+}
+
+// SelectICloudFile 选择 iCloud 账号文件 (Wails Dialog)
+func (a *App) SelectICloudFile() string {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择 iCloud 账号文件",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "CSV 文件 (*.csv)",
+				Pattern:     "*.csv",
+			},
+			{
+				DisplayName: "文本文件 (*.txt)",
+				Pattern:     "*.txt",
 			},
 			{
 				DisplayName: "所有文件 (*.*)",

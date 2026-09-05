@@ -32,6 +32,7 @@ function switchPage(pageId) {
   if (pageId === 'accounts') {
     loadOutlookAccountsList();
     startOutlookAutoRefresh();
+    if (typeof loadICloudAccountsList === 'function') loadICloudAccountsList();
   } else {
     stopOutlookAutoRefresh();
   }

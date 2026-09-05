@@ -508,6 +508,7 @@
                     <div class="dropdown-option" data-value="moemail">MoeMail</div>
                     <div class="dropdown-option" data-value="cloudmail" data-i18n="register.cloudmail">Cloud-Mail</div>
                     <div class="dropdown-option" data-value="mailnest">MailNest</div>
+                    <div class="dropdown-option" data-value="icloud">iCloud</div>
                   </div>
                 </div>
               </div>
@@ -876,12 +877,82 @@
             </div>
           </div>
         </div>
+
+        <!-- iCloud 账号列表 -->
+        <div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:260px;">
+          <div class="settings-group-title" style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <img src="assets/kiro.svg" style="width:18px;height:18px;border-radius:4px;">
+              <span data-i18n="accounts.icloudTitle">iCloud 邮箱</span>
+              <span style="font-size:12px;font-weight:600;color:var(--text-muted);padding:3px 8px;background:var(--bg-subtle);border-radius:6px;"><span data-i18n="accounts.count">共</span> <span id="icloud-count">0</span> <span data-i18n="accounts.countUnit">个</span></span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="openAddICloudModal()" class="btn btn-dark btn-sm">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                <span data-i18n="accounts.addAccount">添加账号</span>
+              </button>
+              <button onclick="clearAllICloudAccounts()" class="btn btn-danger btn-sm" data-i18n="common.clearAll">清空全部</button>
+            </div>
+          </div>
+          <div style="flex:1;overflow-x:auto;min-height:0;">
+            <table style="width:100%;">
+              <thead><tr>
+                <th style="width:40px;padding:10px 16px;" data-i18n="accounts.thIndex">#</th>
+                <th style="padding:10px 8px;" data-i18n="accounts.thEmail">邮箱地址</th>
+                <th style="width:80px;padding:10px 8px;" data-i18n="accounts.thStatus">状态</th>
+                <th style="width:120px;padding:10px 8px;" data-i18n="accounts.thAddedAt">添加时间</th>
+                <th style="width:60px;padding:10px 16px;text-align:right;" data-i18n="accounts.thActions">操作</th>
+              </tr></thead>
+              <tbody id="parsed-icloud-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
   </div>
 </div>
 
+</div>
+
+<!-- 添加 iCloud 账号模态框 -->
+<div id="add-icloud-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="assets/kiro.svg" style="width:22px;height:22px;border-radius:4px;">
+        <h3 style="font-size:16px;font-weight:700;" data-i18n="accounts.icloudAddTitle">添加 iCloud 邮箱账号</h3>
+      </div>
+      <button onclick="closeAddICloudModal()" style="background:none;border:none;color:var(--text-muted);font-size:28px;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <!-- 导入文件 -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;" data-i18n="accounts.importFile">导入文件</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="importICloudFile()" class="btn btn-secondary" style="flex:1;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span data-i18n="accounts.selectTxt">选择 TXT 文件</span>
+        </button>
+        <span style="font-size:11px;color:var(--text-muted);" data-i18n="accounts.icloudPerLine">每行一个账号</span>
+      </div>
+    </div>
+    <!-- 分隔线 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+      <span style="font-size:11px;color:var(--text-muted);font-weight:500;" data-i18n="accounts.orManual">或手动输入</span>
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+    <!-- 手动输入 -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;" data-i18n="accounts.icloudManualInput">手动输入</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;" data-i18n="accounts.icloudFormat">格式：邮箱----iCloud 消息列表 URL，每行一个</div>
+      <textarea id="cfg-icloud-data" class="form-input" rows="6" placeholder="user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com" style="resize:vertical;font-family:var(--font-mono);font-size:12px;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeAddICloudModal()" class="btn btn-secondary" data-i18n="common.cancel">取消</button>
+      <button onclick="addICloudAccounts()" class="btn btn-dark" data-i18n="accounts.addToList">添加到列表</button>
+    </div>
+  </div>
 </div>
 
 <!-- 添加 Outlook 账号模态框 -->

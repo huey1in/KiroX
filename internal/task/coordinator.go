@@ -57,6 +57,7 @@ func startTask(req StartTaskRequest) map[string]interface{} {
 	}
 
 	var outlookAccounts []email.OutlookAccount
+	var icloudAccounts []email.ICloudAccount
 
 	if emailProvider == "moemail" {
 		// MoeMail 模式：验证域名和配置
@@ -83,6 +84,34 @@ func startTask(req StartTaskRequest) map[string]interface{} {
 		if config == (email.MailNestConfig{}) {
 			Manager.mu.Unlock()
 			return map[string]interface{}{"error": "请先配置 MailNest"}
+		}
+	} else if emailProvider == "icloud" {
+		// iCloud 模式：加载账号列表
+		stored := email.GetICloudAccounts()
+		if len(stored) == 0 {
+			Manager.mu.Unlock()
+			return map[string]interface{}{"error": "请先添加 iCloud 邮箱账号"}
+		}
+		for _, acc := range stored {
+			registered, _ := acc["registered"].(bool)
+			if registered {
+				continue
+			}
+			em, _ := acc["email"].(string)
+			murl, _ := acc["messagesURL"].(string)
+			if em != "" && murl != "" {
+				icloudAccounts = append(icloudAccounts, email.ICloudAccount{Email: em, MessagesURL: murl})
+			}
+		}
+		if len(icloudAccounts) == 0 {
+			Manager.mu.Unlock()
+			return map[string]interface{}{"error": "没有可用的 iCloud 账号（所有账号已注册）"}
+		}
+		if len(icloudAccounts) < req.Count {
+			Manager.mu.Unlock()
+			return map[string]interface{}{
+				"error": fmt.Sprintf("可用 iCloud 账号不足: 需要 %d, 仅有 %d", req.Count, len(icloudAccounts)),
+			}
 		}
 	} else {
 		// Outlook 模式：加载账号列表
@@ -142,7 +171,7 @@ func startTask(req StartTaskRequest) map[string]interface{} {
 	Manager.logsMu.Unlock()
 
 	// 后台执行
-	go runBatch(req, emailProvider, outlookAccounts)
+	go runBatch(req, emailProvider, outlookAccounts, icloudAccounts)
 
 	return map[string]interface{}{"status": "started"}
 }
@@ -173,7 +202,7 @@ func StopTask(force bool) map[string]interface{} {
 }
 
 // runBatch 执行批量注册
-func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []email.OutlookAccount) {
+func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []email.OutlookAccount, icloudAccounts []email.ICloudAccount) {
 	// 创建可取消的 context，停止时立即中断所有 HTTP 请求
 	taskCtx, taskCancel := context.WithCancel(context.Background())
 	defer taskCancel()
@@ -200,6 +229,9 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 	taskConfig.Proxy = req.Proxy
 	if taskConfig.Proxy != "" {
 		log.Printf("[Kiro] 已启用代理")
+	}
+	if emailProvider == "icloud" {
+		taskConfig.UseICloud = true
 	}
 
 	// 预先准备 MoeMail 域名池
@@ -261,6 +293,19 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 		}
 		acc := outlookAccounts[accountPoolIdx]
 		accountPoolIdx++
+		return acc, true
+	}
+
+	// iCloud 账号池索引（并发安全）
+	var icloudPoolIdx int
+	icloudNext := func() (email.ICloudAccount, bool) {
+		accountPoolMu.Lock()
+		defer accountPoolMu.Unlock()
+		if icloudPoolIdx >= len(icloudAccounts) {
+			return email.ICloudAccount{}, false
+		}
+		acc := icloudAccounts[icloudPoolIdx]
+		icloudPoolIdx++
 		return acc, true
 	}
 
@@ -391,6 +436,20 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 			cfgCopy := config
 			taskCfg.MailNestConfig = &cfgCopy
 			currentEmail = address
+		} else if emailProvider == "icloud" {
+			// iCloud 模式：从共享池领取账号
+			acc, ok := icloudNext()
+			if !ok {
+				log.Printf("[Kiro][%d/%d] 无可用 iCloud 账号，跳过", i+1, req.Count)
+				Manager.mu.Lock()
+				Manager.completed++
+				Manager.failed++
+				Manager.mu.Unlock()
+				return
+			}
+			taskCfg.UseICloud = true
+			taskCfg.ICloudAccount = &acc
+			currentEmail = acc.Email
 		}
 
 		log.Printf("[Kiro][%d/%d] 开始注册", i+1, req.Count)
@@ -533,6 +592,12 @@ func runBatch(req StartTaskRequest, emailProvider string, outlookAccounts []emai
 				email.UpdateAccountStatus(currentEmail, true, success)
 			}
 			// 未设密码的失败邮箱不标记 registered，下次任务可继续使用
+		}
+		if taskConfig.UseICloud && currentEmail != "" {
+			passwordSet, _ := result["passwordSet"].(bool)
+			if passwordSet {
+				email.MarkICloudAccountRegistered(currentEmail)
+			}
 		}
 		if success {
 			if err := data.SaveKiroSuccess(result, outDir); err != nil {

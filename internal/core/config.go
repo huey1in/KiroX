@@ -43,6 +43,7 @@ type Config struct {
 	MailNestProvider *email.MailNestProvider
 
 	UseICloud      bool
+	ICloudCSV      string
 	ICloudAccount  *email.ICloudAccount
 
 	MoEmailBaseURL string
