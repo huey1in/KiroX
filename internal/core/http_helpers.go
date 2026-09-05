@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -78,6 +77,43 @@ func (r *Registrar) CookieString() string {
 	return strings.Join(parts, "; ")
 }
 
+// BuildProfileNavigationHeaders mirrors the document request that loads the
+// Profile app. The browser sends the current AWS cookies on this request too;
+// keeping them on the initial document load makes the subsequent FWCIM and
+// D2C-token state belong to the same session.
+func (r *Registrar) BuildProfileNavigationHeaders(referer string) map[string]string {
+	h := map[string]string{
+		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language":           "zh-CN,zh;q=0.9,en;q=0.8",
+		"User-Agent":                r.Identity.UA,
+		"sec-ch-ua":                 r.Identity.SecUA,
+		"sec-ch-ua-mobile":          "?0",
+		"sec-ch-ua-platform":        `"Windows"`,
+		"sec-fetch-dest":            "document",
+		"sec-fetch-mode":            "navigate",
+		"sec-fetch-site":            "cross-site",
+		"Upgrade-Insecure-Requests": "1",
+	}
+	if referer != "" {
+		h["Referer"] = referer
+	}
+	if cookie := r.profileCookieString(); cookie != "" {
+		h["Cookie"] = cookie
+	}
+	return h
+}
+
+func (r *Registrar) profileCookieString() string {
+	keys := []string{"awsccc", "aws-user-profile-ubid", "awsd2c-token", "awsd2c-token-c", "i18next", "aws-waf-token"}
+	var parts []string
+	for _, key := range keys {
+		if value := strings.TrimSpace(r.Cookies[key]); value != "" {
+			parts = append(parts, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
 // FetchD2CToken 获取 D2C Token
 func (r *Registrar) FetchD2CToken(origin, referer string) error {
 	headers := map[string]string{
@@ -105,10 +141,15 @@ func (r *Registrar) FetchD2CToken(origin, referer string) error {
 		headers["Cookie"] = strings.Join(parts, "; ")
 	}
 
-	payload := map[string]interface{}{}
-	if old, ok := r.Cookies["awsd2c-token"]; ok {
-		payload["token"] = old
+	// 手动浏览器流程 (HAR entries 34/63) 每次都本地生成一个 ES256 自签 JWT
+	// {"vid":<uuid>,"iss":"s_p"} 提交, 并把 vid 作为后续 api/execute 的 visitorId。
+	// 项目原先提交空 body, 与真实浏览器行为不一致。
+	vid := newVisitorUUID()
+	jwt, err := webVisorJWT(vid)
+	if err != nil {
+		return err
 	}
+	payload := map[string]interface{}{"token": jwt}
 
 	body, respHeaders, err := r.DoPost("https://vs.aws.amazon.com/token", payload, headers)
 	if err != nil {
@@ -121,24 +162,8 @@ func (r *Registrar) FetchD2CToken(origin, referer string) error {
 	if tok, ok := data["token"].(string); ok && tok != "" {
 		r.Cookies["awsd2c-token"] = tok
 		r.Cookies["awsd2c-token-c"] = tok
-		// 从 JWT 中提取 visitor ID
-		jwtParts := strings.Split(tok, ".")
-		if len(jwtParts) >= 2 {
-			pad := jwtParts[1]
-			if m := len(pad) % 4; m != 0 {
-				pad += strings.Repeat("=", 4-m)
-			}
-			pad = strings.ReplaceAll(pad, "-", "+")
-			pad = strings.ReplaceAll(pad, "_", "/")
-			if decoded, err := base64.StdEncoding.DecodeString(pad); err == nil {
-				var p map[string]interface{}
-				if json.Unmarshal(decoded, &p) == nil {
-					if vid, ok := p["vid"].(string); ok {
-						r.VisitorID = vid
-					}
-				}
-			}
-		}
 	}
+	// visitorId 采用本地生成的 vid (与浏览器一致: 后续请求复用同一 vid)。
+	r.VisitorID = vid
 	return nil
 }

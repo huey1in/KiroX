@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"regexp"
 	"strings"
 	"time"
 
@@ -195,18 +196,76 @@ func (r *Registrar) Step7_8ProfileInit() error {
 	}
 
 	url := fmt.Sprintf("%s/?workflowID=%s", r.Cfg.ProfileBase, r.WorkflowID)
-	_, _, respH, err := r.DoGet(url, map[string]string{
-		"Accept":         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		"User-Agent":     r.Identity.UA,
-		"sec-fetch-dest": "document",
-		"sec-fetch-mode": "navigate",
-	})
+	pageStartedAt := time.Now()
+	referer := fmt.Sprintf("%s/platform/%s/signup?workflowStateHandle=%s", r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
+	body, status, respH, err := r.DoGet(url, r.BuildProfileNavigationHeaders(referer))
 	if err != nil {
 		return err
 	}
 	httputil.SaveCookies(r.Cookies, respH)
+	if status < 200 || status >= 300 {
+		return profilePageResponseError(status, body)
+	}
+	if hash := extractProfileWebpackHash(body); hash != "" {
+		r.Identity.WebpackHash = hash
+		log.Printf("Profile bundle=%s", hash)
+	}
+	r.ProfilePageStartedAt = pageStartedAt
 	r.FPCtx.ResetPerfTiming()
-	return r.FetchD2CToken(r.Cfg.ProfileBase, url)
+
+	// HAR entry 50: POST /api/get-config {} (浏览器加载 profile 应用后必发)
+	if body, status, _, err := r.DoPostRaw(r.Cfg.ProfileBase+"/api/get-config",
+		map[string]interface{}{}, r.BuildProfileHeaders(url)); err != nil {
+		return err
+	} else if status != 200 {
+		log.Printf("[profile] get-config 非 200 (%d): %s", status, truncateBytes(body, 120))
+	}
+
+	d2cStart := time.Now()
+	if err := r.FetchD2CToken(r.Cfg.ProfileBase, url); err != nil {
+		return err
+	}
+	r.LastD2CFetchDuration = time.Since(d2cStart)
+	return nil
+}
+
+var profileWebpackHashRE = regexp.MustCompile(`(?:^|[/_])app_([a-fA-F0-9]{10,64})\.min\.js(?:["'?]|$)`)
+
+func extractProfileWebpackHash(body []byte) string {
+	matches := profileWebpackHashRE.FindSubmatch(body)
+	if len(matches) != 2 {
+		return ""
+	}
+	return string(matches[1])
+}
+
+func profilePageResponseError(status int, body []byte) error {
+	if status >= 400 {
+		bodyText := strings.ToLower(string(body))
+		if status == 403 && strings.Contains(bodyText, "cloudfront") {
+			return fmt.Errorf("Profile page 被 CloudFront 拒绝 (HTTP %d)", status)
+		}
+		return fmt.Errorf("Profile page 请求失败 (HTTP %d)", status)
+	}
+	return fmt.Errorf("Profile page 未返回 HTML")
+}
+
+func elapsedMillisSince(start, now time.Time) int64 {
+	if start.IsZero() || now.Before(start) {
+		return 0
+	}
+	return now.Sub(start).Milliseconds()
+}
+
+func profileStartResponseError(status int, body []byte) error {
+	if status >= 400 {
+		bodyText := strings.ToLower(string(body))
+		if status == 403 && strings.Contains(bodyText, "cloudfront") {
+			return fmt.Errorf("Profile start 被 CloudFront 拒绝 (HTTP %d)", status)
+		}
+		return fmt.Errorf("Profile start 请求失败 (HTTP %d)", status)
+	}
+	return fmt.Errorf("Profile start 未返回 workflowState")
 }
 
 // Step8ProfileStart Profile 启动
@@ -215,13 +274,13 @@ func (r *Registrar) Step8ProfileStart() error {
 	ref := fmt.Sprintf("%s/?workflowID=%s", r.Cfg.ProfileBase, r.WorkflowID)
 	fp := r.GenFP("profile", "PageLoad", 0, "")
 
-	body, _, _, err := r.DoPostRaw(r.Cfg.ProfileBase+"/api/start", map[string]interface{}{
+	body, _, respH, err := r.DoPostRaw(r.Cfg.ProfileBase+"/api/start", map[string]interface{}{
 		"workflowID": r.WorkflowID,
 		"browserData": map[string]interface{}{
 			"attributes": map[string]interface{}{
 				"fingerprint":     fp,
 				"eventTimestamp":  time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
-				"timeSpentOnPage": "38",
+				"timeSpentOnPage": fmt.Sprintf("%d", elapsedMillisSince(r.ProfilePageStartedAt, time.Now())),
 				"eventType":       "PageLoad",
 				"ubid":            r.Ubid,
 				"visitorId":       r.VisitorID,
@@ -232,6 +291,7 @@ func (r *Registrar) Step8ProfileStart() error {
 	if err != nil {
 		return err
 	}
+	httputil.SaveCookies(r.Cookies, respH)
 
 	var data map[string]interface{}
 	json.Unmarshal(body, &data)
@@ -242,6 +302,12 @@ func (r *Registrar) Step8ProfileStart() error {
 	if len(r.WorkflowState) > 30 {
 		log.Printf("workflowState=%s...", r.WorkflowState[:30])
 	}
+	r.ProfileEmailStartedAt = time.Now()
+
+	// HAR entry 66: D2C 遥测 timeTakenToFetchVID (profile 页)
+	profilePageURL := fmt.Sprintf("%s/?workflowID=%s#/signup/start?workflowID=%s",
+		r.Cfg.ProfileBase, r.WorkflowID, r.WorkflowID)
+	r.PostD2CEventSafe(profilePageURL, r.LastD2CFetchDuration)
 	return nil
 }
 
@@ -292,7 +358,19 @@ func (r *Registrar) Step9SendOTP() error {
 		}
 		return fmt.Errorf("send-otp 失败 (%d)", status)
 	}
+	r.ProfileVerificationStartedAt = time.Now()
 	log.Println("验证码已发送")
+
+	// katal 遥测 (HAR entry 69): SendOTP 完成后浏览器必发。
+	getConfigMs := float64(elapsedMillisSince(r.ProfilePageStartedAt, time.Now()))
+	sendOTPMs := float64(elapsedMillisSince(r.ProfileEmailStartedAt, time.Now()))
+	if getConfigMs <= 0 {
+		getConfigMs = 577 // HAR GetConfig 577ms 的典型值兜底
+	}
+	if sendOTPMs <= 0 {
+		sendOTPMs = 672
+	}
+	r.PostKatalSignupBatch(getConfigMs, sendOTPMs)
 	return nil
 }
 

@@ -47,6 +47,14 @@ func GenPerfTiming(nowMs int64) map[string]int64 {
 	}
 }
 
+func copyPerfTiming(src map[string]int64) map[string]int64 {
+	dst := make(map[string]int64, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
 func formatScreen(s ScreenInfo) string {
 	return fmt.Sprintf("%d-%d-%d-%d-*-*-*", s.Width, s.Height, s.AvailHeight, s.ColorDepth)
 }
@@ -68,23 +76,20 @@ func genMetricsFirstLoad(pageType string) map[string]int {
 	}
 	switch pageType {
 	case "profile":
-		m["batt"] = 5 + rand.Intn(21)
-		m["fp2"] = 1 + rand.Intn(8)
-		m["browser"] = rand.Intn(4)
-		m["capabilities"] = 1 + rand.Intn(8)
-		m["dnt"] = rand.Intn(4)
-		m["input"] = 8 + rand.Intn(23)
-		m["canvas"] = 5 + rand.Intn(16)
+		m["script"] = 1
+		m["batt"] = 2 + rand.Intn(2)
+		m["capabilities"] = 3 + rand.Intn(2)
+		m["input"] = 10 + rand.Intn(5)
+		m["canvas"] = 3 + rand.Intn(3)
 	case "signup":
-		m["script"] = rand.Intn(3)
-		m["batt"] = rand.Intn(6)
-		m["fp2"] = rand.Intn(4)
-		m["gpu"] = 3 + rand.Intn(6)
-	default:
-		m["script"] = rand.Intn(3)
-		m["auto"] = rand.Intn(3)
-		m["browser"] = rand.Intn(3)
-		m["gpu"] = 3 + rand.Intn(6)
+		m["script"] = 1
+		m["batt"] = 1
+		m["capabilities"] = 1
+		m["gpu"] = 3 + rand.Intn(2)
+		m["dnt"] = 1
+	default: // signin
+		m["script"] = 1
+		m["gpu"] = 4 + rand.Intn(3)
 	}
 	return m
 }
@@ -100,17 +105,31 @@ func genMetricsPageSubmit() map[string]int {
 
 // genInteraction 生成交互数据
 func genInteraction(eventType string) map[string]interface{} {
+	return genInteractionSpec(eventType, 0, 0, 0)
+}
+
+// genInteractionSpec 按手动抓包的行为画像生成交互数据:
+//   signin 提交邮箱/SIGNUP:  clicks=2, keyPresses=2, pastes=1 (粘贴邮箱)
+//   signup 提交密码:         clicks=5, keyPresses=16, pastes=1
+//   profile 验证码:          clicks=1, keyPresses=2, pastes=1 (粘贴验证码)
+func genInteractionSpec(eventType string, clicks, keyPresses, pastes int) map[string]interface{} {
 	if eventType == "PageLoad" || eventType == "first_load" {
 		return map[string]interface{}{
 			"clicks": 0, "touches": 0, "keyPresses": 0,
 			"cuts": 0, "copies": 0, "pastes": 0,
 			"keyPressTimeIntervals": []int{},
 			"mouseClickPositions":   []string{},
-			"keyCycles": []int{}, "mouseCycles": []int{}, "touchCycles": []int{},
+			"keyCycles":             []int{}, "mouseCycles": []int{}, "touchCycles": []int{},
 		}
 	}
-	nClicks := 1 + rand.Intn(10) // 1~10 clicks
-	nKeys := 3 + rand.Intn(20)   // 3~22 keys
+	if clicks <= 0 {
+		clicks = 1 + rand.Intn(10) // 1~10 clicks
+	}
+	if keyPresses <= 0 {
+		keyPresses = 3 + rand.Intn(20) // 3~22 keys
+	}
+	nKeys := keyPresses
+	nClicks := clicks
 	nIntervals := max(1, nKeys/3) + rand.Intn(max(1, nKeys/2-nKeys/3+1))
 	nCycles := max(2, nKeys/2) + rand.Intn(max(1, nKeys*2/3-nKeys/2+1))
 
@@ -133,10 +152,26 @@ func genInteraction(eventType string) map[string]interface{} {
 
 	return map[string]interface{}{
 		"clicks": nClicks, "touches": 0, "keyPresses": nKeys,
-		"cuts": 0, "copies": 0, "pastes": 0,
+		"cuts": 0, "copies": 0, "pastes": pastes,
 		"keyPressTimeIntervals": intervals,
 		"mouseClickPositions":   positions,
-		"keyCycles": cycles, "mouseCycles": mouseCycles, "touchCycles": []int{},
+		"keyCycles":             cycles, "mouseCycles": mouseCycles, "touchCycles": []int{},
+	}
+}
+
+// interactionFor 按页面/事件返回交互画像。
+func interactionFor(pageType, eventType string) map[string]interface{} {
+	switch {
+	case pageType == "signin" && (eventType == "PageSubmit" || eventType == "SignupStart"):
+		return genInteractionSpec(eventType, 2, 2, 1)
+	case pageType == "signup" && (eventType == "PageSubmit" || eventType == "SignupStart"):
+		return genInteractionSpec(eventType, 5, 16, 1)
+	case pageType == "profile" && eventType == "EmailVerification":
+		return genInteractionSpec(eventType, 1, 2, 1)
+	case pageType == "profile" && eventType == "PageSubmit":
+		return genInteractionSpec(eventType, 2, 2, 1)
+	default:
+		return genInteraction(eventType)
 	}
 }
 
@@ -144,7 +179,8 @@ func genInteraction(eventType string) map[string]interface{} {
 func genFormField(startMs int64, emailLen int, email string, interaction map[string]interface{}) map[string]interface{} {
 	fieldTs := startMs - int64(10+rand.Intn(41))
 	fieldRand := 1000 + rand.Intn(9000)
-	fieldName := fmt.Sprintf("formField29-%d-%d", fieldTs, fieldRand)
+	fieldID := 1 + rand.Intn(99)
+	fieldName := fmt.Sprintf("formField%d-%d-%d", fieldID, fieldTs, fieldRand)
 
 	nKeys := max(3, emailLen/3+rand.Intn(10)-3)
 	intervals := make([]int, min(nKeys-1, 10))
@@ -160,6 +196,10 @@ func genFormField(startMs int64, emailLen int, email string, interaction map[str
 	if kp, ok := interaction["keyPresses"].(int); ok && kp > 0 {
 		nKeys = kp
 	}
+	pastes := 0
+	if ps, ok := interaction["pastes"].(int); ok && ps > 0 {
+		pastes = ps
+	}
 
 	var cksum string
 	if email != "" {
@@ -171,11 +211,11 @@ func genFormField(startMs int64, emailLen int, email string, interaction map[str
 	return map[string]interface{}{
 		fieldName: map[string]interface{}{
 			"clicks": 1, "touches": 0, "keyPresses": nKeys,
-			"cuts": 0, "copies": 0, "pastes": 0,
+			"cuts": 0, "copies": 0, "pastes": pastes,
 			"keyPressTimeIntervals": intervals,
 			"mouseClickPositions":   []string{fmt.Sprintf("%d.5,%d.5", 100+rand.Intn(151), 10+rand.Intn(11))},
 			"keyCycles": keyCycles, "mouseCycles": []int{80 + rand.Intn(71)}, "touchCycles": []int{},
-			"width": 180, "height": 32, "totalFocusTime": 0,
+			"width": 180, "height": 32, "totalFocusTime": 400 + rand.Intn(2100),
 			"checksum": cksum, "autocomplete": false, "prefilled": false,
 		},
 	}
@@ -249,6 +289,14 @@ func BuildFingerprintData(
 	} else {
 		perfTiming = GenPerfTiming(nowMs)
 	}
+	// 手动流程 (HAR entry 15): 首个指纹在 DOMContentLoaded 之后、load 事件完成之前生成,
+	// loadEventEnd/loadEventStart/domComplete 尚未填充。
+	if eventType == "first_load" {
+		perfTiming = copyPerfTiming(perfTiming)
+		perfTiming["loadEventEnd"] = 0
+		perfTiming["loadEventStart"] = 0
+		perfTiming["domComplete"] = 0
+	}
 
 	// lsUbid
 	var lsUbid string
@@ -265,25 +313,27 @@ func BuildFingerprintData(
 	var historyLength int
 	var isCompatible bool
 
+	// 对齐手动抓包 (HAR): signin 页 history=5 且加载 cloudfront index.js;
+	// profile 页 history=6 (首载) -> 8; signup 密码页 history=9, scripts.elapsed=0。
 	switch pageType {
 	case "profile":
 		dynamicURLs = []string{fmt.Sprintf("/dist/main/app_%s.min.js", identity.WebpackHash)}
-		scriptsElapsed = 0
+		scriptsElapsed = 1
 		if eventType == "PageLoad" || eventType == "first_load" {
-			historyLength = 2
+			historyLength = 6
 		} else {
-			historyLength = 3
+			historyLength = 8
 		}
 		isCompatible = true
 	case "signup":
 		dynamicURLs = []string{"/assets/js/app.js"}
-		scriptsElapsed = 1
-		historyLength = 5
+		scriptsElapsed = 0
+		historyLength = 9
 		isCompatible = true
 	default:
-		dynamicURLs = []string{"/assets/js/app.js"}
+		dynamicURLs = []string{"/assets/js/app.js", "https://d35uxhjf90umnp.cloudfront.net/index.js"}
 		scriptsElapsed = 1
-		historyLength = 1
+		historyLength = 5
 		isCompatible = false
 	}
 
@@ -296,7 +346,7 @@ func BuildFingerprintData(
 	}
 
 	// interaction
-	interaction := genInteraction(eventType)
+	interaction := interactionFor(pageType, eventType)
 
 	// start / end 时间
 	endMs := nowMs + int64(rand.Intn(51))
@@ -341,7 +391,7 @@ func BuildFingerprintData(
 		},
 	})
 	result.Set("end", endMs)
-	result.Set("timeZone", 8)
+	result.Set("timeZone", identity.TimezoneHours)
 	result.Set("flashVersion", nil)
 	result.Set("plugins", pluginsStr+" ||"+screenStr)
 	result.Set("dupedPlugins", pluginsStr+" ||"+screenStr)

@@ -46,6 +46,17 @@ func (r *Registrar) Step11CreateIdentity(otp string) error {
 	if len(r.RegCode) > 20 {
 		log.Printf("regCode=%s...", r.RegCode[:20])
 	}
+
+	// katal 遥测 (HAR entry 72): CreateIdentity 完成后浏览器必发。
+	verificationMs := float64(elapsedMillisSince(r.ProfileVerificationStartedAt, time.Now()))
+	createIdentityMs := float64(elapsedMillisSince(r.ProfileEmailStartedAt, time.Now()))
+	if verificationMs <= 0 {
+		verificationMs = 15539 // HAR SignUpEmailVerificationStep 15539ms 兜底
+	}
+	if createIdentityMs <= 0 {
+		createIdentityMs = 603
+	}
+	r.PostKatalVerificationBatch(verificationMs, createIdentityMs)
 	return nil
 }
 

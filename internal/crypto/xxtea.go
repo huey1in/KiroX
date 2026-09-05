@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	fhttp "github.com/bogdanfinn/fhttp"
 	httputil "reg_go/internal/http"
@@ -24,68 +26,67 @@ const (
 var (
 	fallbackKey = [4]uint32{1888420705, 2576816180, 2347232058, 874813317}
 
-	cacheMu          sync.Mutex
-	cachedKey        *[4]uint32
-	cachedVersion    string
-	cachedIdentifier string
+	configOnce sync.Once
+	configPtr  atomic.Pointer[xxteaConfig]
 )
 
-// RefreshAppJSConfig 从 app.js 刷新 XXTEA 密钥和 TES 版本
-func RefreshAppJSConfig(proxy string) {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	if cachedKey != nil {
-		return
-	}
-	js := fetchAppJS(proxy)
-	if js != "" {
-		key, ident, ver := extractFromAppJS(js)
-		if key != nil {
-			cachedKey = key
+// xxteaConfig 是密钥/TES 版本/identifier 的不可变快照。
+// 热路径 (每次指纹加密) 通过 atomic.Pointer 无锁读取, 不再与其他并发任务争抢互斥锁。
+type xxteaConfig struct {
+	Key        [4]uint32
+	Version    string
+	Identifier string
+}
+
+// RefreshAppJSConfig 从 app.js 刷新 XXTEA 密钥和 TES 版本。
+// 首次调用由 sync.Once 保证只有一个 goroutine 拉取 app.js,
+// 网络请求期间不再持有任何锁, 后续调用零开销直接返回。
+// (旧实现把整个下载过程放在全局互斥锁内, 导致所有并发注册流程在启动时串行排队)
+func RefreshAppJSConfig(proxy, chromeVer, userAgent, secUA string) {
+	configOnce.Do(func() {
+		cfg := xxteaConfig{
+			Version:    fallbackVer,
+			Identifier: identifier,
 		}
-		if ident != "" {
-			cachedIdentifier = ident
+
+		js := fetchAppJS(proxy, chromeVer, userAgent, secUA)
+		if js != "" {
+			key, ident, ver := extractFromAppJS(js)
+			if key != nil {
+				cfg.Key = *key
+			}
+			if ident != "" {
+				cfg.Identifier = ident
+			}
+			if ver != "" {
+				cfg.Version = ver
+			}
 		}
-		if ver != "" {
-			cachedVersion = ver
+		if cfg.Key == [4]uint32{} {
+			log.Println("[xxtea] 使用 fallback 密钥")
+			cfg.Key = fallbackKey
 		}
-	}
-	if cachedKey == nil {
-		log.Println("[xxtea] 使用 fallback 密钥")
-		k := fallbackKey
-		cachedKey = &k
-	}
-	if cachedVersion == "" {
-		cachedVersion = fallbackVer
-	}
-	if cachedIdentifier == "" {
-		cachedIdentifier = identifier
-	}
+		configPtr.Store(&cfg)
+	})
 }
 
 func GetTESVersion() string {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	if cachedVersion != "" {
-		return cachedVersion
+	if cfg := configPtr.Load(); cfg != nil {
+		return cfg.Version
 	}
 	return fallbackVer
 }
 
 func GetIdentifier() string {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	if cachedIdentifier != "" {
-		return cachedIdentifier
+	if cfg := configPtr.Load(); cfg != nil {
+		return cfg.Identifier
 	}
 	return identifier
 }
 
 func GetActiveKey() [4]uint32 {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	if cachedKey != nil {
-		return *cachedKey
+	if cfg := configPtr.Load(); cfg != nil {
+		return cfg.Key
 	}
 	return fallbackKey
 }
@@ -145,27 +146,54 @@ func xxteaEncrypt(plaintext string, key [4]uint32) []byte {
 	return result
 }
 
-func fetchAppJS(proxy string) string {
-	client := httputil.NewTLSClient(proxy, true, "144.0.0.0")
-	req, _ := fhttp.NewRequest("GET", "https://us-east-1.signin.aws/assets/js/app.js", nil)
-	httputil.SetHeaders(req, map[string]string{
-		"User-Agent":      httputil.DefaultUA,
+// appJSFetchTimeout 首次下载 app.js 的最长等待时间。
+// 并发批次启动前由 main 预热, 这里兜底防止慢代理把整批任务卡在启动阶段。
+const appJSFetchTimeout = 15 * time.Second
+
+func fetchAppJS(proxy, chromeVer, userAgent, secUA string) string {
+	ch := make(chan string, 1)
+	go func() {
+		client := httputil.NewTLSClient(proxy, true, chromeVer)
+		req, _ := fhttp.NewRequest("GET", "https://us-east-1.signin.aws/assets/js/app.js", nil)
+		httputil.SetHeaders(req, appJSRequestHeaders(chromeVer, userAgent, secUA))
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("[xxtea] 下载 app.js 失败: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		ch <- string(b)
+	}()
+	select {
+	case js := <-ch:
+		return js
+	case <-time.After(appJSFetchTimeout):
+		log.Printf("[xxtea] 下载 app.js 超时 (%s), 使用 fallback 密钥", appJSFetchTimeout)
+		return ""
+	}
+}
+
+func appJSRequestHeaders(chromeVer, userAgent, secUA string) map[string]string {
+	if chromeVer == "" {
+		chromeVer = "144.0.0.0"
+	}
+	if userAgent == "" {
+		userAgent = httputil.DefaultUA
+	}
+	if secUA == "" {
+		secUA = httputil.DefaultSecUA
+	}
+	return map[string]string{
+		"User-Agent":      userAgent,
 		"Accept":          "*/*",
 		"Accept-Language": "en-US,en;q=0.9",
 		"Referer":         "https://us-east-1.signin.aws/",
-		"sec-ch-ua":       httputil.DefaultSecUA,
+		"sec-ch-ua":       secUA,
 		"sec-fetch-dest":  "script",
 		"sec-fetch-mode":  "no-cors",
 		"sec-fetch-site":  "same-origin",
-	})
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("[xxtea] 下载 app.js 失败: %v", err)
-		return ""
 	}
-	defer resp.Body.Close()
-	b, _ := io.ReadAll(resp.Body)
-	return string(b)
 }
 
 func extractFromAppJS(js string) (*[4]uint32, string, string) {

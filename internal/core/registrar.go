@@ -60,6 +60,15 @@ type Registrar struct {
 
 	// Outlook 模式: 发送验证码前的邮件数量
 	OutlookMailCount int
+
+	// 遥测/指纹计时: 记录各页面开始时间, 用于生成真实 timeSpentOnPage 与 D2C/katal 上报
+	SigninPageStartedAt         time.Time
+	SigninPageURL               string
+	LastD2CFetchDuration        time.Duration
+	ProfilePageStartedAt        time.Time
+	ProfileEmailStartedAt       time.Time
+	ProfileVerificationStartedAt time.Time
+	PasswordPageStartedAt       time.Time
 }
 
 // NewRegistrar 创建注册器
@@ -173,6 +182,23 @@ func (r *Registrar) DoGet(url string, headers map[string]string) ([]byte, int, m
 		return data, resp.StatusCode, resp.Header, nil
 	}
 	return nil, 0, nil, lastErr
+}
+
+// DoPostBodyRaw 发送 POST 请求 (原始字符串 body, 不做 JSON 序列化)
+func (r *Registrar) DoPostBodyRaw(url string, rawBody string, headers map[string]string) ([]byte, int, map[string][]string, error) {
+	body := strings.NewReader(rawBody)
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	httputil.SetHeaders(req, headers)
+	resp, err := r.Client.Do(req)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	return data, resp.StatusCode, resp.Header, nil
 }
 
 // DoPostRaw 发送 POST 请求，返回状态码（带自动重试）
@@ -318,6 +344,13 @@ func (r *Registrar) Step3Email() error {
 		log.Printf("email=%s", r.Email)
 		return nil
 	}
+	if r.Cfg.UseICloud && r.Cfg.ICloudAccount != nil {
+		log.Println("[3] 使用 iCloud 邮箱")
+		r.EmailSvc = email.NewICloudService(*r.Cfg.ICloudAccount, r.Cfg.Proxy, r.Identity.ChromeVer)
+		r.Email = r.EmailSvc.Create()
+		log.Printf("email=%s", r.Email)
+		return nil
+	}
 	log.Println("[3] 创建临时邮箱")
 	// 如果未配置 MoEmail URL，从已保存的 MoeMail 配置中自动读取
 	baseURL := r.Cfg.MoEmailBaseURL
@@ -374,15 +407,22 @@ func (r *Registrar) Step4Portal() error {
 
 	loginURL := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
-	return r.FetchD2CToken(r.Cfg.SigninBase, loginURL)
+	d2cStart := time.Now()
+	if err := r.FetchD2CToken(r.Cfg.SigninBase, loginURL); err != nil {
+		return err
+	}
+	r.LastD2CFetchDuration = time.Since(d2cStart)
+	return nil
 }
 
 // Step5WorkflowInit 工作流初始化
 func (r *Registrar) Step5WorkflowInit() error {
 	log.Println("[5] 工作流初始化")
+	r.SigninPageStartedAt = time.Now()
 	api := fmt.Sprintf("%s/platform/%s/api/execute", r.Cfg.SigninBase, r.Cfg.DirectoryID)
 	ref := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
+	r.SigninPageURL = ref
 
 	fp := r.GenFP("signin", "first_load", 0, "")
 	rid := NewUUID()
@@ -400,6 +440,10 @@ func (r *Registrar) Step5WorkflowInit() error {
 		return err
 	}
 	httputil.SaveCookies(r.Cookies, respH)
+
+	// HAR entry 21: /metrics/fingerprint IsFingerprintGenerated:Success (operation=start)
+	metricFP := r.GenFP("signin", "first_load", 0, "")
+	r.PostFingerprintMetricSafe("IsFingerprintGenerated:Success", metricFP, "AWSSignin:FingerprintMetrics:start")
 
 	var data map[string]interface{}
 	json.Unmarshal(body, &data)
@@ -429,6 +473,15 @@ func (r *Registrar) Step5WorkflowInit() error {
 			r.WorkflowHandle = wh
 		}
 	}
+
+	// HAR entry 27: /metrics/fingerprint IsFingerprintFileLoaded:Success (operation=OnLoad_Username_Page)
+	r.PostFingerprintMetricSafe("IsFingerprintFileLoaded:Success", "1", "AWSSignin:FingerprintMetrics:OnLoad_Username_Page")
+
+	// D2C/WebVisor visitor token 与耗时遥测 (HAR entries 34/35/37)。
+	// Step4Portal 已调 FetchD2CToken, 这里仅上报耗时事件。
+	loginURL := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
+		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
+	r.PostD2CEventSafe(loginURL, r.LastD2CFetchDuration)
 	return nil
 }
 

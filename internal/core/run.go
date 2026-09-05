@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"reg_go/internal/crypto"
 )
 
 // urlRegex 用于把日志/错误里的完整 URL 脱敏为 <endpoint>，避免暴露后端地址。
@@ -120,6 +122,10 @@ func (r *Registrar) Run() map[string]interface{} {
 	if r.ctxCancelled() {
 		return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email}
 	}
+
+	// 预热 XXTEA 密钥 / TES 版本: 从 app.js 拉取最新配置 (与任务一致的 UA/TLS)。
+	// sync.Once 保证仅首次真正下载, 并发任务不串行阻塞。
+	crypto.RefreshAppJSConfig(r.Cfg.Proxy, r.Identity.ChromeVer, r.Identity.UA, r.Identity.SecUA)
 
 	steps := []struct {
 		name string

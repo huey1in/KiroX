@@ -344,3 +344,28 @@ func extractCodeFromText(text string, regex *regexp.Regexp) string {
 	}
 	return ""
 }
+
+// ExtractCode 从邮件文本中提取 AWS 验证码 (含黑名单过滤)。
+func ExtractCode(text string) string {
+	patterns := []string{
+		`(?i)(?:verification code|code|验证码)[：:\s]+(\d{6})`,
+		`(\d{6})\s*(?:is your|为您的)`,
+	}
+	for _, p := range patterns {
+		re := regexp.MustCompile(p)
+		m := re.FindStringSubmatch(text)
+		if len(m) == 2 && !isBlacklisted(m[1]) {
+			return m[1]
+		}
+	}
+	re := regexp.MustCompile(`\b(\d{6})\b`)
+	m := re.FindStringSubmatch(text)
+	if len(m) == 2 && !isBlacklisted(m[1]) {
+		return m[1]
+	}
+	return ""
+}
+
+func isBlacklisted(code string) bool {
+	return code == "000000" || code == "111111" || code == "123456"
+}

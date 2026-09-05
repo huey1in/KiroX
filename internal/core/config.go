@@ -42,6 +42,9 @@ type Config struct {
 	MailNestConfig   *email.MailNestConfig
 	MailNestProvider *email.MailNestProvider
 
+	UseICloud      bool
+	ICloudAccount  *email.ICloudAccount
+
 	MoEmailBaseURL string
 	MoEmailAPIKey  string
 }

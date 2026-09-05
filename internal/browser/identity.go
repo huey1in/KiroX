@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"time"
 )
 
 // ──────────────────── Chrome 多版本支持 ────────────────────
@@ -99,6 +100,7 @@ type BrowserIdentity struct {
 	LsubidPrefixSignin  string
 	LsubidPrefixProfile string
 	WebpackHash         string
+	TimezoneHours       int
 }
 
 // ──────────────────── 算法: GPU 配置生成 ────────────────────
@@ -390,6 +392,10 @@ func RandomIdentity() *BrowserIdentity {
 
 	ua := fmt.Sprintf("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36", cv.Version)
 
+	// 时区取自本机 (与真实浏览器一致)
+	_, tzOffset := time.Now().Zone()
+	tzHours := tzOffset / 3600
+
 	return &BrowserIdentity{
 		ChromeVer:           cv.Version,
 		UA:                  ua,
@@ -410,5 +416,6 @@ func RandomIdentity() *BrowserIdentity {
 		LsubidPrefixSignin:  lsubidPrefixes[rand.Intn(len(lsubidPrefixes))],
 		LsubidPrefixProfile: lsubidPrefixes[rand.Intn(len(lsubidPrefixes))],
 		WebpackHash:         fmt.Sprintf("%x", rand.Int63())[:10],
+		TimezoneHours:       tzHours,
 	}
 }
