@@ -43,15 +43,15 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.24'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -124,8 +124,11 @@ jobs:
       - name: Name Windows installer
         if: runner.os == 'Windows'
         run: |
-          $architecture = ("${{ matrix.platform }}" -split "/")[1]
-          Move-Item -LiteralPath "build/bin/KiroX-$architecture-installer.exe" -Destination "build/bin/${{ matrix.artifact }}"
+          $installers = @(Get-ChildItem -LiteralPath "build/bin" -Filter "*-installer.exe" -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one NSIS installer, found $($installers.Count): $($installers.Name -join ', ')"
+          }
+          Move-Item -LiteralPath $installers[0].FullName -Destination "build/bin/${{ matrix.artifact }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -137,7 +140,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
