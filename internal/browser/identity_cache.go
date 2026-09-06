@@ -256,7 +256,7 @@ func cachedIdentityForProxy(proxyURL string, refreshSession bool) *BrowserIdenti
 
 	now := time.Now().Unix()
 	if entry, ok := idCache[key]; ok && entry.Identity != nil {
-		if now-entry.CreatedAt < int64((time.Duration(identityCacheTTLHours.Load()) * time.Hour).Seconds()) {
+		if identityMatchesTLSProfiles(entry.Identity) && now-entry.CreatedAt < int64((time.Duration(identityCacheTTLHours.Load())*time.Hour).Seconds()) {
 			if refreshSession {
 				return refreshVolatile(entry.Identity)
 			}
@@ -271,6 +271,58 @@ func cachedIdentityForProxy(proxyURL string, refreshSession bool) *BrowserIdenti
 		return refreshVolatile(id)
 	}
 	return cloneIdentity(id)
+}
+
+func identityMatchesTLSProfiles(identity *BrowserIdentity) bool {
+	if identity == nil {
+		return false
+	}
+	major := strings.SplitN(strings.TrimSpace(identity.ChromeVer), ".", 2)[0]
+	switch major {
+	case "131", "133", "144":
+	default:
+		return false
+	}
+	return strings.Contains(identity.UA, "Chrome/"+identity.ChromeVer) &&
+		strings.Contains(identity.SecUA, `"Chromium";v="`+major+`"`) &&
+		strings.Contains(identity.SecUA, `"Google Chrome";v="`+major+`"`) &&
+		identityMatchesChromeSurface(identity)
+}
+
+func identityMatchesChromeSurface(identity *BrowserIdentity) bool {
+	if identity.Platform != "Win32" || identity.Screen.ColorDepth != 24 ||
+		identity.Screen.Width <= 0 || identity.Screen.Height <= 0 ||
+		identity.Screen.AvailWidth != identity.Screen.Width ||
+		identity.Screen.AvailHeight <= 0 || identity.Screen.AvailHeight > identity.Screen.Height {
+		return false
+	}
+	if !containsInt([]int{4, 8, 16, 32}, identity.DeviceMemory) ||
+		!containsInt([]int{4, 8, 12, 16, 20, 24, 32}, identity.HardwareConcurrency) {
+		return false
+	}
+	if identity.MathTan != "-1.4214488238747245" ||
+		identity.MathSin != "0.8178819121159085" ||
+		identity.MathCos != "-0.5753861119575491" {
+		return false
+	}
+	if len(identity.Plugins) != len(pluginsPool) {
+		return false
+	}
+	for i := range pluginsPool {
+		if identity.Plugins[i]["name"] != pluginsPool[i]["name"] {
+			return false
+		}
+	}
+	return true
+}
+
+func containsInt(values []int, target int) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func cloneIdentity(base *BrowserIdentity) *BrowserIdentity {

@@ -104,7 +104,7 @@ KiroX は現在、大規模なアーキテクチャリファクタリングを�
 
 ### リリース版を使う
 
-[Releases](https://github.com/huey1in/kirox/releases/latest) から OS と CPU アーキテクチャに合った `.zip` / `.tar.gz` をダウンロードし、展開してアプリを実行します。Windows x64 の例は `kiro-reg-windows-amd64.exe.zip` です。
+[Releases](https://github.com/huey1in/kirox/releases/latest) から OS と CPU アーキテクチャに合ったリリースをダウンロードします。Windows はインストーラー形式で、x64 の例は `kirox-windows-amd64-installer.exe` です。macOS と Linux は引き続き `.zip` / `.tar.gz` を使用します。
 
 Windows では WebView2、Linux のリリース版では GTK 3 / WebKitGTK 4.1 などのシステムランタイムが必要です。
 
@@ -135,13 +135,16 @@ wails dev
 
 # 本番ビルド
 wails build
+
+# Windows インストーラー（NSIS 3 が必要）
+wails build -nsis
 ```
 
 ビルド成果物は `build/bin/` に出力されます。
 
 WebKitGTK 4.1 を使う Linux 環境では、`wails dev -tags webkit2_41` / `wails build -tags webkit2_41` を使用してください。
 
-フロントエンドに npm 依存関係はありません。Wails が実行する `frontend/build.js` は静的ファイルを `frontend/dist/` にコピーするだけで、単独の Web サーバーは起動しません。Go の機能は Wails のバインディング経由で呼び出すため、アプリの開発には `wails dev` を使用します。
+フロントエンドは指紋オフセット曲線の描画に `d3@7.9.0` を使用します。Wails が実行する `frontend/build.js` は静的ファイルと必要な依存関係を `frontend/dist/` にまとめ、単独の Web サーバーは起動しません。Go の機能は Wails のバインディング経由で呼び出すため、アプリの開発には `wails dev` を使用します。
 
 ---
 

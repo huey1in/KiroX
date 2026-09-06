@@ -537,6 +537,34 @@ iframe::-webkit-scrollbar {
 .settings-page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
 .settings-page-title { font-size:20px; font-weight:700; color:var(--text); }
 .settings-page-subtitle { font-size:12px; color:var(--text-muted); margin-top:3px; }
+.settings-floating-save {
+  position:fixed;
+  right:32px;
+  bottom:28px;
+  z-index:190;
+  width:48px;
+  height:48px;
+  border:0;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  background:#111827;
+  box-shadow:0 10px 24px rgba(15,23,42,.24);
+  cursor:pointer;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(10px);
+  transition:opacity .18s ease,transform .18s ease,visibility .18s ease,background .15s ease;
+}
+.settings-floating-save.is-visible { opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0); }
+.settings-floating-save:hover:not(:disabled) { background:#1f2937; }
+.settings-floating-save:focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 30%,transparent); outline-offset:3px; }
+.settings-floating-save:disabled { background:var(--bg-hover); color:var(--text-muted); box-shadow:none; cursor:not-allowed; }
+[data-theme="dark"] .settings-floating-save { background:#e5e7eb; color:#111827; }
+[data-theme="dark"] .settings-floating-save:hover:not(:disabled) { background:#f3f4f6; }
 .settings-card { margin-bottom:16px; }
 .settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 16px; }
 .settings-field { display:flex; flex-direction:column; gap:7px; min-width:0; font-size:12px; font-weight:600; color:var(--text-secondary); }
@@ -561,6 +589,8 @@ iframe::-webkit-scrollbar {
 #advanced-settings-content { border-top:1px solid var(--border); padding:20px 22px 22px; }
 .advanced-warning { padding:10px 12px; margin-bottom:18px; background:rgba(245,158,11,.1); border-left:3px solid #d97706; color:var(--text-secondary); font-size:12px; line-height:1.55; }
 .advanced-endpoints { margin-top:18px; }
+.advanced-subsection { margin-top:20px; padding-top:2px; border-top:1px solid var(--border); }
+.advanced-subsection .settings-item { padding-bottom:0; }
 .fingerprint-curve-section { margin:0 0 22px; }
 .fingerprint-curve-heading { margin-bottom:12px; }
 .fingerprint-curve-editor { overflow:hidden; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text); }

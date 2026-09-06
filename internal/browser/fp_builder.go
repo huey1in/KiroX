@@ -23,26 +23,26 @@ func GenPerfTiming(nowMs int64) map[string]int64 {
 	domContentLoadedStart := domInteractiveOffset + int64(rand.Intn(3))
 
 	return map[string]int64{
-		"connectStart":             base + dnsOffset + 1 + int64(rand.Intn(3)),
-		"secureConnectionStart":    base + dnsOffset + 3 + int64(rand.Intn(5)),
-		"unloadEventEnd":           0,
-		"domainLookupStart":        base + dnsOffset,
-		"domainLookupEnd":          base + dnsOffset + int64(rand.Intn(2)),
-		"responseStart":            base + responseOffset,
-		"connectEnd":               base + connectEndOffset,
-		"responseEnd":              base + responseOffset + int64(rand.Intn(5)),
-		"requestStart":             base + connectEndOffset,
-		"domLoading":               base + responseOffset + 2 + int64(rand.Intn(5)),
-		"redirectStart":            0,
-		"loadEventEnd":             loadEventEnd,
-		"domComplete":              loadEventEnd,
-		"navigationStart":          base,
-		"loadEventStart":           loadEventEnd,
-		"domContentLoadedEventEnd": loadEventEnd,
-		"unloadEventStart":         0,
-		"redirectEnd":              0,
-		"domInteractive":           base + domInteractiveOffset,
-		"fetchStart":               base + dnsOffset,
+		"connectStart":               base + dnsOffset + 1 + int64(rand.Intn(3)),
+		"secureConnectionStart":      base + dnsOffset + 3 + int64(rand.Intn(5)),
+		"unloadEventEnd":             0,
+		"domainLookupStart":          base + dnsOffset,
+		"domainLookupEnd":            base + dnsOffset + int64(rand.Intn(2)),
+		"responseStart":              base + responseOffset,
+		"connectEnd":                 base + connectEndOffset,
+		"responseEnd":                base + responseOffset + int64(rand.Intn(5)),
+		"requestStart":               base + connectEndOffset,
+		"domLoading":                 base + responseOffset + 2 + int64(rand.Intn(5)),
+		"redirectStart":              0,
+		"loadEventEnd":               loadEventEnd,
+		"domComplete":                loadEventEnd,
+		"navigationStart":            base,
+		"loadEventStart":             loadEventEnd,
+		"domContentLoadedEventEnd":   loadEventEnd,
+		"unloadEventStart":           0,
+		"redirectEnd":                0,
+		"domInteractive":             base + domInteractiveOffset,
+		"fetchStart":                 base + dnsOffset,
 		"domContentLoadedEventStart": base + domContentLoadedStart,
 	}
 }
@@ -109,9 +109,10 @@ func genInteraction(eventType string) map[string]interface{} {
 }
 
 // genInteractionSpec 按手动抓包的行为画像生成交互数据:
-//   signin 提交邮箱/SIGNUP:  clicks=2, keyPresses=2, pastes=1 (粘贴邮箱)
-//   signup 提交密码:         clicks=5, keyPresses=16, pastes=1
-//   profile 验证码:          clicks=1, keyPresses=2, pastes=1 (粘贴验证码)
+//
+//	signin 提交邮箱/SIGNUP:  clicks=2, keyPresses=2, pastes=1 (粘贴邮箱)
+//	signup 提交密码:         clicks=5, keyPresses=16, pastes=1
+//	profile 验证码:          clicks=1, keyPresses=2, pastes=1 (粘贴验证码)
 func genInteractionSpec(eventType string, clicks, keyPresses, pastes int) map[string]interface{} {
 	if eventType == "PageLoad" || eventType == "first_load" {
 		return map[string]interface{}{
@@ -214,7 +215,7 @@ func genFormField(startMs int64, emailLen int, email string, interaction map[str
 			"cuts": 0, "copies": 0, "pastes": pastes,
 			"keyPressTimeIntervals": intervals,
 			"mouseClickPositions":   []string{fmt.Sprintf("%d.5,%d.5", 100+rand.Intn(151), 10+rand.Intn(11))},
-			"keyCycles": keyCycles, "mouseCycles": []int{80 + rand.Intn(71)}, "touchCycles": []int{},
+			"keyCycles":             keyCycles, "mouseCycles": []int{80 + rand.Intn(71)}, "touchCycles": []int{},
 			"width": 180, "height": 32, "totalFocusTime": 400 + rand.Intn(2100),
 			"checksum": cksum, "autocomplete": false, "prefilled": false,
 		},
@@ -449,7 +450,11 @@ func BuildFingerprintData(
 	result.Set("canvas", map[string]interface{}{
 		"hash": canvasHash, "emailHash": nil, "histogramBins": histSlice,
 	})
-	result.Set("token", map[string]interface{}{"isCompatible": isCompatible, "pageHasCaptcha": 0})
+	pageHasCaptcha := 0
+	if ctx != nil && ctx.PageHasCaptcha {
+		pageHasCaptcha = 1
+	}
+	result.Set("token", map[string]interface{}{"isCompatible": isCompatible, "pageHasCaptcha": pageHasCaptcha})
 	result.Set("auth", map[string]interface{}{"form": map[string]string{"method": "get"}})
 	result.Set("errors", []interface{}{})
 	result.Set("version", crypto.GetTESVersion())

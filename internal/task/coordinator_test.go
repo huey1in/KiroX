@@ -121,3 +121,69 @@ func TestRunTasksAlreadyCanceled(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthenticationFailureDoesNotTriggerBatchKillSwitch(t *testing.T) {
+	errorMsg := "设置密码失败: AWS 身份验证失败，验证令牌可能无效或已过期，响应包含 CAPTCHA 验证信息 (AUTHENTICATION_FAILED)"
+	if isKillSwitchError(errorMsg) {
+		t.Fatal("authentication failure alone must not cancel the entire batch")
+	}
+	if isRetryableRegistrationError(errorMsg) {
+		t.Fatal("authentication failure should not retry the same registration")
+	}
+}
+
+func TestWAFSolverFailureDoesNotRestartRegistration(t *testing.T) {
+	for _, errorMsg := range []string{
+		"AWS WAF 动态验证失败: 2Captcha: Workers could not solve the Captcha",
+		"AWS WAF 动态验证失败: 2Captcha: ERROR_CAPTCHA_UNSOLVABLE (operation=getTaskResult, taskType=AmazonTaskProxyless, taskId=42): Workers could not solve the Captcha",
+		"AWS WAF 动态验证失败: 2Captcha: ERROR_IP_BLOCKED (operation=createTask, taskType=AmazonTaskProxyless): IP is blocked",
+		"2Captcha: ERROR_IP_BLOCKED (operation=getTaskResult, taskType=AmazonTask, taskId=42): IP is blocked",
+		"2Captcha: ERROR_ACCOUNT_SUSPENDED: account suspended",
+		"AWS WAF 动态验证失败: context deadline exceeded",
+		"AWS WAF 动态验证失败: 2Captcha 结果未返回 captcha_voucher",
+		"CAPTCHA_REQUIRED: verification required",
+		"ERROR_CAPTCHA_UNSOLVABLE",
+		"设置密码失败: CAPTCHA/风控验证",
+	} {
+		t.Run(errorMsg, func(t *testing.T) {
+			if got := classifyError(errorMsg); got != "captcha" {
+				t.Fatalf("classifyError() = %q, want captcha", got)
+			}
+			if isRetryableRegistrationError(errorMsg) {
+				t.Fatal("CAPTCHA failure must not restart the entire registration")
+			}
+			if isKillSwitchError(errorMsg) {
+				t.Fatal("one CAPTCHA failure must not cancel the entire batch")
+			}
+		})
+	}
+}
+
+func TestAWSRiskErrorsStillTriggerBatchKillSwitch(t *testing.T) {
+	for _, errorMsg := range []string{
+		"send-otp 失败 (400)",
+		"注册被拦截: BLOCKED",
+		"AWS 请求失败: IP或浏览器指纹被检测",
+	} {
+		if !isKillSwitchError(errorMsg) {
+			t.Fatalf("AWS risk error did not trigger batch kill switch: %s", errorMsg)
+		}
+	}
+}
+
+func TestCaptchaClassificationPreservesOtherFailures(t *testing.T) {
+	for _, test := range []struct {
+		message string
+		want    string
+	}{
+		{message: "account suspended", want: "banned"},
+		{message: "邮箱已注册过", want: "registered"},
+		{message: "connection timeout", want: "failed"},
+		{message: "验证码等待超时", want: "failed"},
+		{message: "", want: "failed"},
+	} {
+		if got := classifyError(test.message); got != test.want {
+			t.Fatalf("classifyError(%q) = %q, want %q", test.message, got, test.want)
+		}
+	}
+}

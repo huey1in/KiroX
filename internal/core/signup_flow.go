@@ -112,6 +112,7 @@ func (r *Registrar) Step7Signup() error {
 // Step7_5SignupInit Signup API 初始化
 func (r *Registrar) Step7_5SignupInit() error {
 	log.Println("[7.5] Signup API 初始化")
+	r.FPCtx.ResetPerfTiming()
 	api := fmt.Sprintf("%s/platform/%s/signup/api/execute", r.Cfg.SigninBase, r.Cfg.DirectoryID)
 	ref := fmt.Sprintf("%s/platform/%s/signup?workflowStateHandle=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)

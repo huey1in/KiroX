@@ -27,12 +27,16 @@ import (
 // metricName 形如 "IsFingerprintGenerated:Success"; operation 形如
 // "AWSSignin:FingerprintMetrics:start"。
 func (r *Registrar) PostFingerprintMetric(metricName, value, operation string) error {
+	ref := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
+		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
+	return r.postFingerprintMetricAt(metricName, value, operation, ref)
+}
+
+func (r *Registrar) postFingerprintMetricAt(metricName, value, operation, ref string) error {
 	if !r.Cfg.TelemetryEnabled {
 		return nil
 	}
 	api := r.Cfg.SigninBase + "/metrics/fingerprint"
-	ref := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
-		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
 
 	form := url.Values{}
 	form.Set("name", metricName)
@@ -62,6 +66,10 @@ func (r *Registrar) PostFingerprintMetricSafe(metricName, value, operation strin
 // SendUserEvent 上报页面事件 (signin.aws 页面加载/提交行为)。
 // 对照 HAR entry 97: PAGE_LOAD / CREDENTIAL_COLLECTION。
 func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage int64) error {
+	return r.sendUserEvent(r.Cfg.DirectoryID, eventType, pageName, timeSpentOnPage)
+}
+
+func (r *Registrar) sendUserEvent(directoryID, eventType, pageName string, timeSpentOnPage int64) error {
 	if !r.Cfg.TelemetryEnabled {
 		return nil
 	}
@@ -89,7 +97,7 @@ func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage in
 		"inputs": []interface{}{
 			map[string]interface{}{
 				"input_type":  "UserEventRequestInput",
-				"directoryId": r.Cfg.DirectoryID,
+				"directoryId": directoryID,
 				"userName":    r.Email,
 				"userEvents":  []interface{}{userEvent},
 			},
@@ -104,6 +112,16 @@ func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage in
 		return fmt.Errorf("user-event/send-event HTTP %d: %s", status, truncateBytes(body, 120))
 	}
 	return nil
+}
+
+func (r *Registrar) sendUserEventSafe(directoryID, eventType, pageName string, timeSpentOnPage int64) {
+	if err := r.sendUserEvent(directoryID, eventType, pageName, timeSpentOnPage); err != nil {
+		log.Printf("[遥测] %s/%s 上报失败: %v", pageName, eventType, err)
+	}
+}
+
+func (r *Registrar) SendUserEventSafe(eventType, pageName string, timeSpentOnPage int64) {
+	r.sendUserEventSafe(r.Cfg.DirectoryID, eventType, pageName, timeSpentOnPage)
 }
 
 // PostD2CEvent 上报 D2C 遥测事件 (timeTakenToFetchVID)。

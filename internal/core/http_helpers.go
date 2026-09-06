@@ -11,8 +11,8 @@ import (
 // BuildHeaders 构建通用请求头
 func (r *Registrar) BuildHeaders(referer, origin string) map[string]string {
 	h := map[string]string{
-		"Accept":              "application/json, text/plain, */*",
-		"Accept-Language":     "zh-CN,zh;q=0.9,en;q=0.8",
+		"Accept":             "application/json, text/plain, */*",
+		"Accept-Language":    "zh-CN,zh;q=0.9,en;q=0.8",
 		"Accept-Encoding":    "gzip, deflate, br",
 		"Content-Type":       "application/json",
 		"User-Agent":         r.Identity.UA,
@@ -29,17 +29,14 @@ func (r *Registrar) BuildHeaders(referer, origin string) map[string]string {
 	if origin != "" {
 		h["Origin"] = origin
 	}
-	if len(r.Cookies) > 0 {
-		h["Cookie"] = r.CookieString()
-	}
 	return h
 }
 
 // BuildProfileHeaders 构建 profile 页面请求头
 func (r *Registrar) BuildProfileHeaders(referer string) map[string]string {
 	h := map[string]string{
-		"Accept":              "*/*",
-		"Accept-Language":     "zh-CN,zh;q=0.9,en;q=0.8",
+		"Accept":             "*/*",
+		"Accept-Language":    "zh-CN,zh;q=0.9,en;q=0.8",
 		"Content-Type":       "application/json;charset=UTF-8",
 		"User-Agent":         r.Identity.UA,
 		"Origin":             r.Cfg.ProfileBase,
@@ -52,7 +49,7 @@ func (r *Registrar) BuildProfileHeaders(referer string) map[string]string {
 		"sec-fetch-site":     "same-origin",
 		"priority":           "u=1, i",
 	}
-	keys := []string{"awsccc", "aws-user-profile-ubid", "i18next"}
+	keys := []string{"awsccc", "aws-user-profile-ubid", "i18next", "aws-waf-token"}
 	if _, ok := r.Cookies["awsd2c-token"]; ok {
 		keys = append(keys, "awsd2c-token", "awsd2c-token-c")
 	}
@@ -117,7 +114,7 @@ func (r *Registrar) profileCookieString() string {
 // FetchD2CToken 获取 D2C Token
 func (r *Registrar) FetchD2CToken(origin, referer string) error {
 	headers := map[string]string{
-		"Accept":              "*/*",
+		"Accept":             "*/*",
 		"Content-Type":       "application/json",
 		"User-Agent":         r.Identity.UA,
 		"Origin":             origin,

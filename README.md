@@ -93,7 +93,7 @@ KiroX 是一款基于 [Wails v2](https://wails.io) 构建的 Kiro 桌面注册�
 
 ### 直接使用
 
-从 [Releases](https://github.com/huey1in/kirox/releases/latest) 下载匹配系统和 CPU 架构的压缩包，解压后运行其中的程序。发布流程提供 Windows amd64 / arm64、macOS amd64 / arm64 和 Linux amd64 构建；例如 Windows x64 对应 `kiro-reg-windows-amd64.exe.zip`。
+从 [Releases](https://github.com/huey1in/kirox/releases/latest) 下载匹配系统和 CPU 架构的版本。Windows 提供安装程序，例如 x64 对应 `kirox-windows-amd64-installer.exe`；macOS 和 Linux 继续使用 `.zip` / `.tar.gz` 压缩包。
 
 ### 从源码构建
 
@@ -123,11 +123,14 @@ wails dev
 
 # 生产构建
 wails build
+
+# Windows 安装包（需要 NSIS 3）
+wails build -nsis
 ```
 
 构建产物位于 `build/bin/`。Linux 使用 WebKitGTK 4.1 时，需安装 `libgtk-3-dev` 和 `libwebkit2gtk-4.1-dev`（Debian / Ubuntu 包名），并使用 `wails dev -tags webkit2_41` 或 `wails build -tags webkit2_41`。
 
-前端没有 npm 第三方依赖。`node frontend/build.js` 仅将静态资源复制到 `frontend/dist/`；前端的 `npm run dev` / `npm run build` 也执行同一脚本，不会启动独立 Web 服务。完整功能依赖 Wails 提供的 Go 方法绑定，应通过 `wails dev` 运行桌面应用。
+前端使用 `d3@7.9.0` 绘制指纹偏移曲线。`node frontend/build.js` 会将静态资源和所需依赖整理到 `frontend/dist/`；前端的 `npm run dev` / `npm run build` 都执行这一构建脚本，不会启动独立 Web 服务。完整功能依赖 Wails 提供的 Go 方法绑定，应通过 `wails dev` 运行桌面应用。
 
 ---
 

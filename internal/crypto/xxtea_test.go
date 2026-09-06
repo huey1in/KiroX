@@ -156,3 +156,30 @@ func TestDownloadAppJSRejectsErrorResponses(t *testing.T) {
 		t.Fatalf("accepted an HTTP error page: js=%q, err=%v", js, err)
 	}
 }
+
+func TestExtractFromCurrentMinifiedAppJS(t *testing.T) {
+	js := `var r=function(){function t(){}return t.prototype.provide=function(){var e=[2576816180,1888420705,2347232058,"ECdITeCs",874813317,29115,32807];return{identifier:e[3],material:[e[1],e[0],e[2],e[4]]}},t}();t.FWCIM_VERSION="4.0.0"`
+	key, ident, version := extractFromAppJS(js)
+	if key == nil || *key != fallbackKey {
+		t.Fatalf("key = %v, want %v", key, fallbackKey)
+	}
+	if ident != identifier || version != fallbackVer {
+		t.Fatalf("identifier/version = %q/%q, want %q/%q", ident, version, identifier, fallbackVer)
+	}
+}
+
+func TestExtractFromAppJSRejectsUnrelatedNumericArray(t *testing.T) {
+	js := `var e=[1,2,3,"not-a-key",4];return{identifier:e[3],material:[e[0],e[1],e[2],e[4]]}`
+	key, ident, _ := extractFromAppJS(js)
+	if key != nil || ident != "" {
+		t.Fatalf("accepted unrelated array: key=%v identifier=%q", key, ident)
+	}
+}
+
+func TestExtractFromAppJSSkipsUnrelatedCandidate(t *testing.T) {
+	js := `var x=[1,2,3,"decoy",4];return{identifier:x[3],material:[x[0],x[1],x[2],x[4]]};var e=[2576816180,1888420705,2347232058,"ECdITeCs",874813317];return{identifier:e[3],material:[e[1],e[0],e[2],e[4]]}`
+	key, ident, _ := extractFromAppJS(js)
+	if key == nil || *key != fallbackKey || ident != identifier {
+		t.Fatalf("key/identifier = %v/%q", key, ident)
+	}
+}

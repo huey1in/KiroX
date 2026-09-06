@@ -31,6 +31,9 @@ type Config struct {
 	HTTPRetries               int
 	FingerprintOffsets        []int
 	FingerprintCurvePositions []int
+	WAFEnabled                bool
+	TwoCaptchaAPIKey          string
+	WAFToken                  string
 
 	EmailProvider  string
 	UseOutlook     bool

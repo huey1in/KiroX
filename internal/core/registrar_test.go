@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	fhttp "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 
+	"reg_go/internal/browser"
 	httputil "reg_go/internal/http"
 )
 
@@ -153,5 +155,32 @@ func TestRegistrarNilContext(t *testing.T) {
 	}
 	if err := r.wait(0); err != nil {
 		t.Fatalf("nil context wait failed: %v", err)
+	}
+}
+
+func TestBuildProfileHeadersIncludesWAFToken(t *testing.T) {
+	r := &Registrar{
+		Cfg:      &Config{ProfileBase: "https://profile.example.com"},
+		Identity: &browser.BrowserIdentity{},
+		Cookies:  map[string]string{"aws-waf-token": "test-waf-token"},
+	}
+	headers := r.BuildProfileHeaders("https://profile.example.com/")
+	if !strings.Contains(headers["Cookie"], "aws-waf-token=test-waf-token") {
+		t.Fatalf("Profile Cookie header = %q", headers["Cookie"])
+	}
+}
+
+func TestBuildHeadersLeavesCookiesToScopedClientJar(t *testing.T) {
+	r := &Registrar{
+		Identity: &browser.BrowserIdentity{},
+		Cookies: map[string]string{
+			"aws-usi-authn":         "signin-cookie",
+			"aws-user-profile-ubid": "profile-cookie",
+		},
+	}
+
+	headers := r.BuildHeaders("https://us-east-1.signin.aws/platform/test", "https://us-east-1.signin.aws")
+	if _, ok := headers["Cookie"]; ok {
+		t.Fatalf("BuildHeaders emitted an unscoped Cookie header: %q", headers["Cookie"])
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"net/url"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	tls_client "github.com/bogdanfinn/tls-client"
 
 	"reg_go/internal/browser"
+	"reg_go/internal/captcha"
 	"reg_go/internal/crypto"
 	"reg_go/internal/email"
 	httputil "reg_go/internal/http"
@@ -69,6 +71,9 @@ type Registrar struct {
 	ProfileEmailStartedAt        time.Time
 	ProfileVerificationStartedAt time.Time
 	PasswordPageStartedAt        time.Time
+
+	solveAWSWAF func(context.Context, captcha.AWSWAFOptions) (captcha.AWSWAFSolution, error)
+	solveImage  func(context.Context, []byte) (string, error)
 }
 
 // NewRegistrar 创建注册器
@@ -80,10 +85,25 @@ func NewRegistrar(cfg *Config) *Registrar {
 		identity.Screen.Width, identity.Screen.Height, identity.Screen.ColorDepth)
 
 	client := httputil.NewTLSClient(cfg.Proxy, true, identity.ChromeVer)
+	cookies := make(map[string]string)
+	if token := strings.TrimSpace(cfg.WAFToken); token != "" {
+		cookies["aws-waf-token"] = token
+		for _, rawURL := range []string{cfg.SigninBase, cfg.ProfileBase} {
+			target, err := url.Parse(rawURL)
+			if err == nil && target.Hostname() != "" {
+				client.SetCookies(target, []*http.Cookie{{
+					Name:   "aws-waf-token",
+					Value:  token,
+					Path:   "/",
+					Secure: true,
+				}})
+			}
+		}
+	}
 	return &Registrar{
 		Cfg:       cfg,
 		Client:    client,
-		Cookies:   make(map[string]string),
+		Cookies:   cookies,
 		Identity:  identity,
 		FPCtx:     browser.NewFPContext(identity),
 		VisitorID: httputil.VisitorID(),
@@ -182,6 +202,11 @@ func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]s
 			}
 			return nil, nil, err
 		}
+		if amsTraceEnabled() {
+			if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
+				log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
+			}
+		}
 		defer resp.Body.Close()
 		data, err := io.ReadAll(resp.Body)
 		return data, resp.Header, err
@@ -218,6 +243,11 @@ func (r *Registrar) DoGet(url string, headers map[string]string) ([]byte, int, m
 			}
 			return nil, 0, nil, err
 		}
+		if amsTraceEnabled() {
+			if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
+				log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
+			}
+		}
 		defer resp.Body.Close()
 		data, err := io.ReadAll(resp.Body)
 		return data, resp.StatusCode, resp.Header, err
@@ -239,6 +269,11 @@ func (r *Registrar) DoPostBodyRaw(url string, rawBody string, headers map[string
 	resp, err := r.Client.Do(req)
 	if err != nil {
 		return nil, 0, nil, err
+	}
+	if amsTraceEnabled() {
+		if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
+			log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
+		}
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
@@ -282,6 +317,11 @@ func (r *Registrar) DoPostRaw(url string, payload interface{}, headers map[strin
 			}
 			return nil, 0, nil, err
 		}
+		if amsTraceEnabled() {
+			if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
+				log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
+			}
+		}
 		defer resp.Body.Close()
 		data, err := io.ReadAll(resp.Body)
 		return data, resp.StatusCode, resp.Header, err
@@ -321,7 +361,11 @@ func (r *Registrar) GenFPWithTime(pageType, eventType string, timeOnPage, emailL
 		ref = r.Cfg.ViewBase + "/"
 	}
 
-	fpJSON := browser.GenerateFingerprintJSON(r.Identity, loc, ref, r.FPCtx, pageType, eventType, timeOnPage, emailLen, emailAddr)
+	return r.GenFPAt(loc, ref, pageType, eventType, timeOnPage, emailLen, emailAddr)
+}
+
+func (r *Registrar) GenFPAt(locationURL, referrer, pageType, eventType string, timeOnPage, emailLen int, emailAddr string) string {
+	fpJSON := browser.GenerateFingerprintJSON(r.Identity, locationURL, referrer, r.FPCtx, pageType, eventType, timeOnPage, emailLen, emailAddr)
 	return crypto.EncryptFingerprint(fpJSON)
 }
 

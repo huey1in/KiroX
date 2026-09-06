@@ -56,6 +56,54 @@ func TestApplySelectedIdentityDomains(t *testing.T) {
 	}
 }
 
+func TestIdentityMatchesTLSProfiles(t *testing.T) {
+	valid := RandomIdentity()
+	valid.ChromeVer = "133.0.0.0"
+	valid.UA = "Mozilla/5.0 Chrome/133.0.0.0 Safari/537.36"
+	valid.SecUA = `"Not_A Brand";v="24", "Chromium";v="133", "Google Chrome";v="133"`
+	if !identityMatchesTLSProfiles(valid) {
+		t.Fatal("rejected a supported consistent identity")
+	}
+	for name, identity := range map[string]*BrowserIdentity{
+		"stale version": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.ChromeVer = "139.0.0.0"
+			identity.UA = "Chrome/139.0.0.0"
+			identity.SecUA = `"Chromium";v="139", "Google Chrome";v="139"`
+		}),
+		"UA mismatch": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.UA = "Chrome/139.0.0.0"
+		}),
+		"SecUA mismatch": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.SecUA = `"Chromium";v="139", "Google Chrome";v="139"`
+		}),
+		"invalid memory": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.DeviceMemory = 6
+		}),
+		"invalid color depth": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.Screen.ColorDepth = 30
+		}),
+		"randomized math": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.MathTan = "-1.42144882387472099"
+		}),
+		"shuffled plugins": cloneWith(valid, func(identity *BrowserIdentity) {
+			identity.Plugins[0], identity.Plugins[1] = identity.Plugins[1], identity.Plugins[0]
+		}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if identityMatchesTLSProfiles(identity) {
+				t.Fatalf("accepted inconsistent identity: %#v", identity)
+			}
+		})
+	}
+}
+
+func cloneWith(base *BrowserIdentity, mutate func(*BrowserIdentity)) *BrowserIdentity {
+	clone := cloneIdentity(base)
+	clone.Plugins = append([]map[string]string(nil), base.Plugins...)
+	mutate(clone)
+	return clone
+}
+
 func fingerprintIdentityFixture(prefix string, number int) *BrowserIdentity {
 	identity := &BrowserIdentity{
 		ChromeVer: prefix + "-chrome", UA: prefix + "-ua", SecUA: prefix + "-secua",

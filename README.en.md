@@ -97,7 +97,7 @@ These directions will be delivered incrementally as development progresses. The 
 
 ### Use a release
 
-Download the archive matching your operating system and architecture from [Releases](https://github.com/huey1in/kirox/releases/latest), extract it, and run the application. Releases use `.zip` or `.tar.gz` archives; for example, Windows x64 uses `kiro-reg-windows-amd64.exe.zip`.
+Download the release matching your operating system and architecture from [Releases](https://github.com/huey1in/kirox/releases/latest). Windows ships as an installer, for example `kirox-windows-amd64-installer.exe` for x64; macOS and Linux continue to use `.zip` / `.tar.gz` archives.
 
 ### Build from source
 
@@ -125,13 +125,16 @@ wails dev
 
 # Production build
 wails build
+
+# Windows installer (requires NSIS 3)
+wails build -nsis
 ```
 
 The output binary is located under `build/bin/`.
 
 On Linux, install the required GTK 3 and WebKitGTK development packages. If your system uses WebKitGTK 4.1, run `wails dev -tags webkit2_41` or `wails build -tags webkit2_41`.
 
-The frontend uses vanilla HTML / CSS / JavaScript with no third-party npm dependencies. Wails runs its build command automatically; `node frontend/build.js` only copies static assets into `frontend/dist/` and does not start a web server. Application functions require the Wails bridge, so use `wails dev` to run the desktop app.
+The frontend uses `d3@7.9.0` for the fingerprint offset curve. Wails runs the frontend build automatically; `node frontend/build.js` assembles the static assets and required dependency into `frontend/dist/` and does not start a web server. Application functions require the Wails bridge, so use `wails dev` to run the desktop app.
 
 ---
 

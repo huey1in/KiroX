@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"log"
 	"regexp"
 	"strings"
@@ -23,6 +24,22 @@ func (r *Registrar) formatError(step string, err error) string {
 	if r.ctxCancelled() {
 		return "任务已取消"
 	}
+	var serviceErr *ServiceError
+	if errors.As(err, &serviceErr) {
+		if serviceErr.Code == "AUTHENTICATION_FAILED" {
+			message := "设置密码失败: AWS 身份验证失败，验证令牌可能无效或已过期"
+			if serviceErr.Captcha {
+				message += "，响应包含 CAPTCHA 验证信息"
+			}
+			return message + serviceErrorMetadata(serviceErr)
+		}
+		message := friendlyStepName(step) + "失败"
+		if serviceErr.Message != "" {
+			message += ": " + serviceErr.Message
+		}
+		return message + serviceErrorMetadata(serviceErr)
+	}
+
 	errMsg := scrubURLs(err.Error())
 
 	// 网络连接错误
@@ -84,6 +101,24 @@ func (r *Registrar) formatError(step string, err error) string {
 	}
 
 	// 未知错误，添加步骤信息
+	return friendlyStepName(step) + "失败: " + errMsg
+}
+
+func serviceErrorMetadata(err *ServiceError) string {
+	metadata := err.Code
+	if err.RequestID != "" {
+		if metadata != "" {
+			metadata += ", "
+		}
+		metadata += "requestId=" + err.RequestID
+	}
+	if metadata == "" {
+		return ""
+	}
+	return " (" + metadata + ")"
+}
+
+func friendlyStepName(step string) string {
 	stepNames := map[string]string{
 		"OIDC":           "初始化注册",
 		"Device":         "设备注册",
@@ -105,12 +140,10 @@ func (r *Registrar) formatError(step string, err error) string {
 		"KiroExchange":   "获取访问令牌",
 	}
 
-	friendlyStep := stepNames[step]
-	if friendlyStep == "" {
-		friendlyStep = step
+	if friendlyStep := stepNames[step]; friendlyStep != "" {
+		return friendlyStep
 	}
-
-	return friendlyStep + "失败: " + errMsg
+	return step
 }
 
 // ctxCancelled 检查 context 是否已取消

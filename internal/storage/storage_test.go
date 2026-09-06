@@ -202,6 +202,47 @@ func TestSaveAppSettingsNormalizesBoundsAndRejectsInvalidEndpoint(t *testing.T) 
 	}
 }
 
+func TestSaveAppSettingsValidatesWAFSolver(t *testing.T) {
+	isolateStorageLayout(t)
+	settings := DefaultAppSettings()
+	settings.WAFEnabled = true
+	if _, err := SaveAppSettings(settings); err == nil {
+		t.Fatal("expected missing 2Captcha configuration error")
+	}
+
+	settings.TwoCaptchaAPIKey = "api-key"
+	settings.WAFJSAPIScript = "https://example.com/jsapi.js"
+	saved, err := SaveAppSettings(settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !saved.WAFEnabled || saved.TwoCaptchaAPIKey != "api-key" || saved.WAFJSAPIScript == "" {
+		t.Fatalf("unexpected WAF settings: %+v", saved)
+	}
+
+	settings = DefaultAppSettings()
+	settings.WAFEnabled = true
+	settings.TwoCaptchaAPIKey = "api-key"
+	settings.WAFWebsiteKey = "site-key"
+	if _, err := SaveAppSettings(settings); err == nil {
+		t.Fatal("expected incomplete websiteKey challenge parameters to fail")
+	}
+}
+
+func TestDefaultAppSettingsIncludesWAFDiscoveryValues(t *testing.T) {
+	settings := DefaultAppSettings()
+	if settings.WAFWebsiteURL == "" || settings.WAFJSAPIScript != "" {
+		t.Fatalf("WAF defaults must include only the website URL: %+v", settings)
+	}
+
+	normalized := normalizeAppSettings(AppSettings{
+		WAFJSAPIScript: "https://us-east-1.signin.aws/assets/js/app.js",
+	})
+	if normalized.WAFWebsiteURL != settings.WAFWebsiteURL || normalized.WAFJSAPIScript != "" {
+		t.Fatalf("legacy WAF defaults were not migrated: %+v", normalized)
+	}
+}
+
 func TestPersistentLogsRedactCredentials(t *testing.T) {
 	isolateStorageLayout(t)
 	ConfigurePersistentLogs(true, 7)

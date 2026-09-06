@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	fhttp "github.com/bogdanfinn/fhttp"
+	"github.com/bogdanfinn/fhttp/cookiejar"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
 )
@@ -87,13 +88,18 @@ func PKCE() (verifier, challenge string) {
 	return
 }
 
-// NewTLSClient 创建带 TLS 指纹伪装的 HTTP 客户端
-// chromeVer 可选，忽略（始终使用 Chrome_144 profile）
+// NewTLSClient 创建带 TLS 指纹伪装的 HTTP 客户端。
+// chromeVer 用于选择与 User-Agent 主版本一致的 TLS profile。
 func NewTLSClient(proxy string, followRedirect bool, chromeVer ...string) tls_client.HttpClient {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		panic(fmt.Sprintf("创建 Cookie Jar 失败: %v", err))
+	}
 	opts := []tls_client.HttpClientOption{
 		tls_client.WithTimeoutSeconds(int(requestTimeoutSeconds.Load())),
-		tls_client.WithClientProfile(profiles.Chrome_144),
+		tls_client.WithClientProfile(tlsProfileForChrome(chromeVer...)),
 		tls_client.WithInsecureSkipVerify(),
+		tls_client.WithCookieJar(jar),
 	}
 	if !followRedirect {
 		opts = append(opts, tls_client.WithNotFollowRedirects())
@@ -106,6 +112,21 @@ func NewTLSClient(proxy string, followRedirect bool, chromeVer ...string) tls_cl
 		client.SetProxy(proxy)
 	}
 	return client
+}
+
+func tlsProfileForChrome(chromeVer ...string) profiles.ClientProfile {
+	major := ""
+	if len(chromeVer) > 0 {
+		major = strings.SplitN(strings.TrimSpace(chromeVer[0]), ".", 2)[0]
+	}
+	switch major {
+	case "131":
+		return profiles.Chrome_131
+	case "144":
+		return profiles.Chrome_144
+	default:
+		return profiles.Chrome_133
+	}
 }
 
 // NewNoRedirectTLSClient 创建不跟随重定向的 TLS 客户端
@@ -182,7 +203,10 @@ func SaveCookies(cookies map[string]string, headers map[string][]string) {
 		"path": true, "domain": true, "expires": true,
 		"max-age": true, "secure": true, "httponly": true, "samesite": true,
 	}
-	for _, vals := range headers {
+	for headerName, vals := range headers {
+		if !strings.EqualFold(headerName, "Set-Cookie") {
+			continue
+		}
 		for _, raw := range vals {
 			if !strings.Contains(raw, "=") {
 				continue

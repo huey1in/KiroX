@@ -69,6 +69,15 @@ type AppSettings struct {
 	FingerprintOffsets        []int  `json:"fingerprintOffsets"`
 	FingerprintCurvePositions []int  `json:"fingerprintCurvePositions"`
 	TelemetryEnabled          bool   `json:"telemetryEnabled"`
+	WAFEnabled                bool   `json:"wafEnabled"`
+	TwoCaptchaAPIKey          string `json:"twoCaptchaAPIKey"`
+	WAFWebsiteURL             string `json:"wafWebsiteURL"`
+	WAFWebsiteKey             string `json:"wafWebsiteKey"`
+	WAFIV                     string `json:"wafIV"`
+	WAFContext                string `json:"wafContext"`
+	WAFJSAPIScript            string `json:"wafJSAPIScript"`
+	WAFChallengeScript        string `json:"wafChallengeScript"`
+	WAFCaptchaScript          string `json:"wafCaptchaScript"`
 	OIDCBase                  string `json:"oidcBase"`
 	SigninBase                string `json:"signinBase"`
 	ProfileBase               string `json:"profileBase"`
@@ -100,6 +109,7 @@ func DefaultAppSettings() AppSettings {
 		FingerprintOffsets:        []int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100},
 		FingerprintCurvePositions: []int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100},
 		TelemetryEnabled:          true,
+		WAFWebsiteURL:             "https://us-east-1.signin.aws/platform/d-9067642ac7/signup",
 		OIDCBase:                  "https://oidc.us-east-1.amazonaws.com",
 		SigninBase:                "https://us-east-1.signin.aws",
 		ProfileBase:               "https://profile.aws.amazon.com",
@@ -169,6 +179,20 @@ func normalizeAppSettings(s AppSettings) AppSettings {
 	}
 	if strings.TrimSpace(s.DirectoryID) == "" {
 		s.DirectoryID = d.DirectoryID
+	}
+	s.TwoCaptchaAPIKey = strings.TrimSpace(s.TwoCaptchaAPIKey)
+	s.WAFWebsiteURL = strings.TrimSpace(s.WAFWebsiteURL)
+	s.WAFWebsiteKey = strings.TrimSpace(s.WAFWebsiteKey)
+	s.WAFIV = strings.TrimSpace(s.WAFIV)
+	s.WAFContext = strings.TrimSpace(s.WAFContext)
+	s.WAFJSAPIScript = strings.TrimSpace(s.WAFJSAPIScript)
+	s.WAFChallengeScript = strings.TrimSpace(s.WAFChallengeScript)
+	s.WAFCaptchaScript = strings.TrimSpace(s.WAFCaptchaScript)
+	if s.WAFJSAPIScript == "https://us-east-1.signin.aws/assets/js/app.js" {
+		s.WAFJSAPIScript = ""
+	}
+	if s.WAFWebsiteURL == "" {
+		s.WAFWebsiteURL = d.WAFWebsiteURL
 	}
 	return s
 }
@@ -437,6 +461,31 @@ func SaveAppSettings(appSettings AppSettings) (AppSettings, error) {
 		parsed, err := url.ParseRequestURI(value)
 		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 			return AppSettings{}, fmt.Errorf("%s 必须是有效的 HTTP(S) URL", name)
+		}
+	}
+	if appSettings.WAFEnabled {
+		if appSettings.TwoCaptchaAPIKey == "" {
+			return AppSettings{}, fmt.Errorf("启用 AWS WAF 打码时必须填写 2Captcha API Key")
+		}
+		hasAnyStaticParam := appSettings.WAFWebsiteKey != "" || appSettings.WAFIV != "" || appSettings.WAFContext != "" || appSettings.WAFJSAPIScript != "" || appSettings.WAFChallengeScript != "" || appSettings.WAFCaptchaScript != ""
+		hasChallengeParams := appSettings.WAFWebsiteKey != "" && appSettings.WAFIV != "" && appSettings.WAFContext != ""
+		hasJSAPIParams := appSettings.WAFJSAPIScript != ""
+		if hasAnyStaticParam && !hasChallengeParams && !hasJSAPIParams {
+			return AppSettings{}, fmt.Errorf("静态 AWS WAF 参数需要 websiteKey + iv + context，或 jsapiScript；全部留空时将自动处理动态挑战")
+		}
+		for name, value := range map[string]string{
+			"WAF Website URL":     appSettings.WAFWebsiteURL,
+			"WAF jsapiScript":     appSettings.WAFJSAPIScript,
+			"WAF challengeScript": appSettings.WAFChallengeScript,
+			"WAF captchaScript":   appSettings.WAFCaptchaScript,
+		} {
+			if value == "" && name != "WAF Website URL" {
+				continue
+			}
+			parsed, err := url.ParseRequestURI(value)
+			if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+				return AppSettings{}, fmt.Errorf("%s 必须是有效的 HTTP(S) URL", name)
+			}
 		}
 	}
 	if err := updateSettings(func(settings *settingsFile) {

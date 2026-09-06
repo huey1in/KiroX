@@ -72,6 +72,7 @@ function selectDropdownOption(el, ev) {
     var fn = window[fnName];
     if (typeof fn === 'function') fn(val, label);
   }
+  wrap.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 function closeAllDropdowns() {

@@ -258,24 +258,46 @@ func appJSRequestHeaders(chromeVer, userAgent, secUA string) map[string]string {
 func extractFromAppJS(js string) (*[4]uint32, string, string) {
 	var key *[4]uint32
 	var ident, ver string
-	re := regexp.MustCompile(`var\s+\w+\s*=\s*\[(\d+),\s*"([A-Za-z0-9]+)",\s*(\d+),\s*(\d+),\s*(\d+)\]`)
-	m := re.FindStringSubmatch(js)
-	if len(m) == 6 {
+	// The provider obfuscates both the array contents and the material order.
+	// Match the provide() return expression as well as the array so unrelated
+	// numeric arrays in the minified bundle cannot be selected accidentally.
+	re := regexp.MustCompile(`var\s+([A-Za-z_$][\w$]*)\s*=\s*\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*"([A-Za-z0-9]+)"\s*,\s*(\d+)[^\]]*\]`)
+	for _, m := range re.FindAllStringSubmatch(js, -1) {
+		if len(m) != 7 {
+			continue
+		}
+		name := regexp.QuoteMeta(m[1])
+		provider := regexp.MustCompile(`return\s*\{\s*identifier\s*:\s*` + name + `\[3\]\s*,\s*material\s*:\s*\[\s*` + name + `\[1\]\s*,\s*` + name + `\[0\]\s*,\s*` + name + `\[2\]\s*,\s*` + name + `\[4\]\s*\]`)
+		if !provider.MatchString(js) {
+			continue
+		}
 		nums := make([]uint32, 4)
-		for i, idx := range []int{1, 3, 4, 5} {
-			v, _ := strconv.ParseUint(m[idx], 10, 32)
+		for i, idx := range []int{2, 3, 4, 6} {
+			v, err := strconv.ParseUint(m[idx], 10, 32)
+			if err != nil {
+				nums = nil
+				break
+			}
 			nums[i] = uint32(v)
 		}
-		k := [4]uint32{nums[2], nums[0], nums[3], nums[1]}
-		key = &k
-		ident = m[2]
+		if nums != nil {
+			k := [4]uint32{nums[1], nums[0], nums[2], nums[3]}
+			key = &k
+			ident = m[5]
+			break
+		}
 	}
-	reVer := regexp.MustCompile(`FWCIM_VERSION\s*=\s*"(\d+\.\d+\.\d+)"`)
-	vm := reVer.FindStringSubmatch(js)
-	if len(vm) == 2 {
-		ver = vm[1]
-	}
+	ver = extractFWCIMVersion(js)
 	return key, ident, ver
+}
+
+func extractFWCIMVersion(js string) string {
+	re := regexp.MustCompile(`FWCIM_VERSION(?:"\s*\]|)\s*=\s*"(\d+\.\d+\.\d+)"`)
+	match := re.FindStringSubmatch(js)
+	if len(match) == 2 {
+		return match[1]
+	}
+	return ""
 }
 
 func DecryptFingerprint(encrypted string) (string, error) {

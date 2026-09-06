@@ -58,6 +58,7 @@ function switchPage(pageId) {
   if (pageId === 'info') {
     loadInfoVersion();
   }
+  updateSettingsDirtyState();
 }
 
 async function loadInfoVersion() {
@@ -378,6 +379,8 @@ function getFormConfig() {
 }
 
 window.appSettings = null;
+var savedSettingsSnapshot = null;
+var settingsSaving = false;
 
 function settingValue(id, fallback) {
   var el = document.getElementById(id);
@@ -401,6 +404,48 @@ function setSettingValue(id, value) {
 function setSettingChecked(id, value) {
   var el = document.getElementById(id);
   if (el) el.checked = !!value;
+}
+
+function snapshotAppSettings(settings) {
+  return JSON.stringify(settings || {});
+}
+
+function settingsHaveChanges() {
+  if (savedSettingsSnapshot === null || !window.appSettings) return false;
+  return snapshotAppSettings(collectAppSettings()) !== savedSettingsSnapshot;
+}
+
+function updateFloatingSaveButton(hasChanges) {
+  var button = document.getElementById('settings-floating-save');
+  var headerButton = document.getElementById('settings-save-button');
+  var scrollRoot = document.querySelector('.app-content');
+  if (!button || !headerButton || !scrollRoot) return;
+  var page = document.getElementById('page-settings');
+  var rootRect = scrollRoot.getBoundingClientRect();
+  var headerRect = headerButton.getBoundingClientRect();
+  var headerHasScrolledAway = headerRect.bottom < rootRect.top + 12;
+  button.classList.toggle('is-visible', !!hasChanges && !!page && page.classList.contains('active') && headerHasScrolledAway);
+}
+
+function updateSettingsDirtyState() {
+  var hasChanges = settingsHaveChanges();
+  var headerButton = document.getElementById('settings-save-button');
+  var floatingButton = document.getElementById('settings-floating-save');
+  if (headerButton) headerButton.disabled = !hasChanges || settingsSaving;
+  if (floatingButton) floatingButton.disabled = !hasChanges || settingsSaving;
+  updateFloatingSaveButton(hasChanges);
+}
+
+function initSettingsChangeTracking() {
+  var page = document.getElementById('page-settings');
+  var scrollRoot = document.querySelector('.app-content');
+  if (!page || page.dataset.changeTracking === 'true') return;
+  page.dataset.changeTracking = 'true';
+  page.addEventListener('input', updateSettingsDirtyState);
+  page.addEventListener('change', updateSettingsDirtyState);
+  if (scrollRoot) scrollRoot.addEventListener('scroll', updateSettingsDirtyState, { passive: true });
+  window.addEventListener('resize', updateSettingsDirtyState);
+  updateSettingsDirtyState();
 }
 
 function applyThemePreference(theme) {
@@ -436,6 +481,15 @@ function renderAppSettings(s) {
   setSettingValue('setting-fingerprint-ttl', s.fingerprintTTLHours);
   setFingerprintCurveValues(s.fingerprintOffsets, s.fingerprintCurvePositions);
   setSettingChecked('setting-telemetry', s.telemetryEnabled);
+  setSettingChecked('setting-waf-enabled', s.wafEnabled);
+  setSettingValue('setting-two-captcha-api-key', s.twoCaptchaAPIKey);
+  setSettingValue('setting-waf-website-url', s.wafWebsiteURL);
+  setSettingValue('setting-waf-website-key', s.wafWebsiteKey);
+  setSettingValue('setting-waf-iv', s.wafIV);
+  setSettingValue('setting-waf-context', s.wafContext);
+  setSettingValue('setting-waf-jsapi-script', s.wafJSAPIScript);
+  setSettingValue('setting-waf-challenge-script', s.wafChallengeScript);
+  setSettingValue('setting-waf-captcha-script', s.wafCaptchaScript);
   setSettingValue('setting-oidc-base', s.oidcBase); setSettingValue('setting-signin-base', s.signinBase);
   setSettingValue('setting-profile-base', s.profileBase); setSettingValue('setting-view-base', s.viewBase);
   setSettingValue('setting-portal-base', s.portalBase); setSettingValue('setting-start-url', s.startURL);
@@ -443,7 +497,10 @@ function renderAppSettings(s) {
   setSettingValue('setting-directory-id', s.directoryID);
   applyThemePreference(s.theme);
   syncEmailProxyField();
+  syncWAFSettings();
   syncVolumeLabel();
+  savedSettingsSnapshot = snapshotAppSettings(collectAppSettings());
+  updateSettingsDirtyState();
 }
 
 async function loadAppSettings() {
@@ -479,6 +536,15 @@ function collectAppSettings() {
   s.fingerprintOffsets = getFingerprintCurveValues();
   s.fingerprintCurvePositions = getFingerprintCurvePositions();
   s.telemetryEnabled = settingChecked('setting-telemetry', true);
+  s.wafEnabled = settingChecked('setting-waf-enabled', false);
+  s.twoCaptchaAPIKey = settingValue('setting-two-captcha-api-key', '').trim();
+  s.wafWebsiteURL = settingValue('setting-waf-website-url', '').trim();
+  s.wafWebsiteKey = settingValue('setting-waf-website-key', '').trim();
+  s.wafIV = settingValue('setting-waf-iv', '').trim();
+  s.wafContext = settingValue('setting-waf-context', '').trim();
+  s.wafJSAPIScript = settingValue('setting-waf-jsapi-script', '').trim();
+  s.wafChallengeScript = settingValue('setting-waf-challenge-script', '').trim();
+  s.wafCaptchaScript = settingValue('setting-waf-captcha-script', '').trim();
   s.oidcBase = settingValue('setting-oidc-base', '').trim(); s.signinBase = settingValue('setting-signin-base', '').trim();
   s.profileBase = settingValue('setting-profile-base', '').trim(); s.viewBase = settingValue('setting-view-base', '').trim();
   s.portalBase = settingValue('setting-portal-base', '').trim(); s.startURL = settingValue('setting-start-url', '').trim();
@@ -488,18 +554,32 @@ function collectAppSettings() {
 }
 
 async function saveAppSettings() {
+  if (settingsSaving || !settingsHaveChanges()) return;
+  settingsSaving = true;
+  updateSettingsDirtyState();
   try {
     var result = await window.go.main.App.SaveAppSettings(collectAppSettings());
     if (result.error) { showToast(result.error, 'error'); return; }
     renderAppSettings(result.settings);
     if (window.I18N) window.I18N.setLanguage(result.settings.language || 'zh');
     showToast(tr('settings.saved', '设置已保存'));
-  } catch (e) { showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error'); }
+  } catch (e) {
+    showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');
+  } finally {
+    settingsSaving = false;
+    updateSettingsDirtyState();
+  }
 }
 
 function syncEmailProxyField() {
   var field = document.getElementById('setting-email-proxy');
   if (field) field.disabled = settingValue('setting-email-proxy-mode', 'follow-task') !== 'custom';
+}
+
+function syncWAFSettings() {
+  var fields = document.querySelectorAll('#setting-waf-fields input');
+  var enabled = settingChecked('setting-waf-enabled', false);
+  fields.forEach(function(field) { field.disabled = !enabled; });
 }
 
 function syncVolumeLabel() {
@@ -619,6 +699,7 @@ function renderFingerprintCurve() {
   var meter = document.getElementById('fp-curve-average');
   if (meter) meter.textContent = average + '%';
   setSettingValue('setting-fingerprint-offsets', fingerprintCurveValues.join(','));
+  updateSettingsDirtyState();
 }
 
 function setFingerprintCurveValues(values, positions) {
@@ -695,6 +776,8 @@ async function loadConfig() {
     console.error('[启动] Wails runtime 加载失败');
     // 即使失败也显示界面
     document.getElementById('main-container').style.display = 'block';
+    var failedSkeleton = document.getElementById('skeleton-loader');
+    if (failedSkeleton) failedSkeleton.style.display = 'none';
     return;
   }
   console.log('[启动] Wails runtime 已就绪');
@@ -743,6 +826,7 @@ async function loadConfig() {
 // 页面加载时自动初始化
 window.addEventListener('DOMContentLoaded', async function() {
   await loadConfig();
+  initSettingsChangeTracking();
   initEmailProviderSelection();
   // 初始化 i18n（在 Wails runtime 就绪后），失败时不阻塞主流程
   try {
@@ -764,9 +848,15 @@ window.addEventListener('DOMContentLoaded', async function() {
     var activeLanguage = window.I18N.getLanguage();
     setSettingValue('setting-language', activeLanguage);
     if (window.appSettings) window.appSettings.language = activeLanguage;
+    if (savedSettingsSnapshot !== null) {
+      var savedLanguageState = JSON.parse(savedSettingsSnapshot);
+      savedLanguageState.language = activeLanguage;
+      savedSettingsSnapshot = snapshotAppSettings(savedLanguageState);
+    }
     renderInfoChangelogState();
     renderFingerprintCurve();
     renderProxyDetectCard(proxyDetectView.state, proxyDetectView.payload);
+    updateSettingsDirtyState();
   });
   // 启动时静默检查更新
   if (!window.appSettings || window.appSettings.autoCheckUpdates !== false) setTimeout(checkUpdateOnStartup, 2000);

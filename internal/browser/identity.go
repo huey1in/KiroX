@@ -1,11 +1,10 @@
 package browser
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -19,9 +18,7 @@ type chromeVersion struct {
 // genChromeVersion 动态生成 Chrome 版本信息
 func genChromeVersion() chromeVersion {
 	versions := []string{
-		"120", "121", "122", "123", "124", "125", "126", "127", "128", "129",
-		"130", "131", "132", "133", "134", "135", "136", "137", "138", "139",
-		"140", "141", "142", "143", "144",
+		"131", "133", "144",
 	}
 	v := versions[rand.Intn(len(versions))]
 
@@ -197,14 +194,12 @@ func genScreen() ScreenInfo {
 		taskbar = 32
 	}
 
-	colorDepths := []int{24, 24, 24, 24, 30} // 24常见, 30是 HDR
-
 	return ScreenInfo{
 		Width:       res.w,
 		Height:      res.h,
 		AvailWidth:  res.w,
 		AvailHeight: res.h - taskbar,
-		ColorDepth:  colorDepths[rand.Intn(len(colorDepths))],
+		ColorDepth:  24,
 	}
 }
 
@@ -217,20 +212,9 @@ func genScreen() ScreenInfo {
 //   家族B: "-0.5765775004286854"   末位 53~55
 
 func genMath() (tan, sin, cos string) {
-	tanEnd := 3 + rand.Intn(100) // 放大截断随机差
-	sinEnd := 3 + rand.Intn(100)
-	tan = fmt.Sprintf("-1.42144882387472%03d", tanEnd)
-	sin = fmt.Sprintf("0.81788191211590%03d", sinEnd)
-
-	// cos 有两个家族, 家族A 更常见 (~70%)
-	if rand.Intn(10) < 7 {
-		cosEnd := 89 + rand.Intn(15) // 更大范围
-		cos = fmt.Sprintf("-0.5753861119575%03d", cosEnd)
-	} else {
-		cosEnd := 53 + rand.Intn(10)
-		cos = fmt.Sprintf("-0.5765775004286%03d", cosEnd)
-	}
-	return
+	// FWCIM reads these three values directly from V8. Random decimal suffixes
+	// produce values that no Chrome runtime can emit.
+	return "-1.4214488238747245", "0.8178819121159085", "-0.5753861119575491"
 }
 
 // ──────────────────── 算法: Canvas Histogram 模拟 ────────────────────
@@ -327,14 +311,11 @@ func generateCanvasData() (int32, [256]int) {
 		}
 	}
 
-	// ── 计算 hash: SHA256(bins 的 LE 字节序列) 截取前 4 字节 → int32 ──
-	raw := make([]byte, 256*4)
-	for i, v := range bins {
-		binary.LittleEndian.PutUint32(raw[i*4:], uint32(v))
-	}
-	digest := sha256.Sum256(raw)
-	hash := int32(binary.LittleEndian.Uint32(digest[:4]))
-	return hash, bins
+	// The browser returns a CRC32 of rendered canvas markers and its data URL.
+	// Pixel rendering is unavailable in this HTTP client, so sample the same
+	// uint32 result domain instead of deriving an impossible SHA value from the
+	// histogram (FWCIM does not hash the histogram).
+	return int32(rand.Uint32()), bins
 }
 
 // abs 整数绝对值
@@ -359,11 +340,17 @@ func RandomIdentity() *BrowserIdentity {
 	screen := genScreen()
 
 	// 硬件参数
-	memories := []int{2, 4, 6, 8, 12, 16, 24, 32, 64}
+	memories := []int{4, 8, 16, 32}
 	deviceMemory := memories[rand.Intn(len(memories))]
 
-	concurrencies := []int{2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32}
+	concurrencies := []int{4, 8, 12, 16, 20, 24, 32}
 	hardwareConcurrency := concurrencies[rand.Intn(len(concurrencies))]
+	if strings.Contains(gpuVendor, "Intel") {
+		memories = []int{8, 16, 32}
+		concurrencies = []int{4, 8, 12, 16, 20}
+		deviceMemory = memories[rand.Intn(len(memories))]
+		hardwareConcurrency = concurrencies[rand.Intn(len(concurrencies))]
+	}
 
 	platform := "Win32"
 
@@ -385,10 +372,9 @@ func RandomIdentity() *BrowserIdentity {
 	}
 	sort.Strings(exts)
 
-	// 插件 (Chrome 内置 PDF 插件, 随机排列)
+	// navigator.plugins exposes Chrome's built-in PDF entries in a stable order.
 	plugins := make([]map[string]string, len(pluginsPool))
 	copy(plugins, pluginsPool)
-	rand.Shuffle(len(plugins), func(i, j int) { plugins[i], plugins[j] = plugins[j], plugins[i] })
 
 	ua := fmt.Sprintf("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36", cv.Version)
 

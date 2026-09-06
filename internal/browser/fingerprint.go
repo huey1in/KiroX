@@ -8,21 +8,22 @@ import (
 
 // FingerprintContext 保持同一会话内硬件级指纹字段不变
 type FingerprintContext struct {
-	Identity      *BrowserIdentity
-	CanvasHash    int32
-	HistogramBins [256]int
-	LsUbidSignin  string
-	LsUbidProfile string
-	perfTiming    map[string]int64
-	startTime     *int64
+	Identity       *BrowserIdentity
+	CanvasHash     int32
+	HistogramBins  [256]int
+	LsUbidSignin   string
+	LsUbidProfile  string
+	PageHasCaptcha bool
+	perfTiming     map[string]int64
+	startTime      *int64
 }
 
 // NewFPContext 创建指纹上下文
 func NewFPContext(identity *BrowserIdentity) *FingerprintContext {
 	ts := time.Now().Unix()
 	return &FingerprintContext{
-		Identity:   identity,
-		CanvasHash: identity.CanvasHash,
+		Identity:      identity,
+		CanvasHash:    identity.CanvasHash,
 		HistogramBins: identity.HistogramBase,
 		LsUbidSignin: fmt.Sprintf("%s-%07d-%07d:%d",
 			identity.LsubidPrefixSignin, rand.Intn(10000000), rand.Intn(10000000), ts),
@@ -67,6 +68,7 @@ func (c *FingerprintContext) GetStartTime(nowMs int64) int64 {
 // ResetPerfTiming 切换到新页面时重置 timing
 func (c *FingerprintContext) ResetPerfTiming() {
 	c.perfTiming = nil
+	c.startTime = nil
 }
 
 // GenerateFingerprintJSON 生成指纹 JSON（不加密），供远程加密使用

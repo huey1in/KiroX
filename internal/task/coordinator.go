@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"reg_go/internal/browser"
+	"reg_go/internal/captcha"
 	"reg_go/internal/core"
 	"reg_go/internal/data"
 	"reg_go/internal/email"
@@ -228,6 +229,8 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	taskConfig.HTTPRetries = map[string]int{"fast": 0, "standard": 2, "stable": 3}[settings.RetryProfile]
 	taskConfig.FingerprintOffsets = append([]int(nil), settings.FingerprintOffsets...)
 	taskConfig.FingerprintCurvePositions = append([]int(nil), settings.FingerprintCurvePositions...)
+	taskConfig.WAFEnabled = settings.WAFEnabled
+	taskConfig.TwoCaptchaAPIKey = settings.TwoCaptchaAPIKey
 	taskConfig.EmailProvider = emailProvider
 	taskConfig.Proxy = req.Proxy
 	switch settings.EmailProxyMode {
@@ -238,6 +241,42 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	}
 	if taskConfig.Proxy != "" {
 		log.Printf("[Kiro] 已启用代理")
+	}
+	hasWAFChallengeParams := settings.WAFWebsiteKey != "" && settings.WAFIV != "" && settings.WAFContext != ""
+	hasWAFJSAPIParams := settings.WAFJSAPIScript != ""
+	if settings.WAFEnabled && (hasWAFChallengeParams || hasWAFJSAPIParams) {
+		log.Println("[WAF] 正在通过 2Captcha 获取 aws-waf-token")
+		solverProxy := captcha.RemoteWorkerProxy(taskConfig.Proxy)
+		if strings.TrimSpace(taskConfig.Proxy) != "" && solverProxy == "" {
+			log.Println("[WAF] 当前任务代理仅本机可访问，2Captcha 将使用代理池")
+		}
+		solveCtx, cancelSolve := context.WithTimeout(taskCtx, 3*time.Minute)
+		token, err := captcha.NewClient(settings.TwoCaptchaAPIKey).SolveAWSWAF(solveCtx, captcha.AWSWAFOptions{
+			WebsiteURL:      settings.WAFWebsiteURL,
+			WebsiteKey:      settings.WAFWebsiteKey,
+			IV:              settings.WAFIV,
+			Context:         settings.WAFContext,
+			JSAPIScript:     settings.WAFJSAPIScript,
+			ChallengeScript: settings.WAFChallengeScript,
+			CaptchaScript:   settings.WAFCaptchaScript,
+			Proxy:           solverProxy,
+		})
+		cancelSolve()
+		if err != nil {
+			if taskCtx.Err() != nil {
+				return
+			}
+			log.Printf("[WAF] 获取 aws-waf-token 失败: %v", err)
+			Manager.mu.Lock()
+			Manager.completed = req.Count
+			Manager.failed = req.Count
+			Manager.mu.Unlock()
+			return
+		}
+		taskConfig.WAFToken = token
+		log.Println("[WAF] aws-waf-token 已就绪，将复用于本批注册任务")
+	} else if settings.WAFEnabled {
+		log.Println("[WAF] 已启用动态验证，将在 AWS 返回挑战后自动处理")
 	}
 	if emailProvider == "icloud" {
 		taskConfig.UseICloud = true
@@ -282,7 +321,7 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	// 统计计数器
 	var statsMu sync.Mutex
 	var taskDurations []float64
-	var failRegistered, failNetwork, failBanned, failOther int
+	var failRegistered, failNetwork, failBanned, failCaptcha, failOther int
 	taskStartTime := time.Now()
 
 	// 共享账号池（并发安全），goroutine 动态领取账号（仅 Outlook 模式使用）
@@ -523,17 +562,7 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 				break
 			}
 
-			// 不重试的错误类型（含 context 取消 / 被封 / 临时邮箱重复）
-			noRetryErrors := []string{"suspended", "临时邮箱不可能已存在", "邮箱创建失败", "context canceled", "context deadline exceeded"}
-			shouldRetry := true
-			for _, noRetry := range noRetryErrors {
-				if strings.Contains(errorMsg, noRetry) {
-					shouldRetry = false
-					break
-				}
-			}
-
-			if !shouldRetry || attempt >= maxAttempts-1 {
+			if !isRetryableRegistrationError(errorMsg) || attempt >= maxAttempts-1 {
 				break
 			}
 
@@ -566,6 +595,8 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 				failRegistered++
 			case "banned":
 				failBanned++
+			case "captcha":
+				failCaptcha++
 			default:
 				if strings.Contains(errorMsg, "timeout") || strings.Contains(errorMsg, "网络") || strings.Contains(errorMsg, "connection") || strings.Contains(errorMsg, "TLS") {
 					failNetwork++
@@ -647,6 +678,9 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 		}
 		if failNetwork > 0 {
 			log.Printf("[Kiro]   网络问题: %d (%.0f%%)", failNetwork, float64(failNetwork)/float64(totalCount)*100)
+		}
+		if failCaptcha > 0 {
+			log.Printf("[Kiro]   CAPTCHA 验证失败: %d (%.0f%%)", failCaptcha, float64(failCaptcha)/float64(totalCount)*100)
 		}
 		if failOther > 0 {
 			log.Printf("[Kiro]   其他错误: %d (%.0f%%)", failOther, float64(failOther)/float64(totalCount)*100)
@@ -732,6 +766,9 @@ func classifyError(errorMsg string) string {
 	if errorMsg == "" {
 		return "failed"
 	}
+	if isCaptchaError(errorMsg) {
+		return "captcha"
+	}
 	if strings.Contains(errorMsg, "suspended") {
 		return "banned"
 	}
@@ -741,10 +778,51 @@ func classifyError(errorMsg string) string {
 	return "failed"
 }
 
+func isCaptchaError(errorMsg string) bool {
+	markers := []string{
+		"2Captcha",
+		"AWS WAF 动态验证失败",
+		"AMS 诊断捕获完成",
+		"CAPTCHA_REQUIRED",
+		"ERROR_CAPTCHA_UNSOLVABLE",
+		"CAPTCHA/风控验证",
+	}
+	for _, marker := range markers {
+		if strings.Contains(errorMsg, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func isRetryableRegistrationError(errorMsg string) bool {
+	if isCaptchaError(errorMsg) {
+		return false
+	}
+	noRetryErrors := []string{
+		"suspended",
+		"临时邮箱不可能已存在",
+		"邮箱创建失败",
+		"context canceled",
+		"context deadline exceeded",
+		"AUTHENTICATION_FAILED",
+	}
+	for _, noRetry := range noRetryErrors {
+		if strings.Contains(errorMsg, noRetry) {
+			return false
+		}
+	}
+	return true
+}
+
 // isKillSwitchError 判断该错误是否属于"AWS 已把我们拉黑，继续跑没意义"的熔断级错误。
 // 命中则立即终止全部并发任务。与单纯的瞬态失败（网络超时、验证码延迟）区分。
 func isKillSwitchError(errorMsg string) bool {
 	if errorMsg == "" {
+		return false
+	}
+	// A solver's IP/account errors do not describe AWS risk for this batch.
+	if strings.Contains(errorMsg, "2Captcha") {
 		return false
 	}
 	triggers := []string{

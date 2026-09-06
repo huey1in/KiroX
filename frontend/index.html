@@ -10,75 +10,115 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/components.css">
 <style>
-  /* 骨架屏样式 */
   #skeleton-loader {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: linear-gradient(135deg, #eef2f7 0%, #e0e7ff 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 9999;
+    overflow: hidden;
   }
-  .skeleton-content {
-    text-align: center;
+  .startup-skeleton-sidebar {
+    position: absolute;
+    left: 16px;
+    top: 44px;
+    bottom: 16px;
+    width: 64px;
+    padding: 14px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-radius: 24px;
+    background: rgba(255,255,255,.78);
+    box-shadow: 0 10px 25px -5px rgba(15,23,42,.08);
   }
-  .skeleton-logo {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 24px;
-    background: rgba(255,255,255,0.9);
-    border-radius: 20px;
+  .startup-skeleton-sidebar span {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .startup-skeleton-sidebar span:nth-last-child(3) { margin-top: auto; }
+  .startup-skeleton-main {
+    position: absolute;
+    left: 96px;
+    right: 16px;
+    top: 38px;
+    bottom: 16px;
+    padding: 28px 32px;
+  }
+  .startup-skeleton-heading { width: 132px; height: 18px; margin-bottom: 22px; border-radius: 5px; }
+  .startup-skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .startup-skeleton-card {
+    min-height: 110px;
+    padding: 22px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+    gap: 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.72);
   }
-  .skeleton-logo svg {
-    width: 48px;
-    height: 48px;
+  .startup-skeleton-avatar { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 14px; }
+  .startup-skeleton-copy { flex: 1; display: grid; gap: 10px; }
+  .startup-skeleton-copy i { width: 42%; height: 10px; border-radius: 4px; }
+  .startup-skeleton-copy b { width: 68%; height: 22px; border-radius: 5px; }
+  .startup-skeleton-panel {
+    height: 260px;
+    margin-top: 18px;
+    padding: 22px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.72);
   }
-  .skeleton-text {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 16px;
+  .startup-skeleton-panel > i { display: block; width: 28%; height: 14px; margin-bottom: 24px; border-radius: 4px; }
+  .startup-skeleton-panel > span { display: block; width: 100%; height: 12px; margin-top: 14px; border-radius: 4px; }
+  .startup-skeleton-panel > span:nth-child(3) { width: 82%; }
+  .startup-skeleton-panel > span:nth-child(4) { width: 64%; }
+  .startup-skeleton-sidebar span,
+  .startup-skeleton-heading,
+  .startup-skeleton-avatar,
+  .startup-skeleton-copy i,
+  .startup-skeleton-copy b,
+  .startup-skeleton-panel > i,
+  .startup-skeleton-panel > span {
+    background: linear-gradient(90deg, rgba(148,163,184,.16) 25%, rgba(255,255,255,.72) 50%, rgba(148,163,184,.16) 75%);
+    background-size: 240% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
   }
-  .skeleton-spinner {
-    width: 32px;
-    height: 32px;
-    margin: 0 auto;
-    border: 3px solid rgba(59,130,246,0.2);
-    border-top-color: #3b82f6;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  @keyframes skeleton-shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -140% 0; }
   }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  @media (max-width: 680px) {
+    .startup-skeleton-main { padding: 24px 18px; }
+    .startup-skeleton-grid { grid-template-columns: 1fr; }
+    .startup-skeleton-card:nth-child(2) { display: none; }
   }
 </style>
 </head>
 <body>
 
-<!-- 全局加载遮罩层 -->
-<div id="global-loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
-  <div class="skeleton-spinner" style="border-top-color:#3b82f6;"></div>
-  <div id="global-loading-text" style="margin-top:16px;font-size:14px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3);" data-i18n="common.loading">正在激活...</div>
-</div>
-
 <!-- 骨架屏加载 -->
-<div id="skeleton-loader">
-  <div class="skeleton-content">
-    <div class="skeleton-logo">
-      <svg viewBox="0 0 32 32" fill="none">
-        <path d="M10 8v16M10 16l8-8M10 16l8 8" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+<div id="skeleton-loader" aria-hidden="true">
+  <div class="startup-skeleton-sidebar">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <div class="startup-skeleton-main">
+    <div class="startup-skeleton-heading"></div>
+    <div class="startup-skeleton-grid">
+      <div class="startup-skeleton-card">
+        <div class="startup-skeleton-avatar"></div>
+        <div class="startup-skeleton-copy"><i></i><b></b></div>
+      </div>
+      <div class="startup-skeleton-card">
+        <div class="startup-skeleton-avatar"></div>
+        <div class="startup-skeleton-copy"><i></i><b></b></div>
+      </div>
     </div>
-    <div class="skeleton-text">KiroX</div>
-    <div class="skeleton-spinner"></div>
+    <div class="startup-skeleton-panel">
+      <i></i><span></span><span></span><span></span>
+    </div>
   </div>
 </div>
 
@@ -391,8 +431,12 @@
             <div class="settings-page-title" data-i18n="settings.title">设置</div>
             <div class="settings-page-subtitle" data-i18n="settings.subtitle">配置通知、运行策略和高级选项</div>
           </div>
-          <button type="button" class="btn btn-dark" onclick="saveAppSettings()" data-i18n="settings.save">保存设置</button>
+          <button type="button" id="settings-save-button" class="btn btn-dark" onclick="saveAppSettings()" data-i18n="settings.save" disabled>保存设置</button>
         </div>
+
+        <button type="button" id="settings-floating-save" class="settings-floating-save" onclick="saveAppSettings()" aria-label="保存设置" title="保存设置" data-i18n-aria-label="settings.save" data-i18n-title="settings.save" disabled>
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+        </button>
 
         <div class="card settings-card">
           <div class="settings-group">
@@ -531,6 +575,22 @@
               <label class="settings-field"><span data-i18n="settings.fingerprintTTL">指纹缓存时长（小时）</span><input id="setting-fingerprint-ttl" class="form-input" type="number" min="1" max="168"></label>
             </div>
             <div class="settings-item settings-inline-item"><div class="settings-item-title" data-i18n="settings.telemetry">协议遥测</div><label class="toggle-switch"><input type="checkbox" id="setting-telemetry"><span class="toggle-slider"></span></label></div>
+            <div class="advanced-subsection">
+              <div class="settings-item settings-inline-item">
+                <div><div class="settings-item-title" data-i18n="settings.wafSolver">AWS WAF 打码</div><div class="settings-item-desc" data-i18n="settings.wafSolverDesc">通过 2Captcha 处理 AWS WAF；静态参数留空时自动处理登录过程中返回的动态挑战</div></div>
+                <label class="toggle-switch"><input type="checkbox" id="setting-waf-enabled" onchange="syncWAFSettings()"><span class="toggle-slider"></span></label>
+              </div>
+              <div id="setting-waf-fields" class="settings-grid advanced-endpoints">
+                <label class="settings-field"><span data-i18n="settings.twoCaptchaAPIKey">2Captcha API Key</span><input id="setting-two-captcha-api-key" class="form-input" type="password" autocomplete="off"></label>
+                <label class="settings-field"><span data-i18n="settings.wafWebsiteURL">WAF Website URL</span><input id="setting-waf-website-url" class="form-input"></label>
+                <label class="settings-field"><span data-i18n="settings.wafWebsiteKey">WAF Website Key</span><input id="setting-waf-website-key" class="form-input"></label>
+                <label class="settings-field"><span>IV</span><input id="setting-waf-iv" class="form-input"></label>
+                <label class="settings-field settings-field-full"><span>Context</span><input id="setting-waf-context" class="form-input"></label>
+                <label class="settings-field settings-field-full"><span data-i18n="settings.wafJSAPIScript">jsapiScript</span><input id="setting-waf-jsapi-script" class="form-input"></label>
+                <label class="settings-field"><span>challengeScript</span><input id="setting-waf-challenge-script" class="form-input"></label>
+                <label class="settings-field"><span>captchaScript</span><input id="setting-waf-captcha-script" class="form-input"></label>
+              </div>
+            </div>
             <div class="settings-grid advanced-endpoints">
               <label class="settings-field"><span>OIDC Base</span><input id="setting-oidc-base" class="form-input"></label><label class="settings-field"><span>Signin Base</span><input id="setting-signin-base" class="form-input"></label>
               <label class="settings-field"><span>Profile Base</span><input id="setting-profile-base" class="form-input"></label><label class="settings-field"><span>View Base</span><input id="setting-view-base" class="form-input"></label>

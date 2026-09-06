@@ -4,6 +4,10 @@ build/windows/
 build/linux/
 build/appicon.png
 build/darwin/iconfile.icns
+build/tools/
+build/ams-inspect/
+build/signin-app.js
+build/ams-core.js
 *.exe
 *.exe~
 *.dll
