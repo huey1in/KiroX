@@ -93,7 +93,7 @@ KiroX 是一款基于 [Wails v2](https://wails.io) 构建的 Kiro 桌面注册�
 
 ### 直接使用
 
-从 [Releases](https://github.com/huey1in/kirox/releases/latest) 下载匹配系统和 CPU 架构的版本。Windows 提供安装程序，例如 x64 对应 `kirox-windows-amd64-installer.exe`；macOS 和 Linux 继续使用 `.zip` / `.tar.gz` 压缩包。
+从 [Releases](https://github.com/huey1in/kirox/releases/latest) 下载匹配系统和 CPU 架构的安装包：Windows 使用 `.exe`，macOS 使用 `.dmg`，Debian / Ubuntu Linux 使用 `.deb`。macOS 打开 DMG 后将 KiroX 拖入 Applications；Linux 可运行 `sudo apt install ./kirox-linux-amd64.deb` 安装。
 
 ### 从源码构建
 

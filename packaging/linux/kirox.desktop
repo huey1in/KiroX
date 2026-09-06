@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=KiroX
+Comment=KiroX desktop application
+Exec=kirox
+Icon=kirox
+Terminal=false
+Categories=Utility;
+StartupWMClass=KiroX

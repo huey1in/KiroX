@@ -97,7 +97,7 @@ These directions will be delivered incrementally as development progresses. The 
 
 ### Use a release
 
-Download the release matching your operating system and architecture from [Releases](https://github.com/huey1in/kirox/releases/latest). Windows ships as an installer, for example `kirox-windows-amd64-installer.exe` for x64; macOS and Linux continue to use `.zip` / `.tar.gz` archives.
+Download the installer matching your operating system and architecture from [Releases](https://github.com/huey1in/kirox/releases/latest): `.exe` for Windows, `.dmg` for macOS, and `.deb` for Debian/Ubuntu Linux. On macOS, open the DMG and drag KiroX to Applications. On Linux, install it with `sudo apt install ./kirox-linux-amd64.deb`.
 
 ### Build from source
 

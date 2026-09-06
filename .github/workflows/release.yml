@@ -17,7 +17,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux/amd64
             output: kiro-reg-linux-amd64
-            artifact: kiro-reg-linux-amd64.tar.gz
+            artifact: kirox-linux-amd64.deb
             build_tags: webkit2_41
           - os: windows-latest
             platform: windows/amd64
@@ -32,12 +32,12 @@ jobs:
           - os: macos-latest
             platform: darwin/arm64
             output: kiro-reg-macos-arm64
-            artifact: kiro-reg-macos-arm64.zip
+            artifact: kirox-macos-arm64.dmg
             build_tags: ""
           - os: macos-latest
             platform: darwin/amd64
             output: kiro-reg-macos-amd64
-            artifact: kiro-reg-macos-amd64.zip
+            artifact: kirox-macos-amd64.dmg
             build_tags: ""
 
     runs-on: ${{ matrix.os }}
@@ -117,17 +117,43 @@ jobs:
           iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/iconfile.icns"
           rm -rf "$(dirname "$ICONSET")"
 
-      - name: Package macOS app
+      - name: Package macOS DMG
         if: runner.os == 'macOS'
         run: |
-          cd build/bin
-          zip -r ${{ matrix.output }}.zip *.app
+          APP=$(find build/bin -type d -name "*.app" -prune | head -n 1)
+          if [ -z "$APP" ] || [ ! -d "$APP" ]; then
+            echo "::error::Wails did not produce a macOS app bundle"
+            exit 1
+          fi
+          DMG_ROOT=$(mktemp -d)
+          cp -R "$APP" "$DMG_ROOT/KiroX.app"
+          ln -s /Applications "$DMG_ROOT/Applications"
+          hdiutil create -volname "KiroX" -srcfolder "$DMG_ROOT" -ov -format UDZO "build/bin/${{ matrix.artifact }}"
+          rm -rf "$DMG_ROOT"
 
-      - name: Package Linux binary
+      - name: Package Linux DEB
         if: runner.os == 'Linux'
         run: |
-          cd build/bin
-          tar czf ${{ matrix.output }}.tar.gz ${{ matrix.output }}
+          PACKAGE_ROOT=$(mktemp -d)
+          VERSION="${GITHUB_REF_NAME#v}"
+          install -Dm755 "build/bin/${{ matrix.output }}" "$PACKAGE_ROOT/usr/bin/kirox"
+          install -Dm644 "packaging/linux/kirox.desktop" "$PACKAGE_ROOT/usr/share/applications/kirox.desktop"
+          install -Dm644 "frontend/assets/appicon.png" "$PACKAGE_ROOT/usr/share/icons/hicolor/512x512/apps/kirox.png"
+          mkdir -p "$PACKAGE_ROOT/DEBIAN"
+          INSTALLED_SIZE=$(du -sk "$PACKAGE_ROOT/usr" | cut -f1)
+          {
+            echo "Package: kirox"
+            echo "Version: $VERSION"
+            echo "Section: utils"
+            echo "Priority: optional"
+            echo "Architecture: amd64"
+            echo "Installed-Size: $INSTALLED_SIZE"
+            echo "Maintainer: huey1in <2926957031@qq.com>"
+            echo "Depends: libgtk-3-0 | libgtk-3-0t64, libwebkit2gtk-4.1-0"
+            echo "Homepage: https://github.com/huey1in/KiroX"
+            echo "Description: KiroX desktop application"
+          } > "$PACKAGE_ROOT/DEBIAN/control"
+          dpkg-deb --build --root-owner-group "$PACKAGE_ROOT" "build/bin/${{ matrix.artifact }}"
 
       - name: Name Windows installer
         if: runner.os == 'Windows'
@@ -164,6 +190,19 @@ jobs:
           echo "body<<EOF" >> $GITHUB_OUTPUT
           echo "$changelog" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Remove previous release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release view "${{ github.ref_name }}" --json assets --jq '.assets[].name' |
+              while IFS= read -r asset; do
+                if [ -n "$asset" ]; then
+                  gh release delete-asset "${{ github.ref_name }}" "$asset" --yes
+                fi
+              done
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

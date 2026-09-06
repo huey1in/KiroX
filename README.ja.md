@@ -104,7 +104,7 @@ KiroX は現在、大規模なアーキテクチャリファクタリングを�
 
 ### リリース版を使う
 
-[Releases](https://github.com/huey1in/kirox/releases/latest) から OS と CPU アーキテクチャに合ったリリースをダウンロードします。Windows はインストーラー形式で、x64 の例は `kirox-windows-amd64-installer.exe` です。macOS と Linux は引き続き `.zip` / `.tar.gz` を使用します。
+[Releases](https://github.com/huey1in/kirox/releases/latest) から OS と CPU アーキテクチャに合ったインストーラーをダウンロードします。Windows は `.exe`、macOS は `.dmg`、Debian / Ubuntu Linux は `.deb` です。macOS では DMG を開いて KiroX を Applications にドラッグします。Linux では `sudo apt install ./kirox-linux-amd64.deb` でインストールできます。
 
 Windows では WebView2、Linux のリリース版では GTK 3 / WebKitGTK 4.1 などのシステムランタイムが必要です。
 
