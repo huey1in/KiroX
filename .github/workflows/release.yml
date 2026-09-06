@@ -66,7 +66,15 @@ jobs:
 
       - name: Install NSIS
         if: runner.os == 'Windows'
-        run: choco install nsis --yes --no-progress
+        run: |
+          choco install nsis --yes --no-progress
+          $nsisDir = "${env:ProgramFiles(x86)}\NSIS"
+          $makensis = Join-Path $nsisDir "makensis.exe"
+          if (-not (Test-Path -LiteralPath $makensis)) {
+            throw "NSIS installation completed but makensis.exe was not found at $makensis"
+          }
+          $nsisDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & $makensis /VERSION
 
       - name: Copy app icon
         run: cp frontend/assets/appicon.png build/appicon.png
