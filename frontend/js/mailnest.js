@@ -12,27 +12,25 @@ async function inlineTestMailNest() {
     }
     var btn = document.getElementById('mailnest-inline-test-btn');
     var statusEl = document.getElementById('mailnest-inline-status');
-    var btnOriginalHTML = btn ? btn.innerHTML : '';
-    btn.disabled = true;
-    btn.textContent = _mmT('moemail.testing', '测试中...');
-    statusEl.textContent = '';
+    setInlineTestButton(btn, true, 'moemail.testing');
+    clearLocalizedStatus(statusEl);
     try {
         var result = await window.go.main.App.TestMailNestConnection(JSON.stringify({
             projectCode: projectCode, apiKey: apiKey
         }));
         if (result.success) {
             statusEl.style.color = 'var(--success)';
-            statusEl.textContent = _mmT('mailnest.balance', {n: (result.balance || 0)}, '测试成功，余额为 {n}');
+            setLocalizedStatus(statusEl, 'mailnest.balance', {n: (result.balance || 0)}, '测试成功，余额为 {n}');
         } else {
             statusEl.style.color = 'var(--danger)';
-            statusEl.textContent = result.error || _mmT('moemail.testFailed', '连接失败');
+            if (result.error) clearLocalizedStatus(statusEl, result.error);
+            else setLocalizedStatus(statusEl, 'moemail.testFailed', {}, '连接失败');
         }
     } catch (e) {
         statusEl.style.color = 'var(--danger)';
-        statusEl.textContent = _mmT('moemail.testFailedShort', '测试失败');
+        setLocalizedStatus(statusEl, 'moemail.testFailedShort', {}, '测试失败');
     }
-    btn.disabled = false;
-    btn.innerHTML = btnOriginalHTML;
+    setInlineTestButton(btn, false, 'moemail.testing');
 }
 
 // 内联添加 MailNest 配置
@@ -47,12 +45,10 @@ async function inlineAddMailNest() {
     // 先测试连接，成功后才保存
     var btn = document.getElementById('mailnest-inline-test-btn');
     var statusEl = document.getElementById('mailnest-inline-status');
-    var btnOriginalHTML = btn ? btn.innerHTML : '';
-    btn.disabled = true;
-    btn.textContent = _mmT('moemail.testing', '测试中...');
-    statusEl.textContent = '';
+    setInlineTestButton(btn, true, 'moemail.testing');
+    clearLocalizedStatus(statusEl);
     statusEl.style.color = '';
-    statusEl.textContent = '';
+    clearLocalizedStatus(statusEl);
     var testResult;
     try {
         testResult = await window.go.main.App.TestMailNestConnection(JSON.stringify({
@@ -62,8 +58,7 @@ async function inlineAddMailNest() {
         testResult = {error: String(e)};
     } finally {
         if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = btnOriginalHTML;
+            setInlineTestButton(btn, false, 'moemail.testing');
         }
     }
 
@@ -71,7 +66,7 @@ async function inlineAddMailNest() {
         var errMsg = (testResult && testResult.error) || _mmT('moemail.testFailedShort', '测试失败');
         if (statusEl) {
             statusEl.style.color = 'var(--danger)';
-            statusEl.textContent = errMsg;
+            clearLocalizedStatus(statusEl, errMsg);
         }
         showToast(_mmT('moemail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
         return;
@@ -126,4 +121,6 @@ window.addEventListener('i18n:changed', function () {
         if (typeof updateMailNestUI === 'function') updateMailNestUI();
     } catch (e) {
     }
+    var btn = document.getElementById('mailnest-inline-test-btn');
+    if (btn) setInlineTestButton(btn, btn.disabled, 'moemail.testing');
 });

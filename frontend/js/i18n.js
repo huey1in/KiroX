@@ -17,7 +17,7 @@
       },
       page: {
         overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池',
-        settings: '设置', ip: 'IP 管理'
+        settings: '设置', ip: 'IP 管理', info: '关于'
       },
       ip: {
         proxy: '代理', direct: '直连', add: '+ 添加代理', refresh: '刷新',
@@ -50,7 +50,7 @@
         loading: '加载中...', loadFailed: '加载失败', noData: '暂无数据',
         copy: '复制', cancel: '取消', delete: '删除',
         reset: '重置', clearAll: '清空全部', select: '选择', close: '关闭',
-        test: '测试',
+        test: '测试', confirm: '确认',
         prevPage: '上一页', nextPage: '下一页'
       },
       status: {
@@ -80,7 +80,7 @@
         dataDirPlaceholder: '默认存储路径',
         outputDir: '注册结果输出目录', outputDirDesc: '成功账号以明文 JSON 数组写入该目录下的 accounts.json',
         outputDirPlaceholder: '默认：文档/KiroX',
-        proxy: '代理',
+        proxy: '代理', proxyDetecting: '正在检测代理出口…', proxyAvailable: '可用', proxyDetectFailed: '检测失败',
         proxyDesc: '所有注册请求走该代理；留空=直连。支持 http/https/socks5 完整 URL，也支持 host:port:user:pass、host:port、user:pass@host:port 等简写。',
         sound: '提示音', soundDesc: '任务结束时播放提示音', desktopNotification: '桌面通知', desktopNotificationDesc: '任务完成时发送 Windows 桌面通知', soundVolume: '提示音音量',
         appearance: '外观与更新', theme: '主题', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色', language: '界面语言', autoUpdate: '启动时自动检查更新',
@@ -94,7 +94,7 @@
         emailProvider: '邮箱提供商', outlook: '微软邮箱', cloudmail: 'Cloud-Mail',
         selectDomain: '选择域名', selectAllDomain: '全选域名',
         domainHint: '邮箱名将自动生成随机字符串',
-        modeRandom: '随机', modeRoundRobin: '轮询',
+        modeRandom: '随机', modeRoundRobin: '轮询', configCount: '{n} 个配置',
         startBtn: '开始注册', stopBtn: '停止',
         icloud: 'iCloud',
       },
@@ -116,7 +116,7 @@
         addedSummary: '成功添加 {n} 个账号，当前共 {total} 个',
         importSummary: '成功导入 {n} 个账号，当前共 {total} 个',
         importFailed: '导入失败',
-        icloudTitle: 'iCloud 邮箱', icloudAddTitle: '添加 iCloud 邮箱账号',
+        icloudTitle: 'iCloud 邮箱', icloudAddTitle: '添加 iCloud 邮箱账号', icloudInputRequired: '请先输入 iCloud 账号数据',
         icloudPerLine: '每行一个账号', icloudManualInput: '手动输入',
         icloudFormat: '格式：邮箱----iCloud 消息列表 URL，每行一个',
         icloudPlaceholder: 'user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com',
@@ -126,8 +126,8 @@
         deleteMsg: '确认删除账号 {email} ?',
         deleteConfirm: '确认删除',
         deletedOne: '账号已删除',
-        clearAllTitle: '清空微软邮箱',
-        clearAllMsg: '确认清空所有微软邮箱账号？此操作不可恢复！',
+        clearAllTitle: '清空微软邮箱', clearICloudTitle: '清空 iCloud 邮箱',
+        clearAllMsg: '确认清空所有微软邮箱账号？此操作不可恢复！', clearICloudMsg: '确认清空所有 iCloud 邮箱账号？此操作不可恢复！',
         clearAllConfirm: '确认清空',
         allCleared: '已清空所有账号',
         noRegistered: '没有已注册的账号',
@@ -168,7 +168,7 @@
         autoNamePrefix: '配置',
         summaryActive: '已配置 {n} 个，可用 {m} 个',
         summaryNone: '未配置',
-        noDomainsHint: '暂无配置，请先在设置页添加',
+        noDomainsHint: '暂无配置，请先在设置页添加', noActiveDomain: '暂无可用域名，请先测试配置',
         deleteConfigTitle: '删除配置',
         deleteConfigMsg: '确认删除配置 "{name}" 吗？',
         addedNamed: '已添加: {name}',
@@ -221,7 +221,7 @@
       },
       page: {
         overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails',
-        settings: 'Settings', ip: 'IPs'
+        settings: 'Settings', ip: 'IPs', info: 'About'
       },
       ip: {
         proxy: 'Proxy', direct: 'Direct', add: '+ Add proxy', refresh: 'Refresh',
@@ -254,7 +254,7 @@
         loading: 'Loading...', loadFailed: 'Failed to load', noData: 'No data',
         copy: 'Copy', cancel: 'Cancel', delete: 'Delete',
         reset: 'Reset', clearAll: 'Clear all', select: 'Select', close: 'Close',
-        test: 'Test',
+        test: 'Test', confirm: 'Confirm',
         prevPage: 'Prev', nextPage: 'Next'
       },
       status: {
@@ -284,7 +284,7 @@
         dataDirPlaceholder: 'Default path',
         outputDir: 'Output directory', outputDirDesc: 'Successful accounts are written to accounts.json in this directory',
         outputDirPlaceholder: 'Default: Documents/KiroX',
-        proxy: 'Proxy',
+        proxy: 'Proxy', proxyDetecting: 'Detecting proxy exit…', proxyAvailable: 'Available', proxyDetectFailed: 'Detection failed',
         proxyDesc: 'All requests use this proxy; empty = direct. Accepts http/https/socks5 URLs or shortcuts like host:port:user:pass.',
         sound: 'Sound', soundDesc: 'Play a sound when a task ends', desktopNotification: 'Desktop notifications', desktopNotificationDesc: 'Send a Windows notification when a task completes', soundVolume: 'Sound volume',
         appearance: 'Appearance and updates', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', language: 'Language', autoUpdate: 'Check for updates at startup',
@@ -298,7 +298,7 @@
         emailProvider: 'Email provider', outlook: 'Microsoft', cloudmail: 'Cloud-Mail',
         selectDomain: 'Select domain', selectAllDomain: 'Select all',
         domainHint: 'Email username is auto-generated as random string',
-        modeRandom: 'Random', modeRoundRobin: 'Round-robin',
+        modeRandom: 'Random', modeRoundRobin: 'Round-robin', configCount: '{n} configs',
         startBtn: 'Start', stopBtn: 'Stop',
         icloud: 'iCloud',
       },
@@ -318,7 +318,7 @@
         addToList: 'Add to list',
         inputRequired: 'Please enter Outlook account data first',
         addedSummary: 'Added {n} accounts. Total now: {total}',
-        icloudTitle: 'iCloud mail', icloudAddTitle: 'Add iCloud account',
+        icloudTitle: 'iCloud mail', icloudAddTitle: 'Add iCloud account', icloudInputRequired: 'Please enter iCloud account data first',
         icloudPerLine: 'One account per line', icloudManualInput: 'Manual input',
         icloudFormat: 'Format: email----iCloud message list URL, one per line',
         icloudPlaceholder: 'user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com',
@@ -330,8 +330,8 @@
         deleteMsg: 'Delete account {email}?',
         deleteConfirm: 'Confirm delete',
         deletedOne: 'Account deleted',
-        clearAllTitle: 'Clear Microsoft accounts',
-        clearAllMsg: 'Clear all Microsoft mail accounts? This cannot be undone.',
+        clearAllTitle: 'Clear Microsoft accounts', clearICloudTitle: 'Clear iCloud accounts',
+        clearAllMsg: 'Clear all Microsoft mail accounts? This cannot be undone.', clearICloudMsg: 'Clear all iCloud mail accounts? This cannot be undone.',
         clearAllConfirm: 'Confirm clear',
         allCleared: 'All accounts cleared',
         noRegistered: 'No registered accounts',
@@ -372,7 +372,7 @@
         autoNamePrefix: 'Config',
         summaryActive: '{n} configured · {m} available',
         summaryNone: 'Not configured',
-        noDomainsHint: 'No configs yet; add one in Settings',
+        noDomainsHint: 'No configs yet; add one in Settings', noActiveDomain: 'No active domains. Test a config first.',
         deleteConfigTitle: 'Delete config',
         deleteConfigMsg: 'Delete config "{name}"?',
         addedNamed: 'Added: {name}',
@@ -425,7 +425,7 @@
       },
       page: {
         overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール',
-        settings: '設定', ip: 'IP管理'
+        settings: '設定', ip: 'IP管理', info: '情報'
       },
       ip: {
         proxy: 'プロキシ', direct: '直接接続', add: '+ プロキシを追加', refresh: '更新',
@@ -458,7 +458,7 @@
         loading: '読み込み中...', loadFailed: '読み込み失敗', noData: 'データなし',
         copy: 'コピー', cancel: 'キャンセル', delete: '削除',
         reset: 'リセット', clearAll: 'すべてクリア', select: '選択', close: '閉じる',
-        test: 'テスト',
+        test: 'テスト', confirm: '確認',
         prevPage: '前へ', nextPage: '次へ'
       },
       status: {
@@ -488,7 +488,7 @@
         dataDirPlaceholder: 'デフォルトパス',
         outputDir: '出力ディレクトリ', outputDirDesc: '成功アカウントはこのディレクトリの accounts.json に書き出されます',
         outputDirPlaceholder: 'デフォルト：Documents/KiroX',
-        proxy: 'プロキシ',
+        proxy: 'プロキシ', proxyDetecting: 'プロキシ出口を検出中…', proxyAvailable: '利用可能', proxyDetectFailed: '検出失敗',
         proxyDesc: 'すべてのリクエストでこのプロキシを使用。空欄=直接接続。http/https/socks5 のURL、または host:port:user:pass などの省略形式に対応。',
         sound: '通知音', soundDesc: 'タスク終了時に通知音を鳴らす', desktopNotification: 'デスクトップ通知', desktopNotificationDesc: 'タスク完了時に Windows 通知を送信', soundVolume: '通知音量',
         appearance: '外観と更新', theme: 'テーマ', themeSystem: 'システム設定', themeLight: 'ライト', themeDark: 'ダーク', language: '表示言語', autoUpdate: '起動時に更新を確認',
@@ -502,7 +502,7 @@
         emailProvider: 'メールプロバイダ', outlook: 'Microsoft', cloudmail: 'Cloud-Mail',
         selectDomain: 'ドメイン選択', selectAllDomain: 'すべて選択',
         domainHint: 'ユーザー名はランダム文字列で自動生成されます',
-        modeRandom: 'ランダム', modeRoundRobin: 'ラウンドロビン',
+        modeRandom: 'ランダム', modeRoundRobin: 'ラウンドロビン', configCount: '{n} 件の設定',
         startBtn: '登録開始', stopBtn: '停止',
         icloud: 'iCloud',
       },
@@ -523,7 +523,7 @@
         inputRequired: 'Outlook アカウントを入力してください',
         addedSummary: '{n} 件のアカウントを追加 (合計 {total} 件)',
         importSummary: '{n} 件のアカウントを取り込み (合計 {total} 件)',
-        icloudTitle: 'iCloud メール', icloudAddTitle: 'iCloud アカウントを追加',
+        icloudTitle: 'iCloud メール', icloudAddTitle: 'iCloud アカウントを追加', icloudInputRequired: 'iCloud アカウントを入力してください',
         icloudPerLine: '1行に1アカウント', icloudManualInput: '手入力',
         icloudFormat: '形式：email----iCloud メッセージリスト URL (1行1件)',
         icloudPlaceholder: 'user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com',
@@ -534,8 +534,8 @@
         deleteMsg: 'アカウント {email} を削除しますか?',
         deleteConfirm: '削除確定',
         deletedOne: 'アカウントを削除しました',
-        clearAllTitle: 'Microsoft メールをクリア',
-        clearAllMsg: 'すべての Microsoft メールアカウントをクリアしますか? 元に戻せません。',
+        clearAllTitle: 'Microsoft メールをクリア', clearICloudTitle: 'iCloud メールをクリア',
+        clearAllMsg: 'すべての Microsoft メールアカウントをクリアしますか? 元に戻せません。', clearICloudMsg: 'すべての iCloud メールアカウントをクリアしますか? 元に戻せません。',
         clearAllConfirm: 'クリア確定',
         allCleared: 'すべてのアカウントをクリアしました',
         noRegistered: '登録済みアカウントはありません',
@@ -576,7 +576,7 @@
         autoNamePrefix: '設定',
         summaryActive: '{n} 件設定済み · 利用可能 {m} 件',
         summaryNone: '未設定',
-        noDomainsHint: '設定がありません、設定ページで追加してください',
+        noDomainsHint: '設定がありません、設定ページで追加してください', noActiveDomain: '利用可能なドメインがありません。先に設定をテストしてください',
         deleteConfigTitle: '設定を削除',
         deleteConfigMsg: '設定 "{name}" を削除しますか?',
         addedNamed: '追加しました: {name}',

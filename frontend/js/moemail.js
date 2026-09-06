@@ -195,9 +195,8 @@ async function inlineAddMoeMail() {
   // 先测试连接，成功后才保存
   var btn = document.getElementById('moemail-inline-test-btn');
   var statusEl = document.getElementById('moemail-inline-status');
-  var btnOriginalHTML = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.textContent = _mmT('moemail.testing', '测试中...'); }
-  if (statusEl) { statusEl.style.color = ''; statusEl.textContent = ''; }
+  setInlineTestButton(btn, true, 'moemail.testing');
+  if (statusEl) { statusEl.style.color = ''; clearLocalizedStatus(statusEl); }
 
   var testResult;
   try {
@@ -205,12 +204,12 @@ async function inlineAddMoeMail() {
   } catch (e) {
     testResult = { error: String(e) };
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = btnOriginalHTML; }
+    setInlineTestButton(btn, false, 'moemail.testing');
   }
 
   if (!testResult || testResult.error) {
     var errMsg = (testResult && testResult.error) || _mmT('moemail.testFailedShort', '测试失败');
-    if (statusEl) { statusEl.style.color = 'var(--danger)'; statusEl.textContent = errMsg; }
+    if (statusEl) { statusEl.style.color = 'var(--danger)'; clearLocalizedStatus(statusEl, errMsg); }
     showToast(_mmT('moemail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
     return;
   }
@@ -230,7 +229,7 @@ async function inlineAddMoeMail() {
   document.getElementById('moemail-inline-name').value = '';
   document.getElementById('moemail-inline-url').value = '';
   document.getElementById('moemail-inline-apikey').value = '';
-  if (statusEl) { statusEl.style.color = 'var(--success)'; statusEl.textContent = ''; }
+  if (statusEl) { statusEl.style.color = 'var(--success)'; clearLocalizedStatus(statusEl); }
   showToast(_mmT('moemail.addedNamed', { name: name }, '已添加: {name}'));
   updateMoeMailUI();
 }
@@ -245,23 +244,23 @@ async function inlineTestMoeMail() {
   }
   var btn = document.getElementById('moemail-inline-test-btn');
   var statusEl = document.getElementById('moemail-inline-status');
-  var btnOriginalHTML = btn ? btn.innerHTML : '';
-  btn.disabled = true; btn.textContent = _mmT('moemail.testing', '测试中...');
-  statusEl.textContent = '';
+  setInlineTestButton(btn, true, 'moemail.testing');
+  clearLocalizedStatus(statusEl);
   try {
     var result = await window.go.main.App.TestMoeMailConnection(JSON.stringify({url: url, apiKey: apikey}));
     if (result.success) {
       statusEl.style.color = 'var(--success)';
-      statusEl.textContent = _mmT('moemail.connectedDomains', { n: (result.domainCount || 0) }, '连接成功，{n} 个域名');
+      setLocalizedStatus(statusEl, 'moemail.connectedDomains', { n: (result.domainCount || 0) }, '连接成功，{n} 个域名');
     } else {
       statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = result.error || _mmT('moemail.testFailed', '连接失败');
+      if (result.error) clearLocalizedStatus(statusEl, result.error);
+      else setLocalizedStatus(statusEl, 'moemail.testFailed', {}, '连接失败');
     }
   } catch(e) {
     statusEl.style.color = 'var(--danger)';
-    statusEl.textContent = _mmT('moemail.testFailedShort', '测试失败');
+    setLocalizedStatus(statusEl, 'moemail.testFailedShort', {}, '测试失败');
   }
-  btn.disabled = false; btn.innerHTML = btnOriginalHTML;
+  setInlineTestButton(btn, false, 'moemail.testing');
 }
 
 // 测试指定配置
@@ -377,4 +376,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 // 语言切换后重新渲染 MoeMail UI（状态/摘要/空态等动态文本）
 window.addEventListener('i18n:changed', function() {
   try { if (typeof updateMoeMailUI === 'function') updateMoeMailUI(); } catch (e) {}
+  var btn = document.getElementById('moemail-inline-test-btn');
+  if (btn) setInlineTestButton(btn, btn.disabled, 'moemail.testing');
 });

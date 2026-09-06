@@ -5,6 +5,8 @@ var ipSelected = {};
 var ipFormMode = 'create'; // 'create' | 'edit'
 var ipEditingId = null;
 var _ipSearchTimer = null;
+var ipResultView = null;
+var ipListLoading = false;
 
 function _ipEscape(s) {
   if (s == null) return '';
@@ -96,13 +98,14 @@ function ipSearchHay(p) {
 var ipProbing = {}; // 正在测试中的代理 id -> true，用于骨架屏
 
 async function loadIpList() {
-  var box = document.getElementById('ip-list');
-  if (box) box.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">' + _ipT('ip.loading', '加载中...') + '</div>';
+  ipListLoading = true;
+  renderIpList();
   try {
     ipPool = await window.go.main.App.ListProxyPool();
   } catch (e) {
     ipPool = [];
   }
+  ipListLoading = false;
   ipSelected = {};
   renderIpList();
   if (!window.appSettings || window.appSettings.autoProbeProxies !== false) probeAllIp(false);
@@ -167,6 +170,11 @@ function renderIpList() {
   var box = document.getElementById('ip-list');
   var empty = document.getElementById('ip-empty');
   if (!box) return;
+  if (ipListLoading) {
+    if (empty) empty.style.display = 'none';
+    box.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">' + _ipT('ip.loading', '加载中...') + '</div>';
+    return;
+  }
   var q = (document.getElementById('ip-search').value || '').toLowerCase().trim();
   var fstatus = _dv('ip-filter-status');
   var rows = ipPool.filter(function(p) {
@@ -291,6 +299,7 @@ async function testIpEntry(id) {
 function closeIpResultModal() {
   var m = document.getElementById('ip-result-modal');
   if (m) m.classList.remove('show');
+  ipResultView = null;
 }
 
 // 在模态框里展示完整上游检测结果；res 为 null 时显示加载骨架屏
@@ -298,6 +307,7 @@ function showIpResultModal(p, res) {
   var body = document.getElementById('ip-result-body');
   var m = document.getElementById('ip-result-modal');
   if (!body || !m) return;
+  ipResultView = { proxy: p, result: res };
 
   var row = function(label, valHtml) {
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">'
@@ -539,7 +549,7 @@ async function loadProxyOptions() {
   var list = [];
   try { list = await window.go.main.App.ListProxyPool(); } catch (e) {}
   var enabled = (list || []).filter(function(p) { return p.enabled; });
-  var html = '<div class="dropdown-option" data-value="">' + _ipT('ip.direct', '直连') + '</div>';
+  var html = '<div class="dropdown-option" data-value="" data-i18n="ip.direct">' + _ipT('ip.direct', '直连') + '</div>';
   enabled.forEach(function(p) {
     var u = parseProxyUrl(p.url);
     var label = p.probeIp || (u.host + (u.port ? ':' + u.port : ''));
@@ -548,3 +558,16 @@ async function loadProxyOptions() {
   box.innerHTML = html;
   setDropdownValue(wrap, '');
 }
+
+window.addEventListener('i18n:changed', function() {
+  renderIpList();
+  var form = document.getElementById('ip-form-modal');
+  var formTitle = document.getElementById('ip-form-title');
+  if (form && form.classList.contains('show') && formTitle) {
+    formTitle.textContent = ipFormMode === 'edit' ? _ipT('ip.editTitle', '编辑代理') : _ipT('ip.addTitle', '添加代理');
+  }
+  var resultModal = document.getElementById('ip-result-modal');
+  if (ipResultView && resultModal && resultModal.classList.contains('show')) {
+    showIpResultModal(ipResultView.proxy, ipResultView.result);
+  }
+});

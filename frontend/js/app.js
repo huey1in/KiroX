@@ -2,6 +2,25 @@
 
 // 页面切换
 var _currentPageId = 'overview';
+var infoChangelogView = { state: 'idle', error: '' };
+
+function renderInfoChangelogState() {
+  var el = document.getElementById('info-changelog');
+  if (!el || infoChangelogView.state === 'idle' || infoChangelogView.state === 'ready') return;
+  var key = infoChangelogView.state === 'loading' ? 'common.loading'
+    : (infoChangelogView.state === 'empty' ? 'common.noData' : 'common.loadFailed');
+  var fallback = infoChangelogView.state === 'loading' ? '加载中...'
+    : (infoChangelogView.state === 'empty' ? '暂无更新说明' : '加载失败');
+  var suffix = infoChangelogView.error ? ': ' + infoChangelogView.error : '';
+  el.textContent = tr(key, fallback) + suffix;
+  el.style.color = 'var(--text-muted)';
+}
+
+function setInfoChangelogState(state, error) {
+  infoChangelogView = { state: state, error: error || '' };
+  renderInfoChangelogState();
+}
+
 function getPageTitle(pageId) {
   if (window.I18N && pageId) {
     var v = window.I18N.t('page.' + pageId);
@@ -58,11 +77,11 @@ async function loadInfoVersion() {
   var latestEl = document.getElementById('info-latest-version');
   var dateEl = document.getElementById('info-release-date');
   var tagEl = document.getElementById('info-changelog-version');
-  if (changelogEl) changelogEl.innerHTML = '<span style="color:var(--text-muted);">' + tr('common.loading', '加载中...') + '</span>';
+  setInfoChangelogState('loading');
   try {
     var result = await window.go.main.App.CheckUpdate();
     if (result.error) {
-      if (changelogEl) changelogEl.innerHTML = '<span style="color:var(--text-muted);">' + tr('common.loadFailed', '加载失败') + ': ' + result.error + '</span>';
+      setInfoChangelogState('error', result.error);
       return;
     }
     if (latestEl) {
@@ -77,10 +96,16 @@ async function loadInfoVersion() {
     if (bannerVer) bannerVer.textContent = result.latestVersion || '';
     if (changelogEl) {
       var body = (result.changelog || '').trim();
-      changelogEl.innerHTML = body ? renderChangelog(body) : '<span style="color:var(--text-muted);">' + tr('common.noData', '暂无更新说明') + '</span>';
+      if (body) {
+        infoChangelogView = { state: 'ready', error: '' };
+        changelogEl.style.color = '';
+        changelogEl.innerHTML = renderChangelog(body);
+      } else {
+        setInfoChangelogState('empty');
+      }
     }
   } catch(e) {
-    if (changelogEl) changelogEl.innerHTML = '<span style="color:var(--text-muted);">' + tr('common.loadFailed', '加载失败') + '</span>';
+    setInfoChangelogState('error');
   }
 }
 
@@ -179,7 +204,10 @@ async function loadProxy() {
   } catch(e) {}
 }
 
+var proxyDetectView = { state: 'hidden', payload: null };
+
 function renderProxyDetectCard(state, payload) {
+  proxyDetectView = { state: state, payload: payload || null };
   var box = document.getElementById('proxy-detect-card');
   if (!box) return;
   if (state === 'hidden') { box.style.display = 'none'; box.innerHTML = ''; return; }
@@ -187,7 +215,7 @@ function renderProxyDetectCard(state, payload) {
   var base = 'border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;';
   if (state === 'loading') {
     box.style.cssText = base + 'background:var(--card-bg, transparent);color:var(--muted);';
-    box.innerHTML = '正在检测代理出口…';
+    box.textContent = tr('settings.proxyDetecting', '正在检测代理出口…');
     return;
   }
   if (state === 'ok') {
@@ -195,7 +223,7 @@ function renderProxyDetectCard(state, payload) {
     box.style.cssText = base + 'background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.35);';
     box.innerHTML =
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span style="font-weight:600;color:#10b981;">✓ 可用</span>' +
+        '<span style="font-weight:600;color:#10b981;">✓ ' + tr('settings.proxyAvailable', '可用') + '</span>' +
         '<span style="padding:1px 6px;border-radius:4px;background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:600;">' + (payload.scheme || '').toUpperCase() + '</span>' +
         '<span style="color:var(--text);font-weight:600;">' + (payload.ip || '') + '</span>' +
         (loc ? '<span style="color:var(--muted);">· ' + loc + '</span>' : '') +
@@ -205,7 +233,7 @@ function renderProxyDetectCard(state, payload) {
   }
   // error
   box.style.cssText = base + 'background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.35);color:#ef4444;';
-  box.innerHTML = '✗ 检测失败：' + (payload && payload.error ? payload.error : '未知错误');
+  box.textContent = '✗ ' + tr('settings.proxyDetectFailed', '检测失败') + ': ' + (payload && payload.error ? payload.error : tr('ip.unknownError', '未知错误'));
 }
 
 async function saveProxy() {
@@ -733,6 +761,12 @@ window.addEventListener('DOMContentLoaded', async function() {
     var tb = document.getElementById('titlebar-text');
     if (tb) tb.textContent = getPageTitle(_currentPageId);
     refreshLanguageNavLabel();
+    var activeLanguage = window.I18N.getLanguage();
+    setSettingValue('setting-language', activeLanguage);
+    if (window.appSettings) window.appSettings.language = activeLanguage;
+    renderInfoChangelogState();
+    renderFingerprintCurve();
+    renderProxyDetectCard(proxyDetectView.state, proxyDetectView.payload);
   });
   // 启动时静默检查更新
   if (!window.appSettings || window.appSettings.autoCheckUpdates !== false) setTimeout(checkUpdateOnStartup, 2000);

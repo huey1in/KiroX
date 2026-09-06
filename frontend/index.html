@@ -303,7 +303,7 @@
               <div style="font-size:12px;color:var(--text-muted);margin-top:3px;font-family:var(--font-mono);" id="info-version-detail">-</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;">
-              <button onclick="window.go.main.App.OpenURL('https://qm.qq.com/q/RXMTXUlc4w')" class="btn btn-secondary btn-sm" title="QQ 交流群">
+              <button onclick="window.go.main.App.OpenURL('https://qm.qq.com/q/RXMTXUlc4w')" class="btn btn-secondary btn-sm" title="加入交流群" data-i18n-title="about.joinGroup">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
                   <path d="M12 1.5c-3.07 0-5.6 2.31-5.97 5.28-.07.54-.1 1.1-.1 1.66 0 1.05.13 2.06.36 3.01-.5.55-1 1.18-1.41 1.83-.88 1.38-1.49 2.93-1.49 4.27 0 .53.13.85.27 1.03.18.21.45.31.7.31.62 0 1.27-.62 1.83-1.5.32.49.7.94 1.12 1.32-.39.5-.74 1.07-.95 1.69-.21.66-.21 1.39.27 1.95.39.46 1 .67 1.65.74.85.09 1.83-.05 2.78-.32.78-.22 1.55-.55 2.18-.93.63.38 1.4.71 2.18.93.95.27 1.93.41 2.78.32.65-.07 1.26-.28 1.65-.74.48-.56.48-1.29.27-1.95-.21-.62-.56-1.19-.95-1.69.42-.38.8-.83 1.12-1.32.56.88 1.21 1.5 1.83 1.5.25 0 .52-.1.7-.31.14-.18.27-.5.27-1.03 0-1.34-.61-2.89-1.49-4.27-.41-.65-.91-1.28-1.41-1.83.23-.95.36-1.96.36-3.01 0-.56-.03-1.12-.1-1.66C17.6 3.81 15.07 1.5 12 1.5z"/>
                 </svg>
@@ -571,7 +571,7 @@
             <img src="assets/kiro.svg" style="width:22px;height:22px;border-radius:6px;">
             <h3 style="font-size:16px;font-weight:700;" data-i18n="register.newTask">新建注册任务</h3>
           </div>
-          <button type="button" class="modal-close-btn" onclick="closeNewTaskModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close">&times;</button>
+          <button type="button" class="modal-close-btn" onclick="closeNewTaskModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close" data-i18n-aria-label="common.close">&times;</button>
         </div>
 
           <!-- 左右两栏：左栏表单字段，右栏具体选项（延展到模态框右侧） -->
@@ -725,7 +725,7 @@
         <div class="modal-content" style="max-width:640px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h3 id="ip-form-title" style="font-size:16px;font-weight:700;" data-i18n="ip.addTitle">添加代理</h3>
-            <button type="button" class="modal-close-btn" onclick="closeIpFormModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close">&times;</button>
+            <button type="button" class="modal-close-btn" onclick="closeIpFormModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close" data-i18n-aria-label="common.close">&times;</button>
           </div>
 
           <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -771,7 +771,7 @@
         <div class="modal-content" style="max-width:420px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h3 style="font-size:16px;font-weight:700;" data-i18n="ip.resultTitle">测试结果</h3>
-            <button type="button" class="modal-close-btn" onclick="closeIpResultModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close">&times;</button>
+            <button type="button" class="modal-close-btn" onclick="closeIpResultModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close" data-i18n-aria-label="common.close">&times;</button>
           </div>
           <div id="ip-result-body"></div>
         </div>
@@ -1024,7 +1024,7 @@
         <img src="assets/icloud.svg" alt="" style="width:22px;height:22px;">
         <h3 style="font-size:16px;font-weight:700;" data-i18n="accounts.icloudAddTitle">添加 iCloud 邮箱账号</h3>
       </div>
-      <button type="button" class="modal-close-btn" onclick="closeAddICloudModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close">&times;</button>
+      <button type="button" class="modal-close-btn" onclick="closeAddICloudModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close" data-i18n-aria-label="common.close">&times;</button>
     </div>
     <!-- 导入文件 -->
     <div style="margin-bottom:16px;">
@@ -1064,7 +1064,7 @@
         <img src="assets/outlook.svg" alt="" style="width:22px;height:22px;">
         <h3 style="font-size:16px;font-weight:700;" data-i18n="accounts.addModalTitle">添加微软邮箱账号</h3>
       </div>
-      <button type="button" class="modal-close-btn" onclick="closeAddOutlookModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close">&times;</button>
+      <button type="button" class="modal-close-btn" onclick="closeAddOutlookModal()" aria-label="关闭" title="关闭" data-i18n-title="common.close" data-i18n-aria-label="common.close">&times;</button>
     </div>
     <!-- 导入文件 -->
     <div style="margin-bottom:16px;">

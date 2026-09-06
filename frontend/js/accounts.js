@@ -246,7 +246,7 @@ function closeAddICloudModal() {
 async function addICloudAccounts() {
   var data = document.getElementById('cfg-icloud-data').value.trim();
   if (!data) {
-    showToast(_accT('accounts.inputRequired', '请先输入 iCloud 账号数据'), 'error');
+    showToast(_accT('accounts.icloudInputRequired', '请先输入 iCloud 账号数据'), 'error');
     return;
   }
   try {
@@ -340,8 +340,8 @@ async function deleteICloudAccount(email) {
 
 function clearAllICloudAccounts() {
   showConfirmModal(
-    _accT('accounts.clearAllTitle', '清空 iCloud 邮箱'),
-    _accT('accounts.clearAllMsg', '确认清空所有 iCloud 邮箱账号？此操作不可恢复！'),
+    _accT('accounts.clearICloudTitle', '清空 iCloud 邮箱'),
+    _accT('accounts.clearICloudMsg', '确认清空所有 iCloud 邮箱账号？此操作不可恢复！'),
     _accT('accounts.clearAllConfirm', '确认清空'),
     async function() {
       try {

@@ -185,9 +185,8 @@ async function inlineAddCloudMail() {
   // 先测试连接，成功后才保存
   var btn = document.getElementById('cloudmail-inline-test-btn');
   var statusEl = document.getElementById('cloudmail-inline-status');
-  var btnOriginalHTML = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.textContent = _cmT('cloudmail.testing', '测试中...'); }
-  if (statusEl) { statusEl.style.color = ''; statusEl.textContent = ''; }
+  setInlineTestButton(btn, true, 'cloudmail.testing');
+  if (statusEl) { statusEl.style.color = ''; clearLocalizedStatus(statusEl); }
 
   var testPayload = { name: name, url: url, email: em, password: pwd, domains: [] };
   var testResult;
@@ -196,12 +195,12 @@ async function inlineAddCloudMail() {
   } catch (e) {
     testResult = { error: String(e) };
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = btnOriginalHTML; }
+    setInlineTestButton(btn, false, 'cloudmail.testing');
   }
 
   if (!testResult || testResult.error) {
     var errMsg = (testResult && testResult.error) || _cmT('cloudmail.testFailedShort', '测试失败');
-    if (statusEl) { statusEl.style.color = 'var(--danger)'; statusEl.textContent = errMsg; }
+    if (statusEl) { statusEl.style.color = 'var(--danger)'; clearLocalizedStatus(statusEl, errMsg); }
     showToast(_cmT('cloudmail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
     return;
   }
@@ -224,7 +223,7 @@ async function inlineAddCloudMail() {
   document.getElementById('cloudmail-inline-url').value = '';
   document.getElementById('cloudmail-inline-email').value = '';
   document.getElementById('cloudmail-inline-password').value = '';
-  if (statusEl) { statusEl.style.color = 'var(--success)'; statusEl.textContent = ''; }
+  if (statusEl) { statusEl.style.color = 'var(--success)'; clearLocalizedStatus(statusEl); }
 
   if (fetchedDomains.length > 0) {
     showToast(_cmT('cloudmail.addedWithDomains', { name: name, n: fetchedDomains.length }, '已添加 {name}，{n} 个域名'));
@@ -246,9 +245,8 @@ async function inlineTestCloudMail() {
   }
   var btn = document.getElementById('cloudmail-inline-test-btn');
   var statusEl = document.getElementById('cloudmail-inline-status');
-  var btnOriginalHTML = btn ? btn.innerHTML : '';
-  btn.disabled = true; btn.textContent = _cmT('cloudmail.testing', '测试中...');
-  if (statusEl) statusEl.textContent = '';
+  setInlineTestButton(btn, true, 'cloudmail.testing');
+  if (statusEl) clearLocalizedStatus(statusEl);
   try {
     var result = await window.go.main.App.TestCloudMailConnection(JSON.stringify({
       name: 'inline-test', url: url, email: em, password: pwd, domains: []
@@ -258,24 +256,25 @@ async function inlineTestCloudMail() {
       if (statusEl) {
         statusEl.style.color = 'var(--success)';
         if (fetched.length > 0) {
-          statusEl.textContent = _cmT('cloudmail.connectedDomainsList', { d: fetched.join(', ') }, '连接成功，域名: {d}');
+          setLocalizedStatus(statusEl, 'cloudmail.connectedDomainsList', { d: fetched.join(', ') }, '连接成功，域名: {d}');
         } else {
-          statusEl.textContent = _cmT('cloudmail.connectedNoDomain', '连接成功，但服务器未返回域名（可能开启了 loginDomain 隐私开关）');
+          setLocalizedStatus(statusEl, 'cloudmail.connectedNoDomain', {}, '连接成功，但服务器未返回域名（可能开启了 loginDomain 隐私开关）');
         }
       }
     } else {
       if (statusEl) {
         statusEl.style.color = 'var(--danger)';
-        statusEl.textContent = result.error || _cmT('cloudmail.testFailed', '连接失败');
+        if (result.error) clearLocalizedStatus(statusEl, result.error);
+        else setLocalizedStatus(statusEl, 'cloudmail.testFailed', {}, '连接失败');
       }
     }
   } catch(e) {
     if (statusEl) {
       statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = _cmT('cloudmail.testFailedShort', '测试失败');
+      setLocalizedStatus(statusEl, 'cloudmail.testFailedShort', {}, '测试失败');
     }
   }
-  btn.disabled = false; btn.innerHTML = btnOriginalHTML;
+  setInlineTestButton(btn, false, 'cloudmail.testing');
 }
 
 async function testCloudMailConfigByIndex(index) {
@@ -367,4 +366,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 window.addEventListener('i18n:changed', function() {
   try { if (typeof updateCloudMailUI === 'function') updateCloudMailUI(); } catch (e) {}
+  var btn = document.getElementById('cloudmail-inline-test-btn');
+  if (btn) setInlineTestButton(btn, btn.disabled, 'cloudmail.testing');
 });
