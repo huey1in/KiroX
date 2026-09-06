@@ -316,14 +316,14 @@ func (r *Registrar) Step8ProfileStart() error {
 func (r *Registrar) Step9SendOTP() error {
 	log.Println("[9] 发送验证码")
 
-	// Outlook 模式: 记录发送前的邮件数量
+	// Outlook 模式: 分别记录收件箱和垃圾邮件发送前的数量
 	if r.Cfg.UseOutlook && r.Cfg.OutlookAccount != nil {
-		count, err := email.GetInboxCountWithProxy(*r.Cfg.OutlookAccount, r.Cfg.EmailProxy)
+		counts, err := email.GetOutlookMailboxCountsWithProxy(*r.Cfg.OutlookAccount, r.Cfg.EmailProxy)
 		if err != nil {
-			log.Printf("获取邮件数量失败: %v, 默认为0", err)
+			log.Printf("获取 Outlook 邮件目录基线失败: %v，将按收件箱基线 0 降级轮询", err)
 		} else {
-			r.OutlookMailCount = count
-			log.Printf("发送前邮件数: %d", count)
+			r.OutlookMailCounts = counts
+			log.Printf("发送前邮件数: 收件箱=%d, 垃圾邮件=%d", counts.Inbox, counts.Junk)
 		}
 	}
 
@@ -383,7 +383,7 @@ func (r *Registrar) Step10GetOTP() (string, error) {
 		timeout = 120
 	}
 	if r.Cfg.UseOutlook && r.Cfg.OutlookAccount != nil {
-		code, err := email.WaitForOTPWithProxy(*r.Cfg.OutlookAccount, r.OutlookMailCount, timeout, 5, r.Cfg.EmailProxy)
+		code, err := email.WaitForOTPWithMailboxCountsProxy(*r.Cfg.OutlookAccount, r.OutlookMailCounts, timeout, 5, r.Cfg.EmailProxy)
 		if err != nil {
 			return "", err
 		}

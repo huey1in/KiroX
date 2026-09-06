@@ -60,8 +60,8 @@ type Registrar struct {
 	// 本地加密
 	JWE *crypto.JWEEncryptor
 
-	// Outlook 模式: 发送验证码前的邮件数量
-	OutlookMailCount int
+	// Outlook 模式: 发送验证码前的收件箱和垃圾邮件数量
+	OutlookMailCounts email.OutlookMailboxCounts
 
 	// 遥测/指纹计时: 记录各页面开始时间, 用于生成真实 timeSpentOnPage 与 D2C/katal 上报
 	SigninPageStartedAt          time.Time
@@ -108,6 +108,9 @@ func NewRegistrar(cfg *Config) *Registrar {
 		FPCtx:     browser.NewFPContext(identity),
 		VisitorID: httputil.VisitorID(),
 		JWE:       &crypto.JWEEncryptor{},
+		OutlookMailCounts: email.OutlookMailboxCounts{
+			Junk: -1,
+		},
 	}
 }
 

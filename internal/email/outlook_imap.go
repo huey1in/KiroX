@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,13 @@ type OutlookAccount struct {
 	ClientID     string
 	RefreshToken string
 	Mode         string
+}
+
+// OutlookMailboxCounts records the message baseline before requesting an OTP.
+// Junk is -1 when the junk folder could not be discovered safely.
+type OutlookMailboxCounts struct {
+	Inbox int
+	Junk  int
 }
 
 // ParseOutlookLines 从文本内容直接解析 Outlook 账号 (Web UI 使用)
@@ -259,7 +267,19 @@ func (c *imapClient) authenticate(email, accessToken string) error {
 }
 
 func (c *imapClient) selectInbox() (int, error) {
-	tag, err := c.sendCommand("SELECT INBOX")
+	return c.selectMailbox("INBOX")
+}
+
+func quoteIMAPMailbox(mailbox string) string {
+	if strings.EqualFold(mailbox, "INBOX") {
+		return "INBOX"
+	}
+	escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(mailbox)
+	return `"` + escaped + `"`
+}
+
+func (c *imapClient) selectMailbox(mailbox string) (int, error) {
+	tag, err := c.sendCommand("SELECT " + quoteIMAPMailbox(mailbox))
 	if err != nil {
 		return 0, err
 	}
@@ -281,7 +301,57 @@ func (c *imapClient) selectInbox() (int, error) {
 	if len(errMsg) > 80 {
 		errMsg = errMsg[:80] + "..."
 	}
-	return 0, fmt.Errorf("SELECT 失败: %s", errMsg)
+	return 0, fmt.Errorf("SELECT %s 失败: %s", mailbox, errMsg)
+}
+
+var imapListPattern = regexp.MustCompile(`(?i)^\* LIST \(([^)]*)\)\s+(?:"(?:\\.|[^"])*"|NIL)\s+(.+)$`)
+
+func parseIMAPListMailbox(line string) (string, string, bool) {
+	match := imapListPattern.FindStringSubmatch(strings.TrimSpace(line))
+	if len(match) != 3 {
+		return "", "", false
+	}
+	rawName := strings.TrimSpace(match[2])
+	name := rawName
+	if strings.HasPrefix(rawName, `"`) {
+		decoded, err := strconv.Unquote(rawName)
+		if err != nil {
+			return "", "", false
+		}
+		name = decoded
+	}
+	return name, match[1], name != ""
+}
+
+func (c *imapClient) findJunkMailbox() (string, error) {
+	tag, err := c.sendCommand(`LIST "" "*"`)
+	if err != nil {
+		return "", err
+	}
+	lines, result, err := c.readUntilTag(tag)
+	if err != nil {
+		return "", err
+	}
+	if !strings.Contains(result, "OK") {
+		return "", fmt.Errorf("LIST 失败: %s", result)
+	}
+
+	var fallback string
+	for _, line := range lines {
+		name, flags, ok := parseIMAPListMailbox(line)
+		if !ok {
+			continue
+		}
+		for _, flag := range strings.Fields(flags) {
+			if strings.EqualFold(flag, `\Junk`) {
+				return name, nil
+			}
+		}
+		if fallback == "" && (strings.EqualFold(name, "Junk") || strings.EqualFold(name, "Junk Email") || strings.EqualFold(name, "Spam")) {
+			fallback = name
+		}
+	}
+	return fallback, nil
 }
 
 func (c *imapClient) close() {
@@ -366,13 +436,45 @@ func WaitForOTP(acc OutlookAccount, beforeCount, timeout, interval int) (string,
 
 // WaitForOTPWithProxy polls Outlook through the selected mailbox network policy.
 func WaitForOTPWithProxy(acc OutlookAccount, beforeCount, timeout, interval int, proxyURL string) (string, error) {
+	return WaitForOTPWithMailboxCountsProxy(acc, OutlookMailboxCounts{Inbox: beforeCount, Junk: -1}, timeout, interval, proxyURL)
+}
+
+type imapPollFolder struct {
+	mailbox string
+	label   string
+	before  int
+}
+
+func findOTPInIMAPMailbox(client *imapClient, folder imapPollFolder, codeRegex *regexp.Regexp) (string, int, error) {
+	total, err := client.selectMailbox(folder.mailbox)
+	if err != nil {
+		return "", 0, err
+	}
+	if total <= folder.before {
+		return "", total, nil
+	}
+	for seq := total; seq > folder.before; seq-- {
+		body, err := client.fetchLatestBody(seq)
+		if err != nil {
+			continue
+		}
+		if code := extractCodeFromText(body, codeRegex); code != "" {
+			log.Printf("[Outlook IMAP] 从%s获取到验证码", folder.label)
+			return code, total, nil
+		}
+	}
+	return "", total, nil
+}
+
+// WaitForOTPWithMailboxCountsProxy polls messages added to Inbox and Junk after the OTP request baseline.
+func WaitForOTPWithMailboxCountsProxy(acc OutlookAccount, counts OutlookMailboxCounts, timeout, interval int, proxyURL string) (string, error) {
 	codeRegex := regexp.MustCompile(`\b(\d{6})\b`)
 	if acc.mailMode() == "graph" {
-		log.Printf("[Outlook Graph] 等待验证码, 邮箱=%s, 发送前邮件数=%d", acc.Email, beforeCount)
-		return waitForOTPGraph(acc, beforeCount, timeout, interval, codeRegex, proxyURL)
+		log.Printf("[Outlook Graph] 等待验证码, 邮箱=%s, 发送前邮件数: 收件箱=%d, 垃圾邮件=%d", acc.Email, counts.Inbox, counts.Junk)
+		return waitForOTPGraph(acc, counts, timeout, interval, codeRegex, proxyURL)
 	}
 
-	log.Printf("[Outlook IMAP] 等待验证码, 邮箱=%s, 发送前邮件数=%d", acc.Email, beforeCount)
+	log.Printf("[Outlook IMAP] 等待验证码, 邮箱=%s, 发送前邮件数: 收件箱=%d, 垃圾邮件=%d", acc.Email, counts.Inbox, counts.Junk)
 	accessToken, err := RefreshOutlookTokenWithProxy(acc, proxyURL)
 	if err != nil {
 		return "", fmt.Errorf("刷新 Outlook Token 失败: %v", err)
@@ -398,45 +500,57 @@ func WaitForOTPWithProxy(acc OutlookAccount, beforeCount, timeout, interval int,
 			continue
 		}
 
-		total, err := client.selectInbox()
-		if err != nil {
-			client.close()
-			consecutiveSelectFail++
-			if consecutiveSelectFail >= maxConsecutiveSelectFail {
-				log.Printf("[Outlook IMAP] 邮箱 %s 连续 %d 次 SELECT 失败，放弃等待", acc.Email, consecutiveSelectFail)
-				return "", fmt.Errorf("IMAP SELECT 连续失败 %d 次: %v", consecutiveSelectFail, err)
-			}
-			log.Printf("[Outlook IMAP] SELECT 失败 (%d/%d): %v", consecutiveSelectFail, maxConsecutiveSelectFail, err)
-			time.Sleep(time.Duration(interval) * time.Second)
-			continue
-		}
-		consecutiveSelectFail = 0 // 成功则重置
-
-		if total <= beforeCount {
-			client.close()
-			if attempt%5 == 0 {
-				log.Printf("[Outlook IMAP] [%d/%d] 暂无新邮件 (当前%d封)...", attempt, maxRetries, total)
-			}
-			time.Sleep(time.Duration(interval) * time.Second)
-			continue
-		}
-
-		for i := total; i > beforeCount; i-- {
-			body, err := client.fetchLatestBody(i)
+		folders := []imapPollFolder{{mailbox: "INBOX", label: "收件箱", before: counts.Inbox}}
+		if counts.Junk >= 0 {
+			junkMailbox, err := client.findJunkMailbox()
 			if err != nil {
+				client.close()
+				consecutiveSelectFail++
+				if consecutiveSelectFail >= maxConsecutiveSelectFail {
+					return "", fmt.Errorf("IMAP 垃圾邮件目录发现连续失败 %d 次: %v", consecutiveSelectFail, err)
+				}
+				time.Sleep(time.Duration(interval) * time.Second)
 				continue
 			}
-			code := extractCodeFromText(body, codeRegex)
+			if junkMailbox != "" {
+				folders = append(folders, imapPollFolder{mailbox: junkMailbox, label: "垃圾邮件", before: counts.Junk})
+			}
+		}
+
+		hadNewMessages := false
+		var selectErr error
+		for _, folder := range folders {
+			code, total, err := findOTPInIMAPMailbox(client, folder, codeRegex)
+			if err != nil {
+				selectErr = err
+				break
+			}
+			if total > folder.before {
+				hadNewMessages = true
+			}
 			if code != "" {
-				log.Printf("[Outlook IMAP] 获取到验证码: %s", code)
 				client.close()
 				return code, nil
 			}
 		}
-
 		client.close()
+		if selectErr != nil {
+			consecutiveSelectFail++
+			if consecutiveSelectFail >= maxConsecutiveSelectFail {
+				log.Printf("[Outlook IMAP] 邮箱 %s 连续 %d 次 SELECT 失败，放弃等待", acc.Email, consecutiveSelectFail)
+				return "", fmt.Errorf("IMAP SELECT 连续失败 %d 次: %v", consecutiveSelectFail, selectErr)
+			}
+			log.Printf("[Outlook IMAP] SELECT 失败 (%d/%d): %v", consecutiveSelectFail, maxConsecutiveSelectFail, selectErr)
+			time.Sleep(time.Duration(interval) * time.Second)
+			continue
+		}
+		consecutiveSelectFail = 0
 		if attempt%5 == 0 {
-			log.Printf("[Outlook IMAP] [%d/%d] 新邮件中未找到验证码...", attempt, maxRetries)
+			if hadNewMessages {
+				log.Printf("[Outlook IMAP] [%d/%d] 新邮件中未找到验证码...", attempt, maxRetries)
+			} else {
+				log.Printf("[Outlook IMAP] [%d/%d] 收件箱和垃圾邮件中暂无新邮件...", attempt, maxRetries)
+			}
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
@@ -450,15 +564,28 @@ func GetInboxCount(acc OutlookAccount) (int, error) {
 
 // GetInboxCountWithProxy reads the baseline count through the explicit mailbox proxy.
 func GetInboxCountWithProxy(acc OutlookAccount, proxyURL string) (int, error) {
+	counts, err := GetOutlookMailboxCountsWithProxy(acc, proxyURL)
+	return counts.Inbox, err
+}
+
+// GetOutlookMailboxCounts records Inbox and Junk counts before requesting an OTP.
+func GetOutlookMailboxCounts(acc OutlookAccount) (OutlookMailboxCounts, error) {
+	return GetOutlookMailboxCountsWithProxy(acc, storage.GetProxy())
+}
+
+// GetOutlookMailboxCountsWithProxy reads both Outlook OTP folder baselines.
+func GetOutlookMailboxCountsWithProxy(acc OutlookAccount, proxyURL string) (OutlookMailboxCounts, error) {
 	if acc.mailMode() == "graph" {
-		return getInboxCountGraph(acc, proxyURL)
+		return getMailboxCountsGraph(acc, proxyURL)
 	}
 	accessToken, err := RefreshOutlookTokenWithProxy(acc, proxyURL)
 	if err != nil {
-		return 0, fmt.Errorf("刷新 Outlook Token 失败: %v", err)
+		return OutlookMailboxCounts{Junk: -1}, fmt.Errorf("刷新 Outlook Token 失败: %v", err)
 	}
 
 	var lastErr error
+	fallback := OutlookMailboxCounts{Junk: -1}
+	hasInboxBaseline := false
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			time.Sleep(time.Duration(1+attempt) * time.Second)
@@ -473,15 +600,39 @@ func GetInboxCountWithProxy(acc OutlookAccount, proxyURL string) (int, error) {
 			lastErr = fmt.Errorf("IMAP 认证失败: %v", err)
 			continue
 		}
-		total, err := client.selectInbox()
+		inboxTotal, err := client.selectInbox()
 		if err != nil {
 			client.close()
 			lastErr = fmt.Errorf("选择收件箱失败: %v", err)
 			log.Printf("[IMAP] GetInboxCount 失败，重连重试 %d/3...", attempt+1)
 			continue
 		}
+		fallback.Inbox = inboxTotal
+		hasInboxBaseline = true
+
+		junkMailbox, err := client.findJunkMailbox()
+		if err != nil {
+			client.close()
+			lastErr = fmt.Errorf("发现垃圾邮件目录失败: %v", err)
+			continue
+		}
+		if junkMailbox == "" {
+			client.close()
+			log.Println("[IMAP] 未发现垃圾邮件目录，继续仅监控收件箱")
+			return fallback, nil
+		}
+		junkTotal, err := client.selectMailbox(junkMailbox)
+		if err != nil {
+			client.close()
+			lastErr = fmt.Errorf("选择垃圾邮件目录失败: %v", err)
+			continue
+		}
 		client.close()
-		return total, nil
+		return OutlookMailboxCounts{Inbox: inboxTotal, Junk: junkTotal}, nil
 	}
-	return 0, lastErr
+	if hasInboxBaseline {
+		log.Printf("[IMAP] 垃圾邮件目录基线读取失败，继续仅监控收件箱: %v", lastErr)
+		return fallback, nil
+	}
+	return OutlookMailboxCounts{Junk: -1}, lastErr
 }
