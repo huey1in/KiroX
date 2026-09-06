@@ -47,21 +47,20 @@ func StartTask(req StartTaskRequest) map[string]interface{} {
 
 // startTask 启动注册任务（私有方法）
 func startTask(req StartTaskRequest) map[string]interface{} {
-	settings := storage.GetAppSettings()
 	if req.Count <= 0 {
-		req.Count = settings.DefaultCount
+		req.Count = 1
 	}
 	if req.Concurrency <= 0 {
-		req.Concurrency = settings.DefaultConcurrency
+		req.Concurrency = 1
 	}
 	if req.Delay < 0 {
-		req.Delay = settings.DefaultDelay
+		req.Delay = 1
 	}
 	if req.EmailProvider == "" {
-		req.EmailProvider = settings.DefaultEmailProvider
+		req.EmailProvider = "outlook"
 	}
 	if !req.ProxyConfigured {
-		req.Proxy = settings.DefaultTaskProxy
+		req.Proxy = ""
 	}
 	Manager.mu.Lock()
 	if Manager.running {
@@ -227,8 +226,8 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	taskConfig.OTPTimeout = settings.OTPTimeoutSeconds
 	taskConfig.TelemetryEnabled = settings.TelemetryEnabled
 	taskConfig.HTTPRetries = map[string]int{"fast": 0, "standard": 2, "stable": 3}[settings.RetryProfile]
-	taskConfig.FingerprintAlgorithm = settings.FingerprintAlgorithm
 	taskConfig.FingerprintOffsets = append([]int(nil), settings.FingerprintOffsets...)
+	taskConfig.FingerprintCurvePositions = append([]int(nil), settings.FingerprintCurvePositions...)
 	taskConfig.EmailProvider = emailProvider
 	taskConfig.Proxy = req.Proxy
 	switch settings.EmailProxyMode {

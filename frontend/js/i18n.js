@@ -60,7 +60,7 @@
         available: '可用', unavailable: '不可用',
       },
       overview: {
-        kiroAccounts: 'Kiro 账号数', successRate: '注册成功率',
+        kiroAccounts: 'Kiro 账号数', successRate: '注册成功率', taskControl: '任务控制',
         liveStatus: '实时状态', progress: '进度', success: '成功', failed: '失败',
         elapsed: '已耗时', eta: '预计剩余', avg: '平均耗时', rate: '成功率',
         newTask: '新建任务', stop: '停止'
@@ -73,9 +73,8 @@
         wechatPay: '微信支付', alipay: '支付宝'
       },
       settings: {
-        title: '设置', subtitle: '配置默认任务、通知和运行策略', save: '保存设置', saved: '设置已保存',
-        general: '常规', notification: '通知', taskDefaults: '注册默认值', networkResilience: '邮箱与容错',
-        defaultCount: '默认注册数量', defaultConcurrency: '默认并发数', defaultDelay: '默认串行间隔（秒）', defaultProvider: '默认邮箱提供商', defaultProxy: '默认任务代理', domainMode: '默认域名模式', random: '随机', roundRobin: '轮询',
+        title: '设置', subtitle: '配置通知、运行策略和高级选项', save: '保存设置', saved: '设置已保存',
+        general: '常规', notification: '通知', networkResilience: '邮箱与容错',
         emailProxyMode: '邮箱取件网络', emailProxy: '邮箱自定义代理', direct: '直连', followTask: '跟随任务代理', customProxy: '自定义代理', otpTimeout: '验证码等待时间', retryProfile: '重试策略', retryFast: '快速（不重试）', retryStandard: '标准（1 次）', retryStable: '稳定（2 次）', stopOnRisk: '风控错误时停止整批任务', stopOnRiskDesc: '避免继续消耗邮箱和代理额度',
         dataDir: '存储目录', dataDirDesc: '邮箱池、邮箱服务配置和代理池的存储位置；默认位于本机应用数据目录',
         dataDirPlaceholder: '默认存储路径',
@@ -87,7 +86,7 @@
         appearance: '外观与更新', theme: '主题', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色', language: '界面语言', autoUpdate: '启动时自动检查更新',
         maintenance: '维护', logRetention: '日志保留天数', moeExpiry: 'MoeMail 有效期（分钟）', persistentLogs: '持久化运行日志', persistentLogsDesc: '落盘前自动遮蔽验证码与令牌', autoProbe: '进入 IP 管理时探测新代理', openLogs: '打开日志目录', clearLogs: '清理日志', clearFingerprint: '清理指纹缓存', logsCleared: '日志已清理', fingerprintCleared: '指纹缓存已清理', clearLogsConfirm: '确定删除全部持久化日志吗？', clearFingerprintConfirm: '确定清理全部指纹缓存吗？',
         advanced: '高级配置', advancedDesc: '服务端点与底层网络参数', advancedInlineWarning: '这些参数直接影响注册协议，修改后请先用少量任务验证。', advancedWarningTitle: '打开高级配置？', advancedWarning: '修改服务端点或底层网络参数可能导致注册失败、账号风控或接口不可用。仅在明确知道参数用途时继续。', continueOpen: '继续打开', requestTimeout: '网络请求超时（秒）', fingerprintTTL: '指纹缓存时长（小时）', telemetry: '协议遥测',
-        fingerprintAlgorithm: '指纹偏移曲线', fingerprintAlgorithmDesc: '控制各指纹域相对缓存身份的重采样强度', fpPresets: '指纹曲线预设', fpStable: '稳定', fpBalanced: '均衡', fpFresh: '全新', fpCompositeCurve: '综合偏移', fpAverageOffset: '平均偏移', fpBrowser: '浏览器', fpHardware: '硬件', fpDisplay: '显示', fpRendering: '渲染', fpSession: '会话', fpReuse: '复用缓存', fpRegenerate: '重新采样'
+        fingerprintAlgorithm: '指纹偏移曲线', fingerprintAlgorithmDesc: '控制各指纹域相对缓存身份的重采样强度', fpCompositeCurve: '综合偏移', fpAverageOffset: '平均偏移', fpControlPoint: '曲线控制点', fpBrowser: '浏览器', fpPlatform: '平台', fpPlugins: '插件', fpResources: 'CPU / 内存', fpGPU: 'GPU / WebGL', fpScreen: '屏幕', fpTimezone: '时区', fpCanvas: 'Canvas', fpMath: '数学运行时', fpSession: '会话', fpReuse: '复用缓存', fpRegenerate: '重新采样'
       },
       logs: { title: '运行日志', copyLog: '复制日志', empty: '暂无日志' },
       register: {
@@ -265,7 +264,7 @@
         available: 'Available', unavailable: 'Unavailable',
       },
       overview: {
-        kiroAccounts: 'Kiro accounts', successRate: 'Success rate',
+        kiroAccounts: 'Kiro accounts', successRate: 'Success rate', taskControl: 'Task control',
         liveStatus: 'Live status', progress: 'Progress', success: 'Success', failed: 'Failed',
         elapsed: 'Elapsed', eta: 'ETA', avg: 'Average', rate: 'Rate',
         newTask: 'New task', stop: 'Stop'
@@ -278,9 +277,8 @@
         wechatPay: 'WeChat Pay', alipay: 'Alipay'
       },
       settings: {
-        title: 'Settings', subtitle: 'Configure task defaults, notifications, and runtime policies', save: 'Save settings', saved: 'Settings saved',
-        general: 'General', notification: 'Notifications', taskDefaults: 'Registration defaults', networkResilience: 'Email and resilience',
-        defaultCount: 'Default count', defaultConcurrency: 'Default concurrency', defaultDelay: 'Default serial delay (seconds)', defaultProvider: 'Default email provider', defaultProxy: 'Default task proxy', domainMode: 'Default domain mode', random: 'Random', roundRobin: 'Round-robin',
+        title: 'Settings', subtitle: 'Configure notifications, runtime policies, and advanced options', save: 'Save settings', saved: 'Settings saved',
+        general: 'General', notification: 'Notifications', networkResilience: 'Email and resilience',
         emailProxyMode: 'Mailbox network', emailProxy: 'Custom mailbox proxy', direct: 'Direct', followTask: 'Follow task proxy', customProxy: 'Custom proxy', otpTimeout: 'Verification-code timeout', retryProfile: 'Retry profile', retryFast: 'Fast (no retry)', retryStandard: 'Standard (1 retry)', retryStable: 'Stable (2 retries)', stopOnRisk: 'Stop the batch on risk errors', stopOnRiskDesc: 'Prevents further mailbox and proxy usage',
         dataDir: 'Data directory', dataDirDesc: 'Storage for mailbox pools, mail service settings, and the proxy pool; defaults to local app data',
         dataDirPlaceholder: 'Default path',
@@ -292,7 +290,7 @@
         appearance: 'Appearance and updates', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', language: 'Language', autoUpdate: 'Check for updates at startup',
         maintenance: 'Maintenance', logRetention: 'Log retention days', moeExpiry: 'MoeMail lifetime (minutes)', persistentLogs: 'Persist runtime logs', persistentLogsDesc: 'Codes and tokens are redacted before writing', autoProbe: 'Probe new proxies when opening IP management', openLogs: 'Open log directory', clearLogs: 'Clear logs', clearFingerprint: 'Clear fingerprint cache', logsCleared: 'Logs cleared', fingerprintCleared: 'Fingerprint cache cleared', clearLogsConfirm: 'Delete all persisted logs?', clearFingerprintConfirm: 'Clear the entire fingerprint cache?',
         advanced: 'Advanced settings', advancedDesc: 'Service endpoints and low-level network options', advancedInlineWarning: 'These values directly affect the registration protocol. Validate changes with a small task first.', advancedWarningTitle: 'Open advanced settings?', advancedWarning: 'Changing service endpoints or low-level network options can break registration, trigger risk controls, or make APIs unavailable. Continue only if you understand the parameters.', continueOpen: 'Continue', requestTimeout: 'Request timeout (seconds)', fingerprintTTL: 'Fingerprint cache (hours)', telemetry: 'Protocol telemetry',
-        fingerprintAlgorithm: 'Fingerprint offset curve', fingerprintAlgorithmDesc: 'Controls the resampling intensity of each fingerprint domain against the cached identity', fpPresets: 'Fingerprint curve presets', fpStable: 'Stable', fpBalanced: 'Balanced', fpFresh: 'Fresh', fpCompositeCurve: 'Composite offset', fpAverageOffset: 'Average offset', fpBrowser: 'Browser', fpHardware: 'Hardware', fpDisplay: 'Display', fpRendering: 'Rendering', fpSession: 'Session', fpReuse: 'Reuse cache', fpRegenerate: 'Resample'
+        fingerprintAlgorithm: 'Fingerprint offset curve', fingerprintAlgorithmDesc: 'Controls the resampling intensity of each fingerprint domain against the cached identity', fpCompositeCurve: 'Composite offset', fpAverageOffset: 'Average offset', fpControlPoint: 'Curve control point', fpBrowser: 'Browser', fpPlatform: 'Platform', fpPlugins: 'Plugins', fpResources: 'CPU / memory', fpGPU: 'GPU / WebGL', fpScreen: 'Screen', fpTimezone: 'Timezone', fpCanvas: 'Canvas', fpMath: 'Math runtime', fpSession: 'Session', fpReuse: 'Reuse cache', fpRegenerate: 'Resample'
       },
       logs: { title: 'Logs', copyLog: 'Copy logs', empty: 'No logs' },
       register: {
@@ -470,7 +468,7 @@
         available: '利用可能', unavailable: '利用不可',
       },
       overview: {
-        kiroAccounts: 'Kiro アカウント数', successRate: '登録成功率',
+        kiroAccounts: 'Kiro アカウント数', successRate: '登録成功率', taskControl: 'タスク操作',
         liveStatus: 'リアルタイム状態', progress: '進行状況', success: '成功', failed: '失敗',
         elapsed: '経過時間', eta: '残り時間', avg: '平均', rate: '成功率',
         newTask: '新規タスク', stop: '停止'
@@ -483,9 +481,8 @@
         wechatPay: 'WeChat Pay', alipay: 'Alipay'
       },
       settings: {
-        title: '設定', subtitle: 'タスク既定値、通知、実行ポリシーを設定', save: '設定を保存', saved: '設定を保存しました',
-        general: '一般', notification: '通知', taskDefaults: '登録の既定値', networkResilience: 'メールと耐障害性',
-        defaultCount: '既定の登録数', defaultConcurrency: '既定の同時実行数', defaultDelay: '既定の直列間隔（秒）', defaultProvider: '既定のメールプロバイダ', defaultProxy: '既定のタスクプロキシ', domainMode: '既定のドメイン方式', random: 'ランダム', roundRobin: 'ラウンドロビン',
+        title: '設定', subtitle: '通知、実行ポリシー、詳細設定を構成', save: '設定を保存', saved: '設定を保存しました',
+        general: '一般', notification: '通知', networkResilience: 'メールと耐障害性',
         emailProxyMode: 'メール取得ネットワーク', emailProxy: 'メール用カスタムプロキシ', direct: '直接接続', followTask: 'タスクプロキシに従う', customProxy: 'カスタムプロキシ', otpTimeout: '認証コード待機時間', retryProfile: '再試行ポリシー', retryFast: '高速（再試行なし）', retryStandard: '標準（1 回）', retryStable: '安定（2 回）', stopOnRisk: 'リスクエラー時に一括停止', stopOnRiskDesc: 'メールとプロキシの追加消費を防ぎます',
         dataDir: 'データディレクトリ', dataDirDesc: 'メールボックス、メールサービス設定、プロキシプールの保存先。既定ではローカルアプリデータ内です',
         dataDirPlaceholder: 'デフォルトパス',
@@ -497,7 +494,7 @@
         appearance: '外観と更新', theme: 'テーマ', themeSystem: 'システム設定', themeLight: 'ライト', themeDark: 'ダーク', language: '表示言語', autoUpdate: '起動時に更新を確認',
         maintenance: 'メンテナンス', logRetention: 'ログ保持日数', moeExpiry: 'MoeMail 有効期間（分）', persistentLogs: '実行ログを保存', persistentLogsDesc: '保存前にコードとトークンを隠します', autoProbe: 'IP 管理を開くとき新規プロキシを検査', openLogs: 'ログフォルダを開く', clearLogs: 'ログを削除', clearFingerprint: '指紋キャッシュを削除', logsCleared: 'ログを削除しました', fingerprintCleared: '指紋キャッシュを削除しました', clearLogsConfirm: '保存済みログをすべて削除しますか？', clearFingerprintConfirm: '指紋キャッシュをすべて削除しますか？',
         advanced: '詳細設定', advancedDesc: 'サービスエンドポイントと低レベルネットワーク設定', advancedInlineWarning: '登録プロトコルへ直接影響します。変更後は少数タスクで確認してください。', advancedWarningTitle: '詳細設定を開きますか？', advancedWarning: 'サービスエンドポイントや低レベルネットワーク設定を変えると、登録失敗、リスク検出、API 利用不能の原因になります。用途を理解している場合のみ続行してください。', continueOpen: '続行', requestTimeout: '通信タイムアウト（秒）', fingerprintTTL: '指紋キャッシュ（時間）', telemetry: 'プロトコルテレメトリ',
-        fingerprintAlgorithm: '指紋オフセット曲線', fingerprintAlgorithmDesc: 'キャッシュ済み ID に対する各指紋領域の再サンプリング強度を制御します', fpPresets: '指紋曲線プリセット', fpStable: '安定', fpBalanced: 'バランス', fpFresh: '新規', fpCompositeCurve: '総合オフセット', fpAverageOffset: '平均オフセット', fpBrowser: 'ブラウザ', fpHardware: 'ハードウェア', fpDisplay: '表示', fpRendering: '描画', fpSession: 'セッション', fpReuse: 'キャッシュを再利用', fpRegenerate: '再サンプリング'
+        fingerprintAlgorithm: '指紋オフセット曲線', fingerprintAlgorithmDesc: 'キャッシュ済み ID に対する各指紋領域の再サンプリング強度を制御します', fpCompositeCurve: '総合オフセット', fpAverageOffset: '平均オフセット', fpControlPoint: '曲線制御点', fpBrowser: 'ブラウザ', fpPlatform: 'プラットフォーム', fpPlugins: 'プラグイン', fpResources: 'CPU / メモリ', fpGPU: 'GPU / WebGL', fpScreen: '画面', fpTimezone: 'タイムゾーン', fpCanvas: 'Canvas', fpMath: '数値演算', fpSession: 'セッション', fpReuse: 'キャッシュを再利用', fpRegenerate: '再サンプリング'
       },
       logs: { title: 'ログ', copyLog: 'ログをコピー', empty: 'ログなし' },
       register: {

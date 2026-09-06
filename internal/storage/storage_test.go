@@ -136,17 +136,14 @@ func TestSchemaTwoSettingsGainRecommendedRuntimeDefaults(t *testing.T) {
 	writeTestFile(t, path, `{"schemaVersion":2,"language":"en"}`)
 
 	settings := GetAppSettings()
-	if settings.DefaultCount != 1 || settings.DefaultConcurrency != 1 || settings.DefaultDelay != 1 {
-		t.Fatalf("unexpected task defaults: %+v", settings)
-	}
 	if settings.EmailProxyMode != "follow-task" || settings.OTPTimeoutSeconds != 120 || !settings.StopOnRisk {
 		t.Fatalf("unexpected resilience defaults: %+v", settings)
 	}
-	if settings.FingerprintAlgorithm != "balanced" {
-		t.Fatalf("unexpected fingerprint algorithm: %q", settings.FingerprintAlgorithm)
-	}
-	if got := fmt.Sprint(settings.FingerprintOffsets); got != "[0 0 0 15 100]" {
+	if got := fmt.Sprint(settings.FingerprintOffsets); got != "[0 0 0 0 0 0 0 15 15 100]" {
 		t.Fatalf("unexpected fingerprint offsets: %s", got)
+	}
+	if got := fmt.Sprint(settings.FingerprintCurvePositions); got != "[0 11 22 33 44 56 67 78 89 100]" {
+		t.Fatalf("unexpected fingerprint curve positions: %s", got)
 	}
 	if settings.Language != "en" || settings.Theme != "system" || !settings.AutoCheckUpdates {
 		t.Fatalf("legacy language or interface defaults were not migrated: %+v", settings)
@@ -156,25 +153,22 @@ func TestSchemaTwoSettingsGainRecommendedRuntimeDefaults(t *testing.T) {
 func TestSaveAppSettingsNormalizesBoundsAndRejectsInvalidEndpoint(t *testing.T) {
 	isolateStorageLayout(t)
 	settings := DefaultAppSettings()
-	settings.DefaultCount = 999
-	settings.DefaultConcurrency = 0
 	settings.SoundVolume = 150
 	settings.EmailProxyMode = "custom"
 	settings.EmailProxy = "127.0.0.1:1080"
-	settings.FingerprintAlgorithm = "unknown"
 
 	saved, err := SaveAppSettings(settings)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if saved.DefaultCount != 1 || saved.DefaultConcurrency != 1 || saved.SoundVolume != 70 {
+	if saved.SoundVolume != 70 {
 		t.Fatalf("numeric settings were not normalized: %+v", saved)
 	}
 	if saved.EmailProxy != "socks5://127.0.0.1:1080" {
 		t.Fatalf("custom email proxy = %q", saved.EmailProxy)
 	}
-	if saved.FingerprintAlgorithm != "balanced" {
-		t.Fatalf("fingerprint algorithm = %q", saved.FingerprintAlgorithm)
+	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 0 0 0 0 0 0 15 15 100]" {
+		t.Fatalf("fingerprint defaults = %s", got)
 	}
 
 	settings = saved
@@ -183,8 +177,22 @@ func TestSaveAppSettingsNormalizesBoundsAndRejectsInvalidEndpoint(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 25 50 75 100]" || saved.FingerprintAlgorithm != "custom" {
-		t.Fatalf("custom fingerprint curve was not normalized: %s (%s)", got, saved.FingerprintAlgorithm)
+	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 25 0 25 25 50 50 75 75 100]" {
+		t.Fatalf("legacy fingerprint curve was not migrated: %s", got)
+	}
+
+	settings = saved
+	settings.FingerprintOffsets = []int{-10, 10, 20, 30, 40, 50, 60, 70, 80, 120}
+	settings.FingerprintCurvePositions = []int{-10, 50, 51, 52, 53, 54, 55, 56, 57, 120}
+	saved, err = SaveAppSettings(settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 10 20 30 40 50 60 70 80 100]" {
+		t.Fatalf("expanded fingerprint curve was not normalized: %s", got)
+	}
+	if got := fmt.Sprint(saved.FingerprintCurvePositions); got != "[0 50 52 54 56 58 60 62 64 100]" {
+		t.Fatalf("fingerprint curve positions were not normalized: %s", got)
 	}
 
 	settings = saved

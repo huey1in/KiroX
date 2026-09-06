@@ -74,7 +74,7 @@ type Registrar struct {
 // NewRegistrar 创建注册器
 func NewRegistrar(cfg *Config) *Registrar {
 	// 每个曲线点控制一个指纹域相对缓存身份的重采样概率。
-	identity := browser.IdentityForOffsets(cfg.Proxy, cfg.FingerprintOffsets)
+	identity := browser.IdentityForOffsets(cfg.Proxy, cfg.FingerprintOffsets, cfg.FingerprintCurvePositions)
 	log.Printf("[指纹] Chrome: %s | GPU: %s | 内存: %dGB | 核心: %d | 分辨率: %dx%d (%d-bit)",
 		identity.ChromeVer, identity.GPUModel, identity.DeviceMemory, identity.HardwareConcurrency,
 		identity.Screen.Width, identity.Screen.Height, identity.Screen.ColorDepth)

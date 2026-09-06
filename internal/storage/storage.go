@@ -44,100 +44,79 @@ type settingsFile struct {
 	Runtime         AppSettings `json:"runtime"`
 }
 
-// AppSettings contains user-facing runtime defaults and advanced service overrides.
+// AppSettings contains user-facing runtime and advanced service overrides.
 // Directory settings stay at the root of settings.json because they are needed before
 // the rest of the application is initialized.
 type AppSettings struct {
-	DefaultCount          int    `json:"defaultCount"`
-	DefaultConcurrency    int    `json:"defaultConcurrency"`
-	DefaultDelay          int    `json:"defaultDelay"`
-	DefaultEmailProvider  string `json:"defaultEmailProvider"`
-	DefaultTaskProxy      string `json:"defaultTaskProxy"`
-	DefaultDomainMode     string `json:"defaultDomainMode"`
-	EmailProxyMode        string `json:"emailProxyMode"`
-	EmailProxy            string `json:"emailProxy"`
-	OTPTimeoutSeconds     int    `json:"otpTimeoutSeconds"`
-	RetryProfile          string `json:"retryProfile"`
-	StopOnRisk            bool   `json:"stopOnRisk"`
-	SoundEnabled          bool   `json:"soundEnabled"`
-	DesktopNotifications  bool   `json:"desktopNotifications"`
-	SoundVolume           int    `json:"soundVolume"`
-	AutoCheckUpdates      bool   `json:"autoCheckUpdates"`
-	Theme                 string `json:"theme"`
-	Language              string `json:"language"`
-	PersistentLogs        bool   `json:"persistentLogs"`
-	LogRetentionDays      int    `json:"logRetentionDays"`
-	AutoProbeProxies      bool   `json:"autoProbeProxies"`
-	MoeMailExpiryMinutes  int    `json:"moeMailExpiryMinutes"`
-	AWSRegion             string `json:"awsRegion"`
-	RequestTimeoutSeconds int    `json:"requestTimeoutSeconds"`
-	FingerprintTTLHours   int    `json:"fingerprintTTLHours"`
-	FingerprintAlgorithm  string `json:"fingerprintAlgorithm"`
-	FingerprintOffsets    []int  `json:"fingerprintOffsets"`
-	TelemetryEnabled      bool   `json:"telemetryEnabled"`
-	OIDCBase              string `json:"oidcBase"`
-	SigninBase            string `json:"signinBase"`
-	ProfileBase           string `json:"profileBase"`
-	ViewBase              string `json:"viewBase"`
-	PortalBase            string `json:"portalBase"`
-	StartURL              string `json:"startURL"`
-	KiroBase              string `json:"kiroBase"`
-	KiroRedirectURI       string `json:"kiroRedirectURI"`
-	DirectoryID           string `json:"directoryID"`
+	EmailProxyMode            string `json:"emailProxyMode"`
+	EmailProxy                string `json:"emailProxy"`
+	OTPTimeoutSeconds         int    `json:"otpTimeoutSeconds"`
+	RetryProfile              string `json:"retryProfile"`
+	StopOnRisk                bool   `json:"stopOnRisk"`
+	SoundEnabled              bool   `json:"soundEnabled"`
+	DesktopNotifications      bool   `json:"desktopNotifications"`
+	SoundVolume               int    `json:"soundVolume"`
+	AutoCheckUpdates          bool   `json:"autoCheckUpdates"`
+	Theme                     string `json:"theme"`
+	Language                  string `json:"language"`
+	PersistentLogs            bool   `json:"persistentLogs"`
+	LogRetentionDays          int    `json:"logRetentionDays"`
+	AutoProbeProxies          bool   `json:"autoProbeProxies"`
+	MoeMailExpiryMinutes      int    `json:"moeMailExpiryMinutes"`
+	AWSRegion                 string `json:"awsRegion"`
+	RequestTimeoutSeconds     int    `json:"requestTimeoutSeconds"`
+	FingerprintTTLHours       int    `json:"fingerprintTTLHours"`
+	FingerprintOffsets        []int  `json:"fingerprintOffsets"`
+	FingerprintCurvePositions []int  `json:"fingerprintCurvePositions"`
+	TelemetryEnabled          bool   `json:"telemetryEnabled"`
+	OIDCBase                  string `json:"oidcBase"`
+	SigninBase                string `json:"signinBase"`
+	ProfileBase               string `json:"profileBase"`
+	ViewBase                  string `json:"viewBase"`
+	PortalBase                string `json:"portalBase"`
+	StartURL                  string `json:"startURL"`
+	KiroBase                  string `json:"kiroBase"`
+	KiroRedirectURI           string `json:"kiroRedirectURI"`
+	DirectoryID               string `json:"directoryID"`
 }
 
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		DefaultCount:          1,
-		DefaultConcurrency:    1,
-		DefaultDelay:          1,
-		DefaultEmailProvider:  "outlook",
-		DefaultDomainMode:     "random",
-		EmailProxyMode:        "follow-task",
-		OTPTimeoutSeconds:     120,
-		RetryProfile:          "standard",
-		StopOnRisk:            true,
-		SoundEnabled:          true,
-		DesktopNotifications:  true,
-		SoundVolume:           70,
-		AutoCheckUpdates:      true,
-		Theme:                 "system",
-		LogRetentionDays:      7,
-		AutoProbeProxies:      true,
-		MoeMailExpiryMinutes:  60,
-		AWSRegion:             "us-east-1",
-		RequestTimeoutSeconds: 60,
-		FingerprintTTLHours:   6,
-		FingerprintAlgorithm:  "balanced",
-		FingerprintOffsets:    []int{0, 0, 0, 15, 100},
-		TelemetryEnabled:      true,
-		OIDCBase:              "https://oidc.us-east-1.amazonaws.com",
-		SigninBase:            "https://us-east-1.signin.aws",
-		ProfileBase:           "https://profile.aws.amazon.com",
-		ViewBase:              "https://view.awsapps.com",
-		PortalBase:            "https://portal.sso.us-east-1.amazonaws.com",
-		StartURL:              "https://view.awsapps.com/start",
-		KiroBase:              "https://app.kiro.dev",
-		KiroRedirectURI:       "https://app.kiro.dev/signin/oauth",
-		DirectoryID:           "d-9067642ac7",
+		EmailProxyMode:            "follow-task",
+		OTPTimeoutSeconds:         120,
+		RetryProfile:              "standard",
+		StopOnRisk:                true,
+		SoundEnabled:              true,
+		DesktopNotifications:      true,
+		SoundVolume:               70,
+		AutoCheckUpdates:          true,
+		Theme:                     "system",
+		LogRetentionDays:          7,
+		AutoProbeProxies:          true,
+		MoeMailExpiryMinutes:      60,
+		AWSRegion:                 "us-east-1",
+		RequestTimeoutSeconds:     60,
+		FingerprintTTLHours:       6,
+		FingerprintOffsets:        []int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100},
+		FingerprintCurvePositions: []int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100},
+		TelemetryEnabled:          true,
+		OIDCBase:                  "https://oidc.us-east-1.amazonaws.com",
+		SigninBase:                "https://us-east-1.signin.aws",
+		ProfileBase:               "https://profile.aws.amazon.com",
+		ViewBase:                  "https://view.awsapps.com",
+		PortalBase:                "https://portal.sso.us-east-1.amazonaws.com",
+		StartURL:                  "https://view.awsapps.com/start",
+		KiroBase:                  "https://app.kiro.dev",
+		KiroRedirectURI:           "https://app.kiro.dev/signin/oauth",
+		DirectoryID:               "d-9067642ac7",
 	}
 }
 
 func normalizeAppSettings(s AppSettings) AppSettings {
 	d := DefaultAppSettings()
-	s.DefaultCount = clampDefault(s.DefaultCount, 1, 100, d.DefaultCount)
-	s.DefaultConcurrency = clampDefault(s.DefaultConcurrency, 1, 10, d.DefaultConcurrency)
-	s.DefaultDelay = clampDefault(s.DefaultDelay, 0, 300, d.DefaultDelay)
-	if !oneOf(s.DefaultEmailProvider, "outlook", "moemail", "cloudmail", "mailnest", "icloud") {
-		s.DefaultEmailProvider = d.DefaultEmailProvider
-	}
-	if !oneOf(s.DefaultDomainMode, "random", "round-robin") {
-		s.DefaultDomainMode = d.DefaultDomainMode
-	}
 	if !oneOf(s.EmailProxyMode, "direct", "follow-task", "custom") {
 		s.EmailProxyMode = d.EmailProxyMode
 	}
-	s.DefaultTaskProxy = NormalizeProxyAddress(strings.TrimSpace(s.DefaultTaskProxy))
 	s.EmailProxy = NormalizeProxyAddress(strings.TrimSpace(s.EmailProxy))
 	if s.EmailProxyMode != "custom" {
 		s.EmailProxy = ""
@@ -159,11 +138,8 @@ func normalizeAppSettings(s AppSettings) AppSettings {
 	s.MoeMailExpiryMinutes = clampDefault(s.MoeMailExpiryMinutes, 10, 1440, d.MoeMailExpiryMinutes)
 	s.RequestTimeoutSeconds = clampDefault(s.RequestTimeoutSeconds, 10, 180, d.RequestTimeoutSeconds)
 	s.FingerprintTTLHours = clampDefault(s.FingerprintTTLHours, 1, 168, d.FingerprintTTLHours)
-	if !oneOf(s.FingerprintAlgorithm, "stable", "balanced", "fresh", "custom") {
-		s.FingerprintAlgorithm = d.FingerprintAlgorithm
-	}
-	s.FingerprintOffsets = normalizeFingerprintOffsets(s.FingerprintOffsets, s.FingerprintAlgorithm)
-	s.FingerprintAlgorithm = fingerprintCurvePreset(s.FingerprintOffsets)
+	s.FingerprintOffsets = normalizeFingerprintOffsets(s.FingerprintOffsets)
+	s.FingerprintCurvePositions = normalizeFingerprintCurvePositions(s.FingerprintCurvePositions)
 	if strings.TrimSpace(s.AWSRegion) == "" {
 		s.AWSRegion = d.AWSRegion
 	}
@@ -204,18 +180,14 @@ func clampDefault(value, minValue, maxValue, fallback int) int {
 	return value
 }
 
-func normalizeFingerprintOffsets(values []int, legacyAlgorithm string) []int {
-	if len(values) != 5 {
-		switch legacyAlgorithm {
-		case "stable":
-			values = []int{0, 0, 0, 0, 0}
-		case "fresh":
-			values = []int{100, 100, 100, 100, 100}
-		default:
-			values = []int{0, 0, 0, 15, 100}
-		}
+func normalizeFingerprintOffsets(values []int) []int {
+	if len(values) == 5 {
+		values = []int{values[0], values[1], values[0], values[1], values[1], values[2], values[2], values[3], values[3], values[4]}
 	}
-	normalized := make([]int, 5)
+	if len(values) != 10 {
+		values = []int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100}
+	}
+	normalized := make([]int, 10)
 	for i, value := range values {
 		if value < 0 {
 			value = 0
@@ -227,25 +199,25 @@ func normalizeFingerprintOffsets(values []int, legacyAlgorithm string) []int {
 	return normalized
 }
 
-func fingerprintCurvePreset(values []int) string {
-	presets := map[string][]int{
-		"stable":   {0, 0, 0, 0, 0},
-		"balanced": {0, 0, 0, 15, 100},
-		"fresh":    {100, 100, 100, 100, 100},
+func normalizeFingerprintCurvePositions(values []int) []int {
+	if len(values) != 10 {
+		return []int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100}
 	}
-	for name, preset := range presets {
-		matched := len(values) == len(preset)
-		for i := range preset {
-			if !matched || values[i] != preset[i] {
-				matched = false
-				break
-			}
+	normalized := make([]int, 10)
+	for i, value := range values {
+		minValue := 0
+		if i > 0 {
+			minValue = normalized[i-1] + 2
 		}
-		if matched {
-			return name
+		maxValue := 100 - (len(values)-1-i)*2
+		if value < minValue {
+			value = minValue
+		} else if value > maxValue {
+			value = maxValue
 		}
+		normalized[i] = value
 	}
-	return "custom"
+	return normalized
 }
 
 func oneOf(value string, allowed ...string) bool {

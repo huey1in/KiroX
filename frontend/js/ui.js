@@ -143,7 +143,7 @@ function escapeHtml(text) {
 
 // 初始化邮箱提供商选择（页面加载时调用）
 function initEmailProviderSelection() {
-  let provider = (window.appSettings && window.appSettings.defaultEmailProvider) || 'outlook';
+  let provider = 'outlook';
   selectEmailProvider(provider);
 }
 
@@ -252,7 +252,7 @@ async function loadMoeMailDomainsToList() {
     html += '</div>';
 
     listDiv.innerHTML = html;
-    selectedMoeMailDomains = [(window.appSettings && window.appSettings.defaultDomainMode === 'round-robin') ? '__all__' : '__random__'];
+    selectedMoeMailDomains = ['__random__'];
     updateDomainOptionStyles();
 
   } catch (e) {
@@ -367,7 +367,7 @@ async function loadCloudMailDomainsToList() {
 
     html += '</div>';
     listDiv.innerHTML = html;
-    selectedCloudMailDomains = [(window.appSettings && window.appSettings.defaultDomainMode === 'round-robin') ? '__all__' : '__random__'];
+    selectedCloudMailDomains = ['__random__'];
     updateCloudMailDomainStyles();
   } catch (e) {
     console.error('加载 Cloud-Mail 域名失败:', e);

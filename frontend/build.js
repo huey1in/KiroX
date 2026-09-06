@@ -30,4 +30,8 @@ for (const file of fs.readdirSync(jsDir)) {
   if (file.endsWith('.js')) fs.copyFileSync(path.join(jsDir, file), path.join(distJsDir, file));
 }
 
+const vendorDir = path.join(distJsDir, 'vendor');
+fs.mkdirSync(vendorDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, 'node_modules', 'd3', 'dist', 'd3.min.js'), path.join(vendorDir, 'd3.min.js'));
+
 console.log('Build completed: frontend/dist/');

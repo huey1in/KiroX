@@ -236,7 +236,7 @@
           </div>
         </div>
 
-        <!-- ===== Kiro 任务卡片 ===== -->
+        <!-- ===== 任务控制卡片 ===== -->
         <div class="db-detail-section">
           <div class="db-detail-top">
             <div class="db-detail-title">
@@ -246,7 +246,7 @@
                   <path d="m12 14 4-4"/>
                 </svg>
               </span>
-              <span>Kiro</span>
+              <span data-i18n="overview.taskControl">任务控制</span>
             </div>
             <div class="db-detail-actions">
               <span class="status-dot" id="st-dot"></span>
@@ -384,28 +384,14 @@
 
     <!-- ===== Page: 设置 ===== -->
     <div class="page" id="page-settings">
-      <div class="page-scroll" style="padding:28px 32px 40px;max-width:800px;margin:0 auto;">
+      <div class="page-scroll" style="padding:28px 32px 40px;max-width:1000px;margin:0 auto;">
 
         <div class="settings-page-header">
           <div>
             <div class="settings-page-title" data-i18n="settings.title">设置</div>
-            <div class="settings-page-subtitle" data-i18n="settings.subtitle">配置默认任务、通知和运行策略</div>
+            <div class="settings-page-subtitle" data-i18n="settings.subtitle">配置通知、运行策略和高级选项</div>
           </div>
           <button type="button" class="btn btn-dark" onclick="saveAppSettings()" data-i18n="settings.save">保存设置</button>
-        </div>
-
-        <div class="card settings-card">
-          <div class="settings-group">
-            <div class="settings-group-title" data-i18n="settings.taskDefaults">注册默认值</div>
-            <div class="settings-grid">
-              <label class="settings-field"><span data-i18n="settings.defaultCount">默认注册数量</span><input id="setting-default-count" class="form-input" type="number" min="1" max="100"></label>
-              <label class="settings-field"><span data-i18n="settings.defaultConcurrency">默认并发数</span><input id="setting-default-concurrency" class="form-input" type="number" min="1" max="10"></label>
-              <label class="settings-field"><span data-i18n="settings.defaultDelay">默认串行间隔（秒）</span><input id="setting-default-delay" class="form-input" type="number" min="0" max="300"></label>
-              <div class="settings-field"><span data-i18n="settings.defaultProvider">默认邮箱提供商</span><div id="setting-default-provider" class="custom-dropdown" data-value="outlook"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text">Outlook</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="outlook">Outlook</div><div class="dropdown-option" data-value="moemail">MoeMail</div><div class="dropdown-option" data-value="cloudmail">Cloud-Mail</div><div class="dropdown-option" data-value="mailnest">MailNest</div><div class="dropdown-option" data-value="icloud">iCloud</div></div></div></div>
-              <div class="settings-field"><span data-i18n="settings.defaultProxy">默认任务代理</span><div id="setting-default-proxy" class="custom-dropdown" data-value=""><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="ip.direct">直连</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="" data-i18n="ip.direct">直连</div></div></div></div>
-              <div class="settings-field"><span data-i18n="settings.domainMode">默认域名模式</span><div id="setting-domain-mode" class="custom-dropdown" data-value="random"><div class="dropdown-selected" onclick="toggleDropdown(this)"><span class="dropdown-selected-text" data-i18n="settings.random">随机</span><span class="dropdown-arrow"></span></div><div class="dropdown-options"><div class="dropdown-option" data-value="random" data-i18n="settings.random">随机</div><div class="dropdown-option" data-value="round-robin" data-i18n="settings.roundRobin">轮询</div></div></div></div>
-            </div>
-          </div>
         </div>
 
         <div class="card settings-card">
@@ -465,19 +451,9 @@
           <div class="settings-group">
             <div class="settings-group-title" data-i18n="settings.notification">通知</div>
 
-            <div class="settings-item">
-              <div class="settings-item-main">
-                <div class="settings-item-title" data-i18n="settings.sound">提示音</div>
-                <div class="settings-item-desc" data-i18n="settings.soundDesc">任务结束时播放提示音</div>
-              </div>
-              <div class="settings-item-action">
-                <label style="cursor:pointer;">
-                  <div class="toggle-switch">
-                    <input type="checkbox" id="cfg-sound">
-                    <span class="toggle-slider"></span>
-                  </div>
-                </label>
-              </div>
+            <div class="settings-item settings-inline-item">
+              <div><div class="settings-item-title" data-i18n="settings.sound">提示音</div><div class="settings-item-desc" data-i18n="settings.soundDesc">任务结束时播放提示音</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="cfg-sound"><span class="toggle-slider"></span></label>
             </div>
             <div class="settings-item settings-inline-item">
               <div><div class="settings-item-title" data-i18n="settings.desktopNotification">桌面通知</div><div class="settings-item-desc" data-i18n="settings.desktopNotificationDesc">任务完成时发送 Windows 桌面通知</div></div>
@@ -485,7 +461,7 @@
             </div>
             <div class="settings-item">
               <div class="settings-item-title" data-i18n="settings.soundVolume">提示音音量</div>
-              <div class="settings-range-row"><input type="range" id="setting-sound-volume" min="0" max="100" step="5" oninput="syncVolumeLabel()"><output id="setting-sound-volume-label">70%</output></div>
+              <div class="settings-range-row"><input type="range" class="settings-volume-range" id="setting-sound-volume" min="0" max="100" step="5" value="70" oninput="syncVolumeLabel()"><output id="setting-sound-volume-label">70%</output></div>
             </div>
           </div>
         </div>
@@ -526,34 +502,25 @@
                   <div class="settings-item-title" data-i18n="settings.fingerprintAlgorithm">指纹偏移曲线</div>
                   <div class="settings-item-desc" data-i18n="settings.fingerprintAlgorithmDesc">控制各指纹域相对缓存身份的重采样强度</div>
                 </div>
-                <div class="fp-curve-presets" role="group" aria-label="指纹曲线预设" data-i18n-aria-label="settings.fpPresets">
-                  <button type="button" data-fp-preset="stable" onclick="applyFingerprintPreset('stable')" data-i18n="settings.fpStable">稳定</button>
-                  <button type="button" class="selected" data-fp-preset="balanced" onclick="applyFingerprintPreset('balanced')" data-i18n="settings.fpBalanced">均衡</button>
-                  <button type="button" data-fp-preset="fresh" onclick="applyFingerprintPreset('fresh')" data-i18n="settings.fpFresh">全新</button>
-                </div>
               </div>
-              <input id="setting-fingerprint-algorithm" type="hidden" value="balanced">
-              <input id="setting-fingerprint-offsets" type="hidden" value="0,0,0,15,100">
+              <input id="setting-fingerprint-offsets" type="hidden" value="0,0,0,0,0,0,0,15,15,100">
               <div id="fingerprint-curve-editor" class="fingerprint-curve-editor">
                 <div class="fp-curve-toolbar">
                   <div class="fp-curve-channel"><span></span><strong data-i18n="settings.fpCompositeCurve">综合偏移</strong></div>
                   <div class="fp-curve-meter"><span data-i18n="settings.fpAverageOffset">平均偏移</span><output id="fp-curve-average">23%</output></div>
                 </div>
                 <div class="fp-curve-stage">
-                  <svg id="fp-curve-svg" viewBox="0 0 600 260" preserveAspectRatio="none" role="group" aria-label="指纹偏移曲线" data-i18n-aria-label="settings.fingerprintAlgorithm">
+                  <svg id="fp-curve-svg" viewBox="0 0 980 260" preserveAspectRatio="none" role="group" aria-label="指纹偏移曲线" data-i18n-aria-label="settings.fingerprintAlgorithm">
                     <g class="fp-curve-grid" aria-hidden="true">
-                      <line x1="56" y1="24" x2="568" y2="24"></line><line x1="56" y1="74" x2="568" y2="74"></line><line x1="56" y1="124" x2="568" y2="124"></line><line x1="56" y1="174" x2="568" y2="174"></line><line x1="56" y1="224" x2="568" y2="224"></line>
-                      <line x1="56" y1="24" x2="56" y2="224"></line><line x1="184" y1="24" x2="184" y2="224"></line><line x1="312" y1="24" x2="312" y2="224"></line><line x1="440" y1="24" x2="440" y2="224"></line><line x1="568" y1="24" x2="568" y2="224"></line>
+                      <line x1="56" y1="24" x2="956" y2="24"></line><line x1="56" y1="74" x2="956" y2="74"></line><line x1="56" y1="124" x2="956" y2="124"></line><line x1="56" y1="174" x2="956" y2="174"></line><line x1="56" y1="224" x2="956" y2="224"></line>
+                      <line x1="56" y1="24" x2="56" y2="224"></line><line x1="156" y1="24" x2="156" y2="224"></line><line x1="256" y1="24" x2="256" y2="224"></line><line x1="356" y1="24" x2="356" y2="224"></line><line x1="456" y1="24" x2="456" y2="224"></line><line x1="556" y1="24" x2="556" y2="224"></line><line x1="656" y1="24" x2="656" y2="224"></line><line x1="756" y1="24" x2="756" y2="224"></line><line x1="856" y1="24" x2="856" y2="224"></line><line x1="956" y1="24" x2="956" y2="224"></line>
                     </g>
                     <g class="fp-curve-scale" aria-hidden="true"><text x="12" y="28">100</text><text x="19" y="78">75</text><text x="19" y="128">50</text><text x="19" y="178">25</text><text x="27" y="228">0</text></g>
-                    <g class="fp-curve-density" aria-hidden="true">
-                      <rect x="65" y="190" width="14" height="34"></rect><rect x="85" y="176" width="14" height="48"></rect><rect x="105" y="185" width="14" height="39"></rect><rect x="125" y="162" width="14" height="62"></rect><rect x="145" y="171" width="14" height="53"></rect><rect x="165" y="148" width="14" height="76"></rect><rect x="185" y="157" width="14" height="67"></rect><rect x="205" y="138" width="14" height="86"></rect><rect x="225" y="151" width="14" height="73"></rect><rect x="245" y="126" width="14" height="98"></rect><rect x="265" y="142" width="14" height="82"></rect><rect x="285" y="116" width="14" height="108"></rect><rect x="305" y="133" width="14" height="91"></rect><rect x="325" y="104" width="14" height="120"></rect><rect x="345" y="122" width="14" height="102"></rect><rect x="365" y="94" width="14" height="130"></rect><rect x="385" y="113" width="14" height="111"></rect><rect x="405" y="81" width="14" height="143"></rect><rect x="425" y="101" width="14" height="123"></rect><rect x="445" y="67" width="14" height="157"></rect><rect x="465" y="87" width="14" height="137"></rect><rect x="485" y="55" width="14" height="169"></rect><rect x="505" y="74" width="14" height="150"></rect><rect x="525" y="43" width="14" height="181"></rect><rect x="545" y="62" width="14" height="162"></rect>
-                    </g>
                     <path id="fp-curve-area" class="fp-curve-area" aria-hidden="true"></path>
                     <path id="fp-curve-line" class="fp-curve-line" aria-hidden="true"></path>
                     <g id="fp-curve-handles"></g>
                   </svg>
-                  <div class="fp-curve-x-axis" aria-hidden="true"><span data-i18n="settings.fpBrowser">浏览器</span><span data-i18n="settings.fpHardware">硬件</span><span data-i18n="settings.fpDisplay">显示</span><span data-i18n="settings.fpRendering">渲染</span><span data-i18n="settings.fpSession">会话</span></div>
+                  <div class="fp-curve-x-axis" aria-hidden="true"><span data-i18n="settings.fpBrowser">浏览器</span><span data-i18n="settings.fpPlatform">平台</span><span data-i18n="settings.fpPlugins">插件</span><span data-i18n="settings.fpResources">CPU / 内存</span><span data-i18n="settings.fpGPU">GPU / WebGL</span><span data-i18n="settings.fpScreen">屏幕</span><span data-i18n="settings.fpTimezone">时区</span><span data-i18n="settings.fpCanvas">Canvas</span><span data-i18n="settings.fpMath">数学运行时</span><span data-i18n="settings.fpSession">会话</span></div>
                 </div>
                 <div class="fp-curve-footer"><span><i class="fp-curve-low"></i><span data-i18n="settings.fpReuse">复用缓存</span></span><span><i class="fp-curve-high"></i><span data-i18n="settings.fpRegenerate">重新采样</span></span></div>
               </div>
@@ -1138,6 +1105,7 @@
 <script src="js/overview.js"></script>
 <script src="js/dropdown.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/vendor/d3.min.js"></script>
 <script src="js/app.js"></script>
 <script src="js/ip.js"></script>
 </body>

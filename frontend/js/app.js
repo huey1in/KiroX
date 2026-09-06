@@ -386,31 +386,8 @@ function applyThemePreference(theme) {
   if (dark) dark.style.display = resolved === 'dark' ? '' : 'none';
 }
 
-async function populateDefaultProxySetting(selected) {
-  var wrap = document.getElementById('setting-default-proxy');
-  if (!wrap) return;
-  var options = wrap.querySelector('.dropdown-options');
-  if (!options) return;
-  var list = [];
-  try { list = await window.go.main.App.ListProxyPool(); } catch (e) {}
-  options.innerHTML = '<div class="dropdown-option" data-value="" data-i18n="ip.direct">' + tr('ip.direct', '直连') + '</div>';
-  (list || []).filter(function(p) { return p.enabled; }).forEach(function(p) {
-    var option = document.createElement('div');
-    option.className = 'dropdown-option';
-    option.setAttribute('data-value', p.url);
-    option.textContent = p.name || p.probeIp || p.url;
-    options.appendChild(option);
-  });
-  setDropdownValue(wrap, selected || '');
-}
-
 function renderAppSettings(s) {
   window.appSettings = s;
-  setSettingValue('setting-default-count', s.defaultCount);
-  setSettingValue('setting-default-concurrency', s.defaultConcurrency);
-  setSettingValue('setting-default-delay', s.defaultDelay);
-  setSettingValue('setting-default-provider', s.defaultEmailProvider);
-  setSettingValue('setting-domain-mode', s.defaultDomainMode);
   setSettingValue('setting-email-proxy-mode', s.emailProxyMode);
   setSettingValue('setting-email-proxy', s.emailProxy);
   setSettingValue('setting-otp-timeout', s.otpTimeoutSeconds);
@@ -429,17 +406,13 @@ function renderAppSettings(s) {
   setSettingValue('setting-aws-region', s.awsRegion);
   setSettingValue('setting-request-timeout', s.requestTimeoutSeconds);
   setSettingValue('setting-fingerprint-ttl', s.fingerprintTTLHours);
-  setFingerprintCurveValues(s.fingerprintOffsets, s.fingerprintAlgorithm || 'balanced');
+  setFingerprintCurveValues(s.fingerprintOffsets, s.fingerprintCurvePositions);
   setSettingChecked('setting-telemetry', s.telemetryEnabled);
   setSettingValue('setting-oidc-base', s.oidcBase); setSettingValue('setting-signin-base', s.signinBase);
   setSettingValue('setting-profile-base', s.profileBase); setSettingValue('setting-view-base', s.viewBase);
   setSettingValue('setting-portal-base', s.portalBase); setSettingValue('setting-start-url', s.startURL);
   setSettingValue('setting-kiro-base', s.kiroBase); setSettingValue('setting-kiro-redirect', s.kiroRedirectURI);
   setSettingValue('setting-directory-id', s.directoryID);
-  document.getElementById('cfg-count').value = s.defaultCount;
-  document.getElementById('cfg-concurrency').value = s.defaultConcurrency;
-  document.getElementById('cfg-delay').value = s.defaultDelay;
-  populateDefaultProxySetting(s.defaultTaskProxy);
   applyThemePreference(s.theme);
   syncEmailProxyField();
   syncVolumeLabel();
@@ -457,12 +430,6 @@ async function loadAppSettings() {
 
 function collectAppSettings() {
   var s = Object.assign({}, window.appSettings || {});
-  s.defaultCount = parseInt(settingValue('setting-default-count', 1)) || 1;
-  s.defaultConcurrency = parseInt(settingValue('setting-default-concurrency', 1)) || 1;
-  s.defaultDelay = Math.max(0, parseInt(settingValue('setting-default-delay', 1)) || 0);
-  s.defaultEmailProvider = settingValue('setting-default-provider', 'outlook');
-  s.defaultTaskProxy = settingValue('setting-default-proxy', '');
-  s.defaultDomainMode = settingValue('setting-domain-mode', 'random');
   s.emailProxyMode = settingValue('setting-email-proxy-mode', 'follow-task');
   s.emailProxy = settingValue('setting-email-proxy', '').trim();
   s.otpTimeoutSeconds = parseInt(settingValue('setting-otp-timeout', 120));
@@ -481,8 +448,8 @@ function collectAppSettings() {
   s.awsRegion = settingValue('setting-aws-region', 'us-east-1').trim();
   s.requestTimeoutSeconds = parseInt(settingValue('setting-request-timeout', 60));
   s.fingerprintTTLHours = parseInt(settingValue('setting-fingerprint-ttl', 6));
-  s.fingerprintAlgorithm = settingValue('setting-fingerprint-algorithm', 'balanced');
   s.fingerprintOffsets = getFingerprintCurveValues();
+  s.fingerprintCurvePositions = getFingerprintCurvePositions();
   s.telemetryEnabled = settingChecked('setting-telemetry', true);
   s.oidcBase = settingValue('setting-oidc-base', '').trim(); s.signinBase = settingValue('setting-signin-base', '').trim();
   s.profileBase = settingValue('setting-profile-base', '').trim(); s.viewBase = settingValue('setting-view-base', '').trim();
@@ -508,8 +475,11 @@ function syncEmailProxyField() {
 }
 
 function syncVolumeLabel() {
+  var slider = document.getElementById('setting-sound-volume');
   var output = document.getElementById('setting-sound-volume-label');
-  if (output) output.textContent = settingValue('setting-sound-volume', 70) + '%';
+  var value = Number(settingValue('setting-sound-volume', 70));
+  if (slider) slider.style.setProperty('--range-progress', value + '%');
+  if (output) output.textContent = value + '%';
 }
 
 function syncAWSRegionEndpoints() {
@@ -519,64 +489,83 @@ function syncAWSRegionEndpoints() {
   setSettingValue('setting-portal-base', 'https://portal.sso.' + region + '.amazonaws.com');
 }
 
-var fingerprintCurvePresets = {
-  stable: [0, 0, 0, 0, 0],
-  balanced: [0, 0, 0, 15, 100],
-  fresh: [100, 100, 100, 100, 100]
-};
-var fingerprintCurveValues = fingerprintCurvePresets.balanced.slice();
-var fingerprintCurveDrag = null;
-var fingerprintCurveX = [56, 184, 312, 440, 568];
-var fingerprintCurveLabelKeys = ['fpBrowser', 'fpHardware', 'fpDisplay', 'fpRendering', 'fpSession'];
+var fingerprintCurveDefaults = [0, 0, 0, 0, 0, 0, 0, 15, 15, 100];
+var fingerprintCurveDefaultPositions = [0, 11, 22, 33, 44, 56, 67, 78, 89, 100];
+var fingerprintCurveValues = fingerprintCurveDefaults.slice();
+var fingerprintCurvePositions = fingerprintCurveDefaultPositions.slice();
 
-function normalizeFingerprintCurve(values, legacyAlgorithm) {
-  if (!Array.isArray(values) || values.length !== 5) values = fingerprintCurvePresets[legacyAlgorithm] || fingerprintCurvePresets.balanced;
+function normalizeFingerprintCurve(values) {
+  if (Array.isArray(values) && values.length === 5) {
+    values = [values[0], values[1], values[0], values[1], values[1], values[2], values[2], values[3], values[3], values[4]];
+  }
+  if (!Array.isArray(values) || values.length !== fingerprintCurveDefaults.length) values = fingerprintCurveDefaults;
   return values.map(function(value) { return Math.max(0, Math.min(100, Math.round(Number(value) || 0))); });
+}
+
+function normalizeFingerprintCurvePositions(positions) {
+  if (!Array.isArray(positions) || positions.length !== fingerprintCurveDefaultPositions.length) return fingerprintCurveDefaultPositions.slice();
+  var normalized = [];
+  positions.forEach(function(position, index) {
+    var min = index === 0 ? 0 : normalized[index - 1] + 2;
+    var max = 100 - (positions.length - 1 - index) * 2;
+    normalized.push(Math.max(min, Math.min(max, Math.round(Number(position) || 0))));
+  });
+  return normalized;
 }
 
 function getFingerprintCurveValues() {
   return fingerprintCurveValues.slice();
 }
 
+function getFingerprintCurvePositions() {
+  return fingerprintCurvePositions.slice();
+}
+
 function fingerprintCurvePoints(values) {
   return values.map(function(value, index) {
-    return { x: fingerprintCurveX[index], y: 224 - value * 2 };
+    return { x: 56 + fingerprintCurvePositions[index] * 9, y: 224 - value * 2 };
+  });
+}
+
+function fingerprintEffectiveValues() {
+  return fingerprintCurveDefaultPositions.map(function(position) {
+    if (position <= fingerprintCurvePositions[0]) return fingerprintCurveValues[0];
+    for (var i = 1; i < fingerprintCurvePositions.length; i++) {
+      if (position <= fingerprintCurvePositions[i]) {
+        var leftX = fingerprintCurvePositions[i - 1];
+        var ratio = (position - leftX) / (fingerprintCurvePositions[i] - leftX);
+        return Math.round(fingerprintCurveValues[i - 1] + (fingerprintCurveValues[i] - fingerprintCurveValues[i - 1]) * ratio);
+      }
+    }
+    return fingerprintCurveValues[fingerprintCurveValues.length - 1];
   });
 }
 
 function fingerprintCurvePath(points) {
-  if (!points.length) return '';
-  var path = 'M ' + points[0].x + ' ' + points[0].y;
-  for (var i = 0; i < points.length - 1; i++) {
-    var p1 = points[i];
-    var p2 = points[i + 1];
-    var control = (p2.x - p1.x) * 0.42;
-    path += ' C ' + (p1.x + control) + ' ' + p1.y + ', ' + (p2.x - control) + ' ' + p2.y + ', ' + p2.x + ' ' + p2.y;
-  }
-  return path;
+  if (!window.d3 || !points.length) return '';
+  return d3.line().x(function(point) { return point.x; }).y(function(point) { return point.y; }).curve(d3.curveMonotoneX)(points);
 }
 
-function matchingFingerprintPreset(values) {
-  return Object.keys(fingerprintCurvePresets).find(function(name) {
-    return fingerprintCurvePresets[name].every(function(value, index) { return values[index] === value; });
-  }) || 'custom';
+function fingerprintCurveAreaPath(points) {
+  if (!window.d3 || !points.length) return '';
+  return d3.area().x(function(point) { return point.x; }).y0(224).y1(function(point) { return point.y; }).curve(d3.curveMonotoneX)(points);
 }
 
 function ensureFingerprintCurveHandles() {
   var handles = document.getElementById('fp-curve-handles');
-  if (!handles || handles.childElementCount) return;
-  var svgNS = 'http://www.w3.org/2000/svg';
-  fingerprintCurveX.forEach(function(_, index) {
-    var group = document.createElementNS(svgNS, 'g');
-    group.setAttribute('class', 'fp-curve-handle');
-    group.setAttribute('data-fp-index', String(index));
-    group.setAttribute('tabindex', '0');
-    group.setAttribute('role', 'slider');
-    group.setAttribute('aria-valuemin', '0');
-    group.setAttribute('aria-valuemax', '100');
-    group.innerHTML = '<line class="fp-curve-guide" x1="0" y1="0" x2="0" y2="0"></line><circle class="fp-curve-handle-hit" r="16"></circle><circle class="fp-curve-handle-ring" r="6"></circle><circle class="fp-curve-handle-core" r="2"></circle><text class="fp-curve-handle-value" x="0" y="-13"></text>';
-    handles.appendChild(group);
-  });
+  if (!handles || !window.d3) return;
+  var entered = d3.select(handles).selectAll('.fp-curve-handle').data(fingerprintCurveDefaultPositions).enter().append('g')
+    .attr('class', 'fp-curve-handle')
+    .attr('data-fp-index', function(_, index) { return index; })
+    .attr('tabindex', 0)
+    .attr('role', 'slider')
+    .attr('aria-valuemin', 0)
+    .attr('aria-valuemax', 100);
+  entered.append('line').attr('class', 'fp-curve-guide').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 0);
+  entered.append('circle').attr('class', 'fp-curve-handle-hit').attr('r', 16);
+  entered.append('circle').attr('class', 'fp-curve-handle-ring').attr('r', 6);
+  entered.append('circle').attr('class', 'fp-curve-handle-core').attr('r', 2);
+  entered.append('text').attr('class', 'fp-curve-handle-value').attr('x', 0).attr('y', -13);
 }
 
 function renderFingerprintCurve() {
@@ -585,87 +574,67 @@ function renderFingerprintCurve() {
   if (!line || !area) return;
   ensureFingerprintCurveHandles();
   var points = fingerprintCurvePoints(fingerprintCurveValues);
-  var path = fingerprintCurvePath(points);
-  line.setAttribute('d', path);
-  area.setAttribute('d', path + ' L 568 224 L 56 224 Z');
-  document.querySelectorAll('.fp-curve-handle').forEach(function(handle, index) {
+  d3.select(line).attr('d', fingerprintCurvePath(points));
+  d3.select(area).attr('d', fingerprintCurveAreaPath(points));
+  d3.selectAll('.fp-curve-handle').each(function(_, index) {
+    var handle = this;
     var point = points[index];
     handle.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
-    handle.setAttribute('aria-label', tr('settings.' + fingerprintCurveLabelKeys[index], fingerprintCurveLabelKeys[index]));
+    handle.setAttribute('aria-label', tr('settings.fpControlPoint', '曲线控制点') + ' ' + (index + 1));
     handle.setAttribute('aria-valuenow', String(fingerprintCurveValues[index]));
-    handle.setAttribute('aria-valuetext', fingerprintCurveValues[index] + '%');
+    handle.setAttribute('aria-valuetext', 'X ' + fingerprintCurvePositions[index] + '%, Y ' + fingerprintCurveValues[index] + '%');
     handle.querySelector('.fp-curve-guide').setAttribute('y2', String(224 - point.y));
     handle.querySelector('.fp-curve-handle-value').textContent = fingerprintCurveValues[index] + '%';
   });
-  var average = Math.round(fingerprintCurveValues.reduce(function(total, value) { return total + value; }, 0) / fingerprintCurveValues.length);
+  var effectiveValues = fingerprintEffectiveValues();
+  var average = Math.round(effectiveValues.reduce(function(total, value) { return total + value; }, 0) / effectiveValues.length);
   var meter = document.getElementById('fp-curve-average');
   if (meter) meter.textContent = average + '%';
-  var preset = matchingFingerprintPreset(fingerprintCurveValues);
-  setSettingValue('setting-fingerprint-algorithm', preset);
   setSettingValue('setting-fingerprint-offsets', fingerprintCurveValues.join(','));
-  document.querySelectorAll('[data-fp-preset]').forEach(function(button) {
-    button.classList.toggle('selected', button.dataset.fpPreset === preset);
-  });
 }
 
-function setFingerprintCurveValues(values, legacyAlgorithm) {
-  fingerprintCurveValues = normalizeFingerprintCurve(values, legacyAlgorithm);
+function setFingerprintCurveValues(values, positions) {
+  fingerprintCurveValues = normalizeFingerprintCurve(values);
+  fingerprintCurvePositions = normalizeFingerprintCurvePositions(positions);
   initFingerprintCurve();
   renderFingerprintCurve();
 }
 
-function applyFingerprintPreset(name) {
-  if (!fingerprintCurvePresets[name]) return;
-  setFingerprintCurveValues(fingerprintCurvePresets[name], name);
-}
-
-function updateFingerprintCurveFromPointer(event) {
-  if (!fingerprintCurveDrag || fingerprintCurveDrag.pointerId !== event.pointerId) return;
-  var svg = document.getElementById('fp-curve-svg');
-  var rect = svg.getBoundingClientRect();
-  var svgY = (event.clientY - rect.top) * 260 / rect.height;
-  fingerprintCurveValues[fingerprintCurveDrag.index] = Math.round(Math.max(0, Math.min(100, (224 - svgY) / 2)));
-  renderFingerprintCurve();
-}
-
-function finishFingerprintCurveDrag(event) {
-  if (!fingerprintCurveDrag || (event.pointerId !== undefined && fingerprintCurveDrag.pointerId !== event.pointerId)) return;
-  var handle = document.querySelector('.fp-curve-handle[data-fp-index="' + fingerprintCurveDrag.index + '"]');
-  if (handle) handle.classList.remove('dragging');
-  fingerprintCurveDrag = null;
-}
-
 function initFingerprintCurve() {
   var svg = document.getElementById('fp-curve-svg');
-  if (!svg) return;
+  if (!svg || !window.d3) return;
   ensureFingerprintCurveHandles();
   if (svg.dataset.ready === 'true') return;
   svg.dataset.ready = 'true';
-  svg.addEventListener('pointerdown', function(event) {
-    var handle = event.target.closest && event.target.closest('.fp-curve-handle');
-    if (!handle) return;
-    event.preventDefault();
-    fingerprintCurveDrag = { index: Number(handle.dataset.fpIndex), pointerId: event.pointerId };
-    handle.classList.add('dragging');
-    updateFingerprintCurveFromPointer(event);
-  });
-  svg.addEventListener('keydown', function(event) {
-    var handle = event.target.closest && event.target.closest('.fp-curve-handle');
-    if (!handle) return;
-    var index = Number(handle.dataset.fpIndex);
+  d3.select(svg).selectAll('.fp-curve-handle')
+    .call(d3.drag().container(svg)
+      .on('start', function() { this.classList.add('dragging'); })
+      .on('drag', function(event) {
+        var index = Number(this.dataset.fpIndex);
+        var minX = index === 0 ? 0 : fingerprintCurvePositions[index - 1] + 2;
+        var maxX = index === fingerprintCurvePositions.length - 1 ? 100 : fingerprintCurvePositions[index + 1] - 2;
+        fingerprintCurvePositions[index] = Math.round(Math.max(minX, Math.min(maxX, (event.x - 56) / 9)));
+        fingerprintCurveValues[index] = Math.round(Math.max(0, Math.min(100, (224 - event.y) / 2)));
+        renderFingerprintCurve();
+      })
+      .on('end', function() { this.classList.remove('dragging'); }))
+    .on('keydown', function(event) {
+    var index = Number(this.dataset.fpIndex);
     var step = event.shiftKey ? 5 : 1;
-    if (event.key === 'ArrowUp' || event.key === 'ArrowRight') fingerprintCurveValues[index] += step;
-    else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') fingerprintCurveValues[index] -= step;
-    else if (event.key === 'Home') fingerprintCurveValues[index] = 0;
-    else if (event.key === 'End') fingerprintCurveValues[index] = 100;
+    if (event.key === 'ArrowUp') fingerprintCurveValues[index] += step;
+    else if (event.key === 'ArrowDown') fingerprintCurveValues[index] -= step;
+    else if (event.key === 'ArrowRight') {
+      var rightMax = index === fingerprintCurvePositions.length - 1 ? 100 : fingerprintCurvePositions[index + 1] - 2;
+      fingerprintCurvePositions[index] = Math.min(rightMax, fingerprintCurvePositions[index] + step);
+    } else if (event.key === 'ArrowLeft') {
+      var leftMin = index === 0 ? 0 : fingerprintCurvePositions[index - 1] + 2;
+      fingerprintCurvePositions[index] = Math.max(leftMin, fingerprintCurvePositions[index] - step);
+    }
     else return;
     event.preventDefault();
     fingerprintCurveValues[index] = Math.max(0, Math.min(100, fingerprintCurveValues[index]));
     renderFingerprintCurve();
   });
-  window.addEventListener('pointermove', updateFingerprintCurveFromPointer);
-  window.addEventListener('pointerup', finishFingerprintCurveDrag);
-  window.addEventListener('pointercancel', finishFingerprintCurveDrag);
   renderFingerprintCurve();
 }
 

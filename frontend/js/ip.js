@@ -546,5 +546,5 @@ async function loadProxyOptions() {
     html += '<div class="dropdown-option" data-value="' + _ipEscape(p.url) + '">' + _ipEscape(label) + '</div>';
   });
   box.innerHTML = html;
-  setDropdownValue(wrap, (window.appSettings && window.appSettings.defaultTaskProxy) || '');
+  setDropdownValue(wrap, '');
 }
