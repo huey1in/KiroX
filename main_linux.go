@@ -13,7 +13,7 @@ func getPlatformOptions() []func(*options.App) {
 	return []func(*options.App){
 		func(app *options.App) {
 			app.Linux = &linux.Options{
-				ProgramName: "Kiro Registration",
+				ProgramName: "KiroX",
 			}
 		},
 	}

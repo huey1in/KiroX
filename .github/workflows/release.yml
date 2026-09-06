@@ -88,24 +88,26 @@ jobs:
       - name: Replace macOS icon with iconutil
         if: runner.os == 'macOS'
         run: |
-          APP=$(find build/bin -name "*.app" -maxdepth 1 | head -1)
-          if [ -n "$APP" ]; then
-            ICONSET=$(mktemp -d)/appicon.iconset
-            mkdir -p "$ICONSET"
-            SRC="frontend/assets/appicon.png"
-            sips -z 16 16 "$SRC" --out "$ICONSET/icon_16x16.png"
-            sips -z 32 32 "$SRC" --out "$ICONSET/icon_16x16@2x.png"
-            sips -z 32 32 "$SRC" --out "$ICONSET/icon_32x32.png"
-            sips -z 64 64 "$SRC" --out "$ICONSET/icon_32x32@2x.png"
-            sips -z 128 128 "$SRC" --out "$ICONSET/icon_128x128.png"
-            sips -z 256 256 "$SRC" --out "$ICONSET/icon_128x128@2x.png"
-            sips -z 256 256 "$SRC" --out "$ICONSET/icon_256x256.png"
-            sips -z 512 512 "$SRC" --out "$ICONSET/icon_256x256@2x.png"
-            sips -z 512 512 "$SRC" --out "$ICONSET/icon_512x512.png"
-            sips -z 1024 1024 "$SRC" --out "$ICONSET/icon_512x512@2x.png"
-            iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/iconfile.icns"
-            rm -rf "$(dirname "$ICONSET")"
+          APP=$(find build/bin -type d -name "*.app" -prune | head -n 1)
+          if [ -z "$APP" ] || [ ! -d "$APP" ]; then
+            echo "::error::Wails did not produce a macOS app bundle"
+            exit 1
           fi
+          ICONSET=$(mktemp -d)/appicon.iconset
+          mkdir -p "$ICONSET"
+          SRC="frontend/assets/appicon.png"
+          sips -z 16 16 "$SRC" --out "$ICONSET/icon_16x16.png"
+          sips -z 32 32 "$SRC" --out "$ICONSET/icon_16x16@2x.png"
+          sips -z 32 32 "$SRC" --out "$ICONSET/icon_32x32.png"
+          sips -z 64 64 "$SRC" --out "$ICONSET/icon_32x32@2x.png"
+          sips -z 128 128 "$SRC" --out "$ICONSET/icon_128x128.png"
+          sips -z 256 256 "$SRC" --out "$ICONSET/icon_128x128@2x.png"
+          sips -z 256 256 "$SRC" --out "$ICONSET/icon_256x256.png"
+          sips -z 512 512 "$SRC" --out "$ICONSET/icon_256x256@2x.png"
+          sips -z 512 512 "$SRC" --out "$ICONSET/icon_512x512.png"
+          sips -z 1024 1024 "$SRC" --out "$ICONSET/icon_512x512@2x.png"
+          iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/iconfile.icns"
+          rm -rf "$(dirname "$ICONSET")"
 
       - name: Package macOS app
         if: runner.os == 'macOS'
