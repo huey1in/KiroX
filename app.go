@@ -18,17 +18,19 @@ import (
 )
 
 type App struct {
-	ctx context.Context
+	ctx         context.Context
+	startupDone chan struct{}
 }
 
 // NewApp 创建新的 App 实例
 func NewApp() *App {
-	return &App{}
+	return &App{startupDone: make(chan struct{})}
 }
 
 // startup 在应用启动时调用
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	close(a.startupDone)
 	// 重定向日志到内存
 	log.SetOutput(&logWriter{app: a})
 	log.SetFlags(log.Ltime)
@@ -44,6 +46,13 @@ func (a *App) startup(ctx context.Context) {
 		runtime.WindowCenter(ctx)
 	}()
 
+}
+
+// restoreWindow brings the existing window back when the executable is launched again.
+func (a *App) restoreWindow() {
+	<-a.startupDone
+	runtime.WindowUnminimise(a.ctx)
+	runtime.WindowShow(a.ctx)
 }
 
 // shutdown 在应用关闭时调用

@@ -30,8 +30,14 @@ func runDesktopApp() {
 		BackgroundColour: &options.RGBA{R: 245, G: 240, B: 235, A: 255},
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
-		StartHidden:      false,
-		Frameless:        true,
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: "com.huey1in.kirox",
+			OnSecondInstanceLaunch: func(_ options.SecondInstanceData) {
+				app.restoreWindow()
+			},
+		},
+		StartHidden: false,
+		Frameless:   true,
 		Bind: []interface{}{
 			app,
 		},
