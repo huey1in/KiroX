@@ -169,7 +169,7 @@ func TestStoredSettingsDiscardRetiredRuntimeFields(t *testing.T) {
 		"awsRegion": "other-region", "oidcBase": "not a URL",
 		"requestTimeoutSeconds": 180, "fingerprintTTLHours": 168,
 		"fingerprintOffsets": []int{100, 100, 100, 100, 100},
-		"wafEnabled":         true, "twoCaptchaAPIKey": "old-key",
+		"wafEnabled":         true, "unknownLegacyOption": "old-value",
 		"fingerprintCurvePositions": []int{0, 25, 50, 75, 100},
 		"telemetryEnabled":          false,
 		"wafWebsiteURL":             "https://old.example", "wafWebsiteKey": "old-key",
