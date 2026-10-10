@@ -104,8 +104,7 @@ func isRetryableError(err error) bool {
 		strings.Contains(errMsg, "broken pipe") ||
 		strings.Contains(errMsg, "connection refused") ||
 		strings.Contains(errMsg, "i/o timeout") ||
-		strings.Contains(errMsg, "TLS handshake timeout") ||
-		strings.Contains(errMsg, "unexpected EOF")
+		strings.Contains(errMsg, "TLS handshake timeout")
 }
 
 // retryBackoff 计算重试退避时间（1-2秒 + 随机抖动）
@@ -363,8 +362,11 @@ func (r *Registrar) Step3Email() error {
 	}
 	if r.Cfg.UseICloud && r.Cfg.ICloudAccount != nil {
 		log.Println("[3] 使用 iCloud 邮箱")
-		r.EmailSvc = email.NewICloudService(*r.Cfg.ICloudAccount, r.Cfg.Proxy, r.Identity.ChromeVer)
+		r.EmailSvc = email.NewICloudService(r.context(), *r.Cfg.ICloudAccount, r.Cfg.EmailProxy, r.Identity.ChromeVer)
 		r.Email = r.EmailSvc.Create()
+		if err := r.context().Err(); err != nil {
+			return err
+		}
 		log.Printf("email=%s", r.Email)
 		return nil
 	}

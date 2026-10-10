@@ -332,14 +332,6 @@ func (a *App) ClearLogs() map[string]interface{} {
 	return map[string]interface{}{"success": true}
 }
 
-// SetLanguage 保存界面语言；仅接受 "zh"/"en"/"ja"
-func (a *App) SetLanguage(lang string) map[string]interface{} {
-	if err := storage.SetLanguage(lang); err != nil {
-		return map[string]interface{}{"error": err.Error()}
-	}
-	return map[string]interface{}{"success": true, "language": lang}
-}
-
 // GetOSLanguage 返回操作系统语言代码 "zh"/"en"/"ja"，用于首次启动自动选语言
 func (a *App) GetOSLanguage() string {
 	return detectOSLanguage()

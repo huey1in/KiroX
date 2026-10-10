@@ -123,7 +123,7 @@ func StartTask(req StartTaskRequest) map[string]interface{} {
 		}
 	} else {
 		// Outlook 模式：加载账号列表
-		storedAccounts := storage.GetAccountsCached()
+		storedAccounts := email.GetOutlookAccounts()
 		if len(storedAccounts) == 0 {
 			Manager.mu.Unlock()
 			return map[string]interface{}{"error": "请先添加微软邮箱账号"}
@@ -418,7 +418,6 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 				Manager.mu.Unlock()
 				return
 			}
-			taskCfg.UseICloud = true
 			taskCfg.ICloudAccount = &acc
 			currentEmail = acc.Email
 		}

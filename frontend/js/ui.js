@@ -65,18 +65,9 @@ function toggleTheme() {
     var theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     applyThemePreference(theme);
     setSettingValue('setting-theme', theme);
-    if (window.appSettings) window.appSettings.theme = theme;
     updateSettingsDirtyState();
     if (window.appSettings && window.go && window.go.main && window.go.main.App && window.go.main.App.SaveAppSettings) {
-      window.go.main.App.SaveAppSettings(window.appSettings).then(function(result) {
-        if (result.error) return;
-        if (savedSettingsSnapshot !== null) {
-          var saved = JSON.parse(savedSettingsSnapshot);
-          saved.theme = result.settings.theme;
-          savedSettingsSnapshot = snapshotAppSettings(saved);
-        }
-        updateSettingsDirtyState();
-      }).catch(function() {});
+      persistAppSetting('theme', theme).catch(function() {});
     }
   };
 

@@ -262,33 +262,26 @@ func (r *Registrar) PostKatalNexus(groups []katalGroup) {
 	}
 	var events []interface{}
 	slot := 18
+	addDictionaryValue := func(value string) string {
+		key := fmt.Sprintf("#%d", slot)
+		slot++
+		dct[key] = value
+		return key
+	}
 	for _, g := range groups {
 		if len(g.Metrics) == 0 {
 			continue
 		}
-		actionID := NewUUID()
-		dct["#4"] = actionID
-		dct["#7"] = g.Producer
-		first := g.Metrics[0]
-		dct["#9"] = first.Key
-		dct["#15"] = first.Schema
-		metricSlots := make([]struct{ key, schema string }, len(g.Metrics))
-		metricSlots[0] = struct{ key, schema string }{"#9", "#15"}
-		for i := 1; i < len(g.Metrics); i++ {
-			keySlot := fmt.Sprintf("#%d", slot)
-			slot++
-			schemaSlot := fmt.Sprintf("#%d", slot)
-			slot++
-			dct[keySlot] = g.Metrics[i].Key
-			dct[schemaSlot] = g.Metrics[i].Schema
-			metricSlots[i] = struct{ key, schema string }{keySlot, schemaSlot}
-		}
-		for i, m := range g.Metrics {
+		actionSlot := addDictionaryValue(NewUUID())
+		producerSlot := addDictionaryValue(g.Producer)
+		for _, m := range g.Metrics {
+			keySlot := addDictionaryValue(m.Key)
+			schemaSlot := addDictionaryValue(m.Schema)
 			events = append(events, map[string]interface{}{
 				"data": map[string]interface{}{
-					"#0": "#1", "#2": "#1", "#3": "#4", "#6": "#7",
-					"#8": metricSlots[i].key, "#10": m.Value, "#11": true,
-					"#12": "#13", "#14": metricSlots[i].schema,
+					"#0": "#1", "#2": "#1", "#3": actionSlot, "#6": producerSlot,
+					"#8": keySlot, "#10": m.Value, "#11": true,
+					"#12": "#13", "#14": schemaSlot,
 					"#16": now.UTC().Format("2006-01-02T15:04:05.000Z"),
 					"#17": fmt.Sprintf("1-%d-%d", now.UnixMilli(), 1000000000+mrand.Int63n(9000000000)),
 				},

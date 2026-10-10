@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,47 +51,14 @@ func outlookGraphFolders(counts OutlookMailboxCounts) []outlookGraphFolder {
 	return folders
 }
 
-func refreshOutlookGraphToken(acc OutlookAccount, proxyURL string) (string, error) {
-	form := url.Values{
-		"client_id":     {acc.ClientID},
-		"refresh_token": {acc.RefreshToken},
-		"grant_type":    {"refresh_token"},
-		"scope":         {"https://graph.microsoft.com/Mail.Read offline_access"},
-	}
-
-	tryPost := func(p string) (*http.Response, error) {
-		client := httpClientWithProxy(p, 30*time.Second)
-		return client.Post(
-			"https://login.microsoftonline.com/common/oauth2/v2.0/token",
-			"application/x-www-form-urlencoded",
-			strings.NewReader(form.Encode()),
-		)
-	}
-
-	resp, err := tryPost(proxyURL)
-	if err != nil {
-		return "", fmt.Errorf("请求失败: %v", err)
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("刷新失败 %d: %s", resp.StatusCode, string(body[:min(300, len(body))]))
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
-	}
-	token, _ := result["access_token"].(string)
-	if token == "" {
-		return "", fmt.Errorf("响应中无 access_token")
-	}
-	return token, nil
+func refreshOutlookGraphToken(ctx context.Context, acc OutlookAccount, proxyURL string) (string, error) {
+	return refreshOutlookOAuthToken(ctx, acc, proxyURL, "/common/oauth2/v2.0/token", "https://graph.microsoft.com/Mail.Read offline_access")
 }
 
-func outlookGraphGet(accessToken, path, proxyURL string, out interface{}) error {
+func outlookGraphGet(ctx context.Context, accessToken, path, proxyURL string, out interface{}) error {
 	client := httpClientWithProxy(proxyURL, 30*time.Second)
-	req, err := http.NewRequest("GET", outlookGraphAPIBaseURL+path, nil)
+	defer client.CloseIdleConnections()
+	req, err := http.NewRequestWithContext(ctx, "GET", outlookGraphAPIBaseURL+path, nil)
 	if err != nil {
 		return err
 	}
@@ -102,43 +70,49 @@ func outlookGraphGet(accessToken, path, proxyURL string, out interface{}) error 
 		return err
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("Graph 请求失败 %d: %s", resp.StatusCode, string(body[:min(300, len(body))]))
 	}
 	return json.Unmarshal(body, out)
 }
 
-func getGraphFolderCountWithToken(accessToken, folderID, proxyURL string) (int, error) {
+func getGraphFolderCountWithToken(ctx context.Context, accessToken, folderID, proxyURL string) (int, error) {
 	var folder outlookGraphFolderResponse
 	path := fmt.Sprintf("/me/mailFolders/%s?$select=totalItemCount", url.PathEscape(folderID))
-	if err := outlookGraphGet(accessToken, path, proxyURL, &folder); err != nil {
+	if err := outlookGraphGet(ctx, accessToken, path, proxyURL, &folder); err != nil {
 		return 0, err
 	}
 	return folder.TotalItemCount, nil
 }
 
-func getMailboxCountsGraph(acc OutlookAccount, proxyURL string) (OutlookMailboxCounts, error) {
-	accessToken, err := refreshOutlookGraphToken(acc, proxyURL)
+func getMailboxCountsGraph(ctx context.Context, acc OutlookAccount, proxyURL string) (OutlookMailboxCounts, error) {
+	accessToken, err := refreshOutlookGraphToken(ctx, acc, proxyURL)
 	if err != nil {
-		return OutlookMailboxCounts{}, fmt.Errorf("刷新 Graph Token 失败: %v", err)
+		return OutlookMailboxCounts{}, fmt.Errorf("刷新 Graph Token 失败: %w", err)
 	}
 	counts := OutlookMailboxCounts{Junk: -1}
-	counts.Inbox, err = getGraphFolderCountWithToken(accessToken, "inbox", proxyURL)
+	counts.Inbox, err = getGraphFolderCountWithToken(ctx, accessToken, "inbox", proxyURL)
 	if err != nil {
 		return counts, err
 	}
-	counts.Junk, err = getGraphFolderCountWithToken(accessToken, "junkemail", proxyURL)
+	counts.Junk, err = getGraphFolderCountWithToken(ctx, accessToken, "junkemail", proxyURL)
 	if err != nil {
+		if ctx.Err() != nil {
+			return counts, ctx.Err()
+		}
 		log.Printf("[Outlook Graph] 无法读取垃圾邮件目录，继续仅监控收件箱: %v", err)
 		counts.Junk = -1
 	}
 	return counts, nil
 }
 
-func findOTPGraphWithToken(accessToken string, counts OutlookMailboxCounts, codeRegex *regexp.Regexp, proxyURL string) (string, error) {
+func findOTPGraphWithToken(ctx context.Context, accessToken string, counts OutlookMailboxCounts, codeRegex *regexp.Regexp, proxyURL string) (string, error) {
 	for _, folder := range outlookGraphFolders(counts) {
-		total, err := getGraphFolderCountWithToken(accessToken, folder.id, proxyURL)
+		total, err := getGraphFolderCountWithToken(ctx, accessToken, folder.id, proxyURL)
 		if err != nil {
 			return "", err
 		}
@@ -155,7 +129,7 @@ func findOTPGraphWithToken(accessToken string, counts OutlookMailboxCounts, code
 		}
 		path := fmt.Sprintf("/me/mailFolders/%s/messages?$top=%d&$orderby=receivedDateTime%%20desc&$select=subject,bodyPreview,body,receivedDateTime", url.PathEscape(folder.id), limit)
 		var messages outlookGraphMessagesResponse
-		if err := outlookGraphGet(accessToken, path, proxyURL, &messages); err != nil {
+		if err := outlookGraphGet(ctx, accessToken, path, proxyURL, &messages); err != nil {
 			return "", err
 		}
 		for _, msg := range messages.Value {
@@ -168,15 +142,18 @@ func findOTPGraphWithToken(accessToken string, counts OutlookMailboxCounts, code
 	return "", nil
 }
 
-func waitForOTPGraph(acc OutlookAccount, counts OutlookMailboxCounts, timeout, interval int, codeRegex *regexp.Regexp, proxyURL string) (string, error) {
-	accessToken, err := refreshOutlookGraphToken(acc, proxyURL)
+func waitForOTPGraph(ctx context.Context, acc OutlookAccount, counts OutlookMailboxCounts, timeout, interval int, codeRegex *regexp.Regexp, proxyURL string) (string, error) {
+	accessToken, err := refreshOutlookGraphToken(ctx, acc, proxyURL)
 	if err != nil {
-		return "", fmt.Errorf("刷新 Graph Token 失败: %v", err)
+		return "", fmt.Errorf("刷新 Graph Token 失败: %w", err)
 	}
 
+	if interval <= 0 {
+		interval = 3
+	}
 	maxRetries := timeout / interval
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		code, err := findOTPGraphWithToken(accessToken, counts, codeRegex, proxyURL)
+		code, err := findOTPGraphWithToken(ctx, accessToken, counts, codeRegex, proxyURL)
 		if err != nil {
 			return "", err
 		}
@@ -184,7 +161,9 @@ func waitForOTPGraph(acc OutlookAccount, counts OutlookMailboxCounts, timeout, i
 			return code, nil
 		}
 
-		time.Sleep(time.Duration(interval) * time.Second)
+		if err := waitEmailPoll(ctx, time.Duration(interval)*time.Second); err != nil {
+			return "", err
+		}
 	}
 	return "", fmt.Errorf("等待验证码超时 (%ds)", timeout)
 }

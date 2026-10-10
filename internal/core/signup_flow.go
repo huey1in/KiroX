@@ -307,7 +307,10 @@ func (r *Registrar) Step9SendOTP() error {
 
 	// Outlook 模式: 分别记录收件箱和垃圾邮件发送前的数量
 	if r.Cfg.UseOutlook && r.Cfg.OutlookAccount != nil {
-		counts, err := email.GetOutlookMailboxCountsWithProxy(*r.Cfg.OutlookAccount, r.Cfg.EmailProxy)
+		counts, err := email.GetOutlookMailboxCountsWithProxy(r.context(), *r.Cfg.OutlookAccount, r.Cfg.EmailProxy)
+		if r.context().Err() != nil {
+			return r.context().Err()
+		}
 		if err != nil {
 			log.Printf("获取 Outlook 邮件目录基线失败: %v，将按收件箱基线 0 降级轮询", err)
 		} else {
@@ -369,7 +372,7 @@ func (r *Registrar) Step10GetOTP() (string, error) {
 		timeout = 120
 	}
 	if r.Cfg.UseOutlook && r.Cfg.OutlookAccount != nil {
-		code, err := email.WaitForOTPWithMailboxCountsProxy(*r.Cfg.OutlookAccount, r.OutlookMailCounts, timeout, 5, r.Cfg.EmailProxy)
+		code, err := email.WaitForOTPWithMailboxCountsProxy(r.context(), *r.Cfg.OutlookAccount, r.OutlookMailCounts, timeout, 5, r.Cfg.EmailProxy)
 		if err != nil {
 			return "", err
 		}

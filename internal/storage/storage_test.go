@@ -4,11 +4,108 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestSettingsCachesConcurrentReadersAndSetters(t *testing.T) {
+	isolateStorageLayout(t)
+	resetAccountsCache()
+	t.Cleanup(resetAccountsCache)
+	homeDir := t.TempDir()
+	t.Setenv("USERPROFILE", homeDir)
+	t.Setenv("HOME", homeDir)
+	GetDataDir()
+	GetResultOutputDir()
+	GetLanguage()
+	start := make(chan struct{})
+	stop := make(chan struct{})
+	var readers, writers sync.WaitGroup
+	for range 4 {
+		readers.Add(1)
+		go func() {
+			defer readers.Done()
+			<-start
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					if GetDataDir() == "" || GetResultOutputDir() == "" {
+						t.Error("directory getter returned an empty path")
+					}
+					GetLanguage()
+					runtime.Gosched()
+				}
+			}
+		}()
+	}
+	for worker := range 2 {
+		dataDir := t.TempDir()
+		resultDir := t.TempDir()
+		writers.Add(3)
+		go func() {
+			defer writers.Done()
+			<-start
+			for range 8 {
+				if _, err := SetDataDirPath(dataDir); err != nil {
+					t.Error(err)
+				}
+				if _, err := ResetDataDirPath(); err != nil {
+					t.Error(err)
+				}
+			}
+		}()
+		go func() {
+			defer writers.Done()
+			<-start
+			for range 8 {
+				if _, err := SetResultOutputDir(resultDir); err != nil {
+					t.Error(err)
+				}
+				if _, err := ResetResultOutputDir(); err != nil {
+					t.Error(err)
+				}
+			}
+		}()
+		go func() {
+			defer writers.Done()
+			<-start
+			settings := DefaultAppSettings()
+			settings.Language = []string{"en", "ja"}[worker]
+			for range 16 {
+				if _, err := SaveAppSettings(settings); err != nil {
+					t.Error(err)
+				}
+			}
+		}()
+	}
+	close(start)
+	writers.Wait()
+	close(stop)
+	readers.Wait()
+	stored := loadSettings()
+	wantDataDir := stored.DataDir
+	if wantDataDir == "" {
+		wantDataDir = GetDefaultDataDir()
+	}
+	if got := GetDataDir(); got != wantDataDir {
+		t.Errorf("data directory cache = %q, persisted = %q", got, wantDataDir)
+	}
+	wantResultDir := stored.ResultOutputDir
+	if wantResultDir == "" {
+		wantResultDir = getDefaultResultOutputDir()
+	}
+	if got := GetResultOutputDir(); got != wantResultDir {
+		t.Errorf("result directory cache = %q, persisted = %q", got, wantResultDir)
+	}
+	if got := GetLanguage(); got != stored.Language {
+		t.Errorf("language cache = %q, persisted = %q", got, stored.Language)
+	}
+}
 
 func isolateStorageLayout(t *testing.T) (string, string) {
 	t.Helper()
@@ -30,12 +127,12 @@ func isolateStorageLayout(t *testing.T) (string, string) {
 func resetStorageGlobalsForTest() {
 	layoutOnce = sync.Once{}
 	layoutErr = nil
+	_dataDirMu.Lock()
 	_dataDir = ""
-	_dataDirOnce = sync.Once{}
+	_dataDirMu.Unlock()
+	_resultOutputMu.Lock()
 	_resultOutputDir = ""
-	_resultOutputOnce = sync.Once{}
-	_language = ""
-	_languageOnce = sync.Once{}
+	_resultOutputMu.Unlock()
 }
 
 func writeTestFile(t *testing.T, path, content string) {
@@ -275,7 +372,7 @@ func TestSetDataDirReloadsAccountsFromNewDirectory(t *testing.T) {
 	t.Cleanup(resetAccountsCache)
 
 	oldDir := GetDataDir()
-	SetAccountsCached([]map[string]interface{}{{"email": "old@example.com"}})
+	setAccountsCached([]map[string]interface{}{{"email": "old@example.com"}})
 	FlushAccountsSync()
 
 	newDir := t.TempDir()
@@ -292,10 +389,25 @@ func TestSetDataDirReloadsAccountsFromNewDirectory(t *testing.T) {
 	assertFileContent(t, filepath.Join(oldDir, "accounts.json"), `[{"email":"old@example.com"}]`)
 }
 
+// setAccountsCached 替换账号列表并触发异步刷盘
+func setAccountsCached(accounts []map[string]interface{}) {
+	_accountsLocationMu.RLock()
+	defer _accountsLocationMu.RUnlock()
+	_accountsMu.Lock()
+	_accountsCache = cloneAccounts(accounts)
+	_accountsLoaded = true
+	_accountsDirty = true
+	_accountsVersion++
+	scheduleFlush()
+	_accountsMu.Unlock()
+}
+
 func isolateAccountsCache(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
+	_dataDirMu.Lock()
 	oldDir := _dataDir
+	_dataDirMu.Unlock()
 	_accountsMu.Lock()
 	oldCache, oldLoaded, oldDirty, oldVersion := _accountsCache, _accountsLoaded, _accountsDirty, _accountsVersion
 	if _flushTimer != nil {
@@ -303,9 +415,9 @@ func isolateAccountsCache(t *testing.T) string {
 	}
 	_accountsCache, _accountsLoaded, _accountsDirty, _accountsVersion, _flushTimer = nil, false, false, 0, nil
 	_accountsMu.Unlock()
+	_dataDirMu.Lock()
 	_dataDir = dir
-	_dataDirOnce = sync.Once{}
-	_dataDirOnce.Do(func() {})
+	_dataDirMu.Unlock()
 	t.Cleanup(func() {
 		FlushAccountsSync()
 		_accountsLoadMu.Lock()
@@ -315,8 +427,9 @@ func isolateAccountsCache(t *testing.T) string {
 		_accountsMu.Lock()
 		_accountsCache, _accountsLoaded, _accountsDirty, _accountsVersion = oldCache, oldLoaded, oldDirty, oldVersion
 		_accountsMu.Unlock()
+		_dataDirMu.Lock()
 		_dataDir = oldDir
-		_dataDirOnce = sync.Once{}
+		_dataDirMu.Unlock()
 	})
 	return filepath.Join(dir, "accounts.json")
 }
@@ -324,7 +437,7 @@ func isolateAccountsCache(t *testing.T) string {
 func TestAccountsCacheOwnsInputAndReturnedMaps(t *testing.T) {
 	isolateAccountsCache(t)
 	input := []map[string]interface{}{{"email": "user@example.com", "registered": false}}
-	SetAccountsCached(input)
+	setAccountsCached(input)
 	input[0]["email"] = "mutated-input@example.com"
 	snapshot := GetAccountsCached()
 	snapshot[0]["email"] = "mutated-snapshot@example.com"
@@ -367,7 +480,7 @@ func TestAccountsFlushPreservesUpdatesDuringIO(t *testing.T) {
 	gate := &blockingJSONValue{entered: make(chan struct{}), release: make(chan struct{})}
 	var releaseOnce sync.Once
 	defer releaseOnce.Do(func() { close(gate.release) })
-	SetAccountsCached([]map[string]interface{}{{"email": "user@example.com", "registered": false, "gate": gate}})
+	setAccountsCached([]map[string]interface{}{{"email": "user@example.com", "registered": false, "gate": gate}})
 	flushed := make(chan struct{})
 	go func() {
 		FlushAccountsSync()
@@ -418,7 +531,7 @@ func TestAccountsConcurrentFlushesPersistLatestSnapshot(t *testing.T) {
 	gate := &blockingJSONValue{entered: make(chan struct{}), release: make(chan struct{})}
 	var releaseOnce sync.Once
 	defer releaseOnce.Do(func() { close(gate.release) })
-	SetAccountsCached([]map[string]interface{}{{"email": "user@example.com", "revision": 1, "gate": gate}})
+	setAccountsCached([]map[string]interface{}{{"email": "user@example.com", "revision": 1, "gate": gate}})
 	firstDone, secondDone := make(chan struct{}), make(chan struct{})
 	go func() {
 		FlushAccountsSync()
@@ -466,7 +579,7 @@ func TestAccountsInitialLoadDoesNotBlockOrOverwriteReplacement(t *testing.T) {
 	}
 	replaced := make(chan struct{})
 	go func() {
-		SetAccountsCached([]map[string]interface{}{{"email": "new@example.com"}})
+		setAccountsCached([]map[string]interface{}{{"email": "new@example.com"}})
 		close(replaced)
 	}()
 	waitForSignal(t, replaced, "cache replacement while initial disk read is blocked")
@@ -488,7 +601,7 @@ func TestAccountsConcurrentReadersModifiersAndFlushes(t *testing.T) {
 	for i := range accounts {
 		accounts[i] = map[string]interface{}{"index": i, "registered": false}
 	}
-	SetAccountsCached(accounts)
+	setAccountsCached(accounts)
 	var workers sync.WaitGroup
 	for i := range accounts {
 		workers.Add(3)

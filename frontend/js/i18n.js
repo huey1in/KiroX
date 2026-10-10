@@ -619,6 +619,7 @@ function tr(key, varsOrFallback, fallbackMaybe) {
   var STORAGE_KEY = 'kirox-language';
   var DEFAULT_LANG = 'zh';
   var currentLang = DEFAULT_LANG;
+  var languageRevision = 0;
   function getByPath(obj, path) {
     var parts = path.split('.');
     var cur = obj;
@@ -666,7 +667,8 @@ function tr(key, varsOrFallback, fallbackMaybe) {
       ariaLabels[l].setAttribute('aria-label', t(ariaLabels[l].getAttribute('data-i18n-aria-label')));
     }
   }
-  function setLanguage(lang, options) {
+  function setLanguage(lang) {
+    languageRevision++;
     if (!DICT[lang]) lang = DEFAULT_LANG;
     currentLang = lang;
     try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) {}
@@ -677,17 +679,10 @@ function tr(key, varsOrFallback, fallbackMaybe) {
       var evt = new CustomEvent('i18n:changed', { detail: { lang: lang } });
       window.dispatchEvent(evt);
     } catch (e) {}
-    // 持久化到后端（异步，不阻塞 UI）
-    if (!options || options.persist !== false) {
-      try {
-        if (window.go && window.go.main && window.go.main.App && window.go.main.App.SetLanguage) {
-          window.go.main.App.SetLanguage(lang);
-        }
-      } catch (e) {}
-    }
   }
   function getLanguage() { return currentLang; }
   async function init() {
+    var revision = languageRevision;
     var lang = '';
     // 1. 后端持久化值
     try {
@@ -715,7 +710,9 @@ function tr(key, varsOrFallback, fallbackMaybe) {
       else lang = 'en';
     }
     if (!DICT[lang]) lang = DEFAULT_LANG;
-    setLanguage(lang, { persist: false });
+    if (languageRevision !== revision) return false;
+    setLanguage(lang);
+    return true;
   }
   // ===== 日志短语翻译表 =====
   // 后端 log.Printf 输出的是中文；前端在渲染前按当前语言做替换。

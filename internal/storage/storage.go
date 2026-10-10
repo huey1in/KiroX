@@ -125,12 +125,10 @@ func oneOf(value string, allowed ...string) bool {
 }
 
 var (
-	_dataDir          string
-	_dataDirOnce      sync.Once
-	_resultOutputDir  string
-	_resultOutputOnce sync.Once
-	_language         string
-	_languageOnce     sync.Once
+	_dataDir         string
+	_dataDirMu       sync.Mutex
+	_resultOutputDir string
+	_resultOutputMu  sync.Mutex
 
 	layoutOnce sync.Once
 	layoutErr  error
@@ -327,9 +325,6 @@ func SaveAppSettings(appSettings AppSettings) (AppSettings, error) {
 	}); err != nil {
 		return AppSettings{}, err
 	}
-	_language = appSettings.Language
-	_languageOnce = sync.Once{}
-	_languageOnce.Do(func() {})
 	return appSettings, nil
 }
 
@@ -368,7 +363,13 @@ func updateSettings(update func(*settingsFile)) error {
 
 // GetDataDir 获取应用数据目录（优先使用自定义目录）
 func GetDataDir() string {
-	_dataDirOnce.Do(func() {
+	_dataDirMu.Lock()
+	defer _dataDirMu.Unlock()
+	return getDataDirLocked()
+}
+
+func getDataDirLocked() string {
+	if _dataDir == "" {
 		settings := loadSettings()
 		custom := strings.TrimSpace(settings.DataDir)
 		if custom != "" {
@@ -380,7 +381,7 @@ func GetDataDir() string {
 			_dataDir = GetDefaultDataDir()
 		}
 		os.MkdirAll(_dataDir, 0755)
-	})
+	}
 	return _dataDir
 }
 
@@ -393,7 +394,10 @@ func SetDataDirPath(dir string) (string, error) {
 	_accountsLocationMu.Lock()
 	defer _accountsLocationMu.Unlock()
 	flushAccountsSyncLocked()
-	oldDir := GetDataDir()
+	// Hold the account location lock before the directory cache lock.
+	_dataDirMu.Lock()
+	defer _dataDirMu.Unlock()
+	oldDir := getDataDirLocked()
 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("创建目录失败: %w", err)
@@ -416,8 +420,6 @@ func SetDataDirPath(dir string) (string, error) {
 	}
 
 	_dataDir = dir
-	_dataDirOnce = sync.Once{}
-	_dataDirOnce.Do(func() {})
 	resetAccountsCache()
 
 	return dir, nil
@@ -428,7 +430,10 @@ func ResetDataDirPath() (string, error) {
 	_accountsLocationMu.Lock()
 	defer _accountsLocationMu.Unlock()
 	flushAccountsSyncLocked()
-	oldDir := GetDataDir()
+	// Hold the account location lock before the directory cache lock.
+	_dataDirMu.Lock()
+	defer _dataDirMu.Unlock()
+	oldDir := getDataDirLocked()
 	defaultDir := GetDefaultDataDir()
 
 	if oldDir != "" && oldDir != defaultDir {
@@ -449,8 +454,6 @@ func ResetDataDirPath() (string, error) {
 
 	os.MkdirAll(defaultDir, 0o755)
 	_dataDir = defaultDir
-	_dataDirOnce = sync.Once{}
-	_dataDirOnce.Do(func() {})
 	resetAccountsCache()
 
 	return defaultDir, nil
@@ -476,7 +479,9 @@ func getDefaultResultOutputDir() string {
 
 // GetResultOutputDir 获取注册结果输出目录（默认为用户文档目录下的 KiroX）
 func GetResultOutputDir() string {
-	_resultOutputOnce.Do(func() {
+	_resultOutputMu.Lock()
+	defer _resultOutputMu.Unlock()
+	if _resultOutputDir == "" {
 		settings := loadSettings()
 		if custom := strings.TrimSpace(settings.ResultOutputDir); custom != "" {
 			_resultOutputDir = custom
@@ -484,12 +489,14 @@ func GetResultOutputDir() string {
 			_resultOutputDir = getDefaultResultOutputDir()
 		}
 		os.MkdirAll(_resultOutputDir, 0755)
-	})
+	}
 	return _resultOutputDir
 }
 
 // SetResultOutputDir 设置自定义输出目录（不迁移已有 JSON 文件）
 func SetResultOutputDir(dir string) (string, error) {
+	_resultOutputMu.Lock()
+	defer _resultOutputMu.Unlock()
 	if dir == "" {
 		return "", fmt.Errorf("目录不能为空")
 	}
@@ -502,54 +509,29 @@ func SetResultOutputDir(dir string) (string, error) {
 		return "", fmt.Errorf("保存配置失败: %w", err)
 	}
 	_resultOutputDir = dir
-	_resultOutputOnce = sync.Once{}
-	_resultOutputOnce.Do(func() {})
 	return dir, nil
 }
 
 // ResetResultOutputDir 重置为默认输出目录（用户文档目录下的 KiroX）
 func ResetResultOutputDir() (string, error) {
+	_resultOutputMu.Lock()
+	defer _resultOutputMu.Unlock()
+	defaultDir := getDefaultResultOutputDir()
+	if err := os.MkdirAll(defaultDir, 0o755); err != nil {
+		return "", fmt.Errorf("创建默认输出目录失败: %w", err)
+	}
 	if err := updateSettings(func(settings *settingsFile) {
 		settings.ResultOutputDir = ""
 	}); err != nil {
 		return "", err
 	}
-
-	defaultDir := getDefaultResultOutputDir()
-	if err := os.MkdirAll(defaultDir, 0o755); err != nil {
-		return "", fmt.Errorf("创建默认输出目录失败: %w", err)
-	}
 	_resultOutputDir = defaultDir
-	_resultOutputOnce = sync.Once{}
-	_resultOutputOnce.Do(func() {})
 	return defaultDir, nil
 }
 
 // GetLanguage 返回当前界面语言代码（"zh"/"en"/"ja"），未设置时返回空字符串。
 func GetLanguage() string {
-	_languageOnce.Do(func() {
-		settings := loadSettings()
-		_language = strings.TrimSpace(settings.Language)
-	})
-	return _language
-}
-
-// SetLanguage 持久化界面语言；仅接受 "zh"/"en"/"ja"，其他值返回错误。
-func SetLanguage(lang string) error {
-	lang = strings.TrimSpace(lang)
-	if lang != "zh" && lang != "en" && lang != "ja" {
-		return fmt.Errorf("不支持的语言: %s", lang)
-	}
-	if err := updateSettings(func(settings *settingsFile) {
-		settings.Language = lang
-		settings.Runtime.Language = lang
-	}); err != nil {
-		return err
-	}
-	_language = lang
-	_languageOnce = sync.Once{}
-	_languageOnce.Do(func() {})
-	return nil
+	return strings.TrimSpace(loadSettings().Language)
 }
 
 // NormalizeProxyAddress 归一化常见代理写法为完整 URL:
@@ -706,19 +688,6 @@ func GetAccountsCached() []map[string]interface{} {
 	_accountsMu.RLock()
 	defer _accountsMu.RUnlock()
 	return cloneAccounts(_accountsCache)
-}
-
-// SetAccountsCached 替换账号列表并触发异步刷盘
-func SetAccountsCached(accounts []map[string]interface{}) {
-	_accountsLocationMu.RLock()
-	defer _accountsLocationMu.RUnlock()
-	_accountsMu.Lock()
-	_accountsCache = cloneAccounts(accounts)
-	_accountsLoaded = true
-	_accountsDirty = true
-	_accountsVersion++
-	scheduleFlush()
-	_accountsMu.Unlock()
 }
 
 // ModifyAccountsCached 原子修改账号列表（回调在锁内执行，高效无文件 I/O）

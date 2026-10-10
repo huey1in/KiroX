@@ -285,6 +285,22 @@ function getFormConfig() {
 window.appSettings = null;
 var savedSettingsSnapshot = null;
 var settingsSaving = false;
+var settingsWriteQueue = Promise.resolve();
+var pendingSettingsWrites = 0;
+var appSettingControls = {
+  emailProxyMode: 'setting-email-proxy-mode', emailProxy: 'setting-email-proxy',
+  otpTimeoutSeconds: 'setting-otp-timeout', retryProfile: 'setting-retry-profile',
+  stopOnRisk: 'setting-stop-on-risk', soundEnabled: 'cfg-sound',
+  desktopNotifications: 'setting-desktop-notification', soundVolume: 'setting-sound-volume',
+  autoCheckUpdates: 'setting-auto-update', theme: 'setting-theme', language: 'setting-language',
+  persistentLogs: 'setting-persistent-logs', logRetentionDays: 'setting-log-retention',
+  autoProbeProxies: 'setting-auto-probe', moeMailExpiryMinutes: 'setting-moe-expiry'
+};
+
+function renderAppSetting(key, value) {
+  if (typeof value === 'boolean') setSettingChecked(appSettingControls[key], value);
+  else setSettingValue(appSettingControls[key], value);
+}
 
 function settingValue(id, fallback) {
   var el = document.getElementById(id);
@@ -311,7 +327,9 @@ function setSettingChecked(id, value) {
 }
 
 function snapshotAppSettings(settings) {
-  return JSON.stringify(settings || {});
+  var ordered = {};
+  Object.keys(settings || {}).sort().forEach(function(key) { ordered[key] = settings[key]; });
+  return JSON.stringify(ordered);
 }
 
 function settingsHaveChanges() {
@@ -365,21 +383,7 @@ function applyThemePreference(theme) {
 
 function renderAppSettings(s) {
   window.appSettings = s;
-  setSettingValue('setting-email-proxy-mode', s.emailProxyMode);
-  setSettingValue('setting-email-proxy', s.emailProxy);
-  setSettingValue('setting-otp-timeout', s.otpTimeoutSeconds);
-  setSettingValue('setting-retry-profile', s.retryProfile);
-  setSettingChecked('setting-stop-on-risk', s.stopOnRisk);
-  setSettingChecked('cfg-sound', s.soundEnabled);
-  setSettingChecked('setting-desktop-notification', s.desktopNotifications);
-  setSettingValue('setting-sound-volume', s.soundVolume);
-  setSettingChecked('setting-auto-update', s.autoCheckUpdates);
-  setSettingValue('setting-theme', s.theme);
-  setSettingValue('setting-language', s.language || 'zh');
-  setSettingChecked('setting-persistent-logs', s.persistentLogs);
-  setSettingValue('setting-log-retention', s.logRetentionDays);
-  setSettingChecked('setting-auto-probe', s.autoProbeProxies);
-  setSettingValue('setting-moe-expiry', s.moeMailExpiryMinutes);
+  Object.keys(appSettingControls).forEach(function(key) { renderAppSetting(key, s[key]); });
   applyThemePreference(s.theme);
   syncEmailProxyField();
   syncVolumeLabel();
@@ -417,21 +421,57 @@ function collectAppSettings() {
   return s;
 }
 
-async function saveAppSettings() {
-  if (settingsSaving || !settingsHaveChanges()) return;
+function commitAppSettings(settings, submitted, fields) {
+  var current = collectAppSettings();
+  (fields || Object.keys(appSettingControls)).forEach(function(key) {
+    if (current[key] !== submitted[key]) return;
+    renderAppSetting(key, settings[key]);
+    if (key === 'theme') applyThemePreference(settings.theme);
+    if (key === 'language' && settings.language && window.I18N) window.I18N.setLanguage(settings.language);
+  });
+  window.appSettings = settings;
+  savedSettingsSnapshot = snapshotAppSettings(settings);
+  syncEmailProxyField();
+  syncVolumeLabel();
+  updateSettingsDirtyState();
+}
+
+function queueAppSettingsWrite(submitted, fields) {
+  pendingSettingsWrites++;
   settingsSaving = true;
   updateSettingsDirtyState();
+  var request = settingsWriteQueue.then(async function() {
+    var settings = submitted;
+    if (fields) {
+      settings = Object.assign({}, window.appSettings);
+      fields.forEach(function(key) { settings[key] = submitted[key]; });
+    }
+    var result = await window.go.main.App.SaveAppSettings(settings);
+    if (result.error) throw new Error(result.error);
+    commitAppSettings(result.settings, submitted, fields);
+    return result;
+  }).finally(function() {
+    pendingSettingsWrites--;
+    settingsSaving = pendingSettingsWrites > 0;
+    updateSettingsDirtyState();
+  });
+  settingsWriteQueue = request.catch(function() {});
+  return request;
+}
+
+function persistAppSetting(key, value) {
+  var submitted = collectAppSettings();
+  submitted[key] = value;
+  return queueAppSettingsWrite(submitted, [key]);
+}
+
+async function saveAppSettings() {
+  if (settingsSaving || !settingsHaveChanges()) return;
   try {
-    var result = await window.go.main.App.SaveAppSettings(collectAppSettings());
-    if (result.error) { showToast(result.error, 'error'); return; }
-    renderAppSettings(result.settings);
-    if (window.I18N) window.I18N.setLanguage(result.settings.language || 'zh');
+    await queueAppSettingsWrite(collectAppSettings());
     showToast(tr('settings.saved', '设置已保存'));
   } catch (e) {
     showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');
-  } finally {
-    settingsSaving = false;
-    updateSettingsDirtyState();
   }
 }
 
@@ -516,34 +556,35 @@ window.addEventListener('DOMContentLoaded', async function() {
   await loadConfig();
   initSettingsChangeTracking();
   initEmailProviderSelection();
-  // 初始化 i18n（在 Wails runtime 就绪后），失败时不阻塞主流程
-  try {
-    if (window.I18N && typeof window.I18N.init === 'function') {
-      await window.I18N.init();
-      if (window.appSettings) window.appSettings.language = window.I18N.getLanguage();
-      setSettingValue('setting-language', window.I18N.getLanguage());
-      refreshLanguageNavLabel();
-      // 重新渲染依赖 i18n 的动态文本
-      var tb = document.getElementById('titlebar-text');
-      if (tb) tb.textContent = getPageTitle(_currentPageId);
-    }
-  } catch(e) {}
-  // 语言切换时刷新动态文本
+  var languageBeforeInit = settingValue('setting-language', '');
+  var initializingLanguage = true;
+  // 初始化和后续语言切换均同步控件，持久化由设置队列处理。
   window.addEventListener('i18n:changed', function() {
     var tb = document.getElementById('titlebar-text');
     if (tb) tb.textContent = getPageTitle(_currentPageId);
     refreshLanguageNavLabel();
     var activeLanguage = window.I18N.getLanguage();
-    setSettingValue('setting-language', activeLanguage);
-    if (window.appSettings) window.appSettings.language = activeLanguage;
-    if (savedSettingsSnapshot !== null) {
-      var savedLanguageState = JSON.parse(savedSettingsSnapshot);
-      savedLanguageState.language = activeLanguage;
-      savedSettingsSnapshot = snapshotAppSettings(savedLanguageState);
+    if (!initializingLanguage || settingValue('setting-language', '') === languageBeforeInit) {
+      setSettingValue('setting-language', activeLanguage);
     }
     renderInfoChangelogState();
     updateSettingsDirtyState();
   });
+  // 初始化 i18n（在 Wails runtime 就绪后），失败时不阻塞主流程
+  try {
+    if (window.I18N && typeof window.I18N.init === 'function') {
+      var selectedDefaultLanguage = await window.I18N.init();
+      var initialLanguage = window.I18N.getLanguage();
+      initializingLanguage = false;
+      refreshLanguageNavLabel();
+      // 重新渲染依赖 i18n 的动态文本
+      var tb = document.getElementById('titlebar-text');
+      if (tb) tb.textContent = getPageTitle(_currentPageId);
+      if (selectedDefaultLanguage && window.appSettings && !window.appSettings.language) {
+        await persistAppSetting('language', initialLanguage);
+      }
+    }
+  } catch(e) {} finally { initializingLanguage = false; }
   // 启动时静默检查更新
   if (!window.appSettings || window.appSettings.autoCheckUpdates !== false) setTimeout(checkUpdateOnStartup, 2000);
 });
@@ -558,7 +599,11 @@ function cycleLanguage() {
   var idx = _langOrder.indexOf(cur);
   var next = _langOrder[(idx + 1) % _langOrder.length];
   try {
+    setSettingValue('setting-language', next);
     window.I18N.setLanguage(next);
+    if (window.appSettings) persistAppSetting('language', next).catch(function(e) {
+      showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');
+    });
     showToast(tr('toast.languageChanged', '已切换语言'));
   } catch(e) {
     showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');

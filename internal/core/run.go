@@ -267,18 +267,10 @@ func (r *Registrar) Run() map[string]interface{} {
 		return map[string]interface{}{"status": "failed", "error": "任务已取消", "email": r.Email, "passwordSet": true}
 	}
 
-	finalSteps := []struct {
-		name string
-		fn   func() error
-	}{
-		{"SSOWorkflow", r.Step12_8SSOWorkflow},
-	}
-	for _, s := range finalSteps {
-		if err := s.fn(); err != nil {
-			friendlyErr := r.formatError(s.name, err)
-			log.Printf("%s %s", prefix, friendlyErr)
-			return map[string]interface{}{"status": "failed", "error": friendlyErr, "email": r.Email, "passwordSet": true}
-		}
+	if err := r.Step12_8SSOWorkflow(); err != nil {
+		friendlyErr := r.formatError("SSOWorkflow", err)
+		log.Printf("%s %s", prefix, friendlyErr)
+		return map[string]interface{}{"status": "failed", "error": friendlyErr, "email": r.Email, "passwordSet": true}
 	}
 
 	if err := r.wait(2 * time.Second); err != nil {

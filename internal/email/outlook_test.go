@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -98,6 +99,7 @@ func TestFindOTPGraphWithTokenFindsNewJunkMessage(t *testing.T) {
 	t.Cleanup(func() { outlookGraphAPIBaseURL = previousBaseURL })
 
 	code, err := findOTPGraphWithToken(
+		context.Background(),
 		"test-token",
 		OutlookMailboxCounts{Inbox: 10, Junk: 4},
 		regexp.MustCompile(`\b(\d{6})\b`),

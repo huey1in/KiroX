@@ -2,6 +2,7 @@ package email
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -151,6 +152,7 @@ type iCloudMessage struct {
 
 // ICloudProvider reads verification messages from an apple55-style mailbox URL.
 type ICloudProvider struct {
+	ctx     context.Context
 	listURL string
 	address string
 	client  tls_client.HttpClient
@@ -159,16 +161,19 @@ type ICloudProvider struct {
 }
 
 // NewICloudService creates an iCloud mailbox service for one CSV account.
-func NewICloudService(account ICloudAccount, proxy, chromeVer string) TempEmailService {
-	return NewICloudProvider(account, proxy, chromeVer)
+func NewICloudService(ctx context.Context, account ICloudAccount, proxy, chromeVer string) TempEmailService {
+	return NewICloudProvider(ctx, account, proxy, chromeVer)
 }
 
 // NewICloudProvider creates an iCloud mailbox provider.
-func NewICloudProvider(account ICloudAccount, proxy, chromeVer string) *ICloudProvider {
+func NewICloudProvider(ctx context.Context, account ICloudAccount, proxy, chromeVer string) *ICloudProvider {
+	client := httputil.NewTLSClient(proxy, true, chromeVer)
+	context.AfterFunc(ctx, client.CloseIdleConnections)
 	return &ICloudProvider{
+		ctx:     ctx,
 		listURL: account.MessagesURL,
 		address: account.Email,
-		client:  httputil.NewTLSClient(proxy, true, chromeVer),
+		client:  client,
 		seen:    make(map[string]struct{}),
 	}
 }
@@ -176,6 +181,9 @@ func NewICloudProvider(account ICloudAccount, proxy, chromeVer string) *ICloudPr
 // Create records existing messages and returns the configured mailbox address.
 func (i *ICloudProvider) Create() string {
 	ids, err := i.fetchMessageIDs()
+	if i.ctx.Err() != nil {
+		return ""
+	}
 	if err != nil {
 		log.Printf("[iCloud] 初始化邮件列表失败: %v", err)
 	} else {
@@ -205,13 +213,22 @@ func (i *ICloudProvider) WaitForCode(timeoutSec, intervalSec int) (string, error
 	}
 	maxRetries := (timeoutSec + intervalSec - 1) / intervalSec
 	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if err := i.ctx.Err(); err != nil {
+			return "", err
+		}
 		ids, err := i.fetchMessageIDs()
+		if i.ctx.Err() != nil {
+			return "", i.ctx.Err()
+		}
 		if err == nil {
 			for _, id := range ids {
 				if i.hasSeen(id) {
 					continue
 				}
 				code, fetchErr := i.fetchMessageCode(id)
+				if i.ctx.Err() != nil {
+					return "", i.ctx.Err()
+				}
 				if fetchErr != nil {
 					log.Printf("[iCloud] 获取邮件 %s 失败: %v", id, fetchErr)
 					continue
@@ -225,7 +242,9 @@ func (i *ICloudProvider) WaitForCode(timeoutSec, intervalSec int) (string, error
 			log.Printf("[iCloud] [%d/%d] 轮询失败: %v", attempt, maxRetries, err)
 		}
 		if attempt < maxRetries {
-			time.Sleep(time.Duration(intervalSec) * time.Second)
+			if err := waitEmailPoll(i.ctx, time.Duration(intervalSec)*time.Second); err != nil {
+				return "", err
+			}
 		}
 	}
 	return "", fmt.Errorf("等待 iCloud 验证码超时 (%ds)", timeoutSec)
@@ -277,7 +296,7 @@ func (i *ICloudProvider) fetchMessageCode(messageID string) (string, error) {
 }
 
 func (i *ICloudProvider) get(rawURL, accept string) ([]byte, error) {
-	req, err := http.NewRequest("GET", rawURL, nil)
+	req, err := http.NewRequestWithContext(i.ctx, "GET", rawURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("创建 iCloud 请求失败: %w", err)
 	}

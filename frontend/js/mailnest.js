@@ -96,16 +96,21 @@ async function loadMailNestConfig() {
 }
 
 function updateMailNestUI() {
-    const summaryEl = document.getElementById('settings-mailnest-summary');
     if (mailnestConfig.projectCode) {
         document.getElementById('mailnest-inline-apikey').value = mailnestConfig.apiKey;
         document.getElementById('mailnest-inline-project-code').value = mailnestConfig.projectCode;
-        summaryEl.textContent = tr('mailnest.summaryActive', "已配置");
     } else {
         document.getElementById('mailnest-inline-apikey').value = '';
         document.getElementById('mailnest-inline-project-code').value = '';
-        summaryEl.textContent = tr('mailnest.summaryNone', "未配置");
     }
+    updateMailNestSummary();
+}
+
+function updateMailNestSummary() {
+    const summaryEl = document.getElementById('settings-mailnest-summary');
+    summaryEl.textContent = mailnestConfig.projectCode
+        ? tr('mailnest.summaryActive', '已配置')
+        : tr('mailnest.summaryNone', '未配置');
 }
 
 // 页面加载时初始化
@@ -116,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 // 语言切换后重新渲染 MailNest UI（状态/摘要/空态等动态文本）
 window.addEventListener('i18n:changed', function () {
     try {
-        if (typeof updateMailNestUI === 'function') updateMailNestUI();
+        updateMailNestSummary();
     } catch (e) {
     }
     var btn = document.getElementById('mailnest-inline-test-btn');
