@@ -52,7 +52,7 @@ class CurlTests : public QObject {
         QString unexpectedError;
         std::jthread worker([&] {
             try {
-                CurlTransport session({{}, {}, profile});
+                CurlTransport session(TransportOptions{{}, {}, profile});
                 HttpRequest request;
                 request.url = QUrl("https://localhost:" + QString::number(server.serverPort()));
                 request.timeout = std::chrono::seconds(2);
@@ -142,7 +142,7 @@ class CurlTests : public QObject {
         QByteArray initialCookie, receivedCookie, otherSessionCookie;
         std::jthread worker([&] {
             try {
-                CurlTransport session({{}, "KiroX test", profile});
+                CurlTransport session(TransportOptions{{}, "KiroX test", profile});
                 session.setCookie(origin, "manual", "present");
                 initialCookie = session.cookie(origin, "manual");
                 HttpRequest request;

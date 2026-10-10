@@ -21,6 +21,8 @@ struct CurlTransport::Impl {
     CURLM *multi = nullptr;
     const std::thread::id owner = std::this_thread::get_id();
     TransportOptions options;
+    QByteArray caFile;
+    QByteArray proxyCaFile;
     std::stop_token stop;
     HttpResponse response;
     std::array<char, CURL_ERROR_SIZE> error{};
@@ -79,7 +81,11 @@ struct CurlTransport::Impl {
         return static_cast<Impl *>(context)->stop.stop_requested() ? 1 : 0;
     }
 };
-CurlTransport::CurlTransport(const TransportOptions &options) : impl_(std::make_unique<Impl>(options)) {
+CurlTransport::CurlTransport(const TransportOptions &options) : CurlTransport(options, {}, {}) {}
+CurlTransport::CurlTransport(const TransportOptions &options, QString caFile, QString proxyCaFile)
+    : impl_(std::make_unique<Impl>(options)) {
+    impl_->caFile = caFile.toUtf8();
+    impl_->proxyCaFile = proxyCaFile.toUtf8();
     if (!impl_->options.proxy.isEmpty())
         impl_->options.proxy = normalizeProxy(impl_->options.proxy);
     if (!options.browserProfile.isEmpty() && options.browserProfile != "chrome131" &&
@@ -131,6 +137,12 @@ HttpResponse CurlTransport::send(const HttpRequest &request, std::stop_token sto
     requireCurl(curl_easy_setopt(session.easy, CURLOPT_MAXREDIRS, 10L));
     requireCurl(curl_easy_setopt(session.easy, CURLOPT_SSL_VERIFYPEER, 1L));
     requireCurl(curl_easy_setopt(session.easy, CURLOPT_SSL_VERIFYHOST, 2L));
+    requireCurl(curl_easy_setopt(session.easy, CURLOPT_PROXY_SSL_VERIFYPEER, 1L));
+    requireCurl(curl_easy_setopt(session.easy, CURLOPT_PROXY_SSL_VERIFYHOST, 2L));
+    if (!session.caFile.isEmpty())
+        requireCurl(curl_easy_setopt(session.easy, CURLOPT_CAINFO, session.caFile.constData()));
+    if (!session.proxyCaFile.isEmpty())
+        requireCurl(curl_easy_setopt(session.easy, CURLOPT_PROXY_CAINFO, session.proxyCaFile.constData()));
 #ifdef Q_OS_WIN
     requireCurl(curl_easy_setopt(session.easy, CURLOPT_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_NATIVE_CA)));
     requireCurl(curl_easy_setopt(session.easy, CURLOPT_PROXY_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_NATIVE_CA)));

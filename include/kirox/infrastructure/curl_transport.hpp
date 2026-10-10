@@ -6,6 +6,7 @@ namespace kirox {
 class CurlTransport final : public ITransport {
   public:
     explicit CurlTransport(const TransportOptions &options);
+    CurlTransport(const TransportOptions &options, QString caFile, QString proxyCaFile);
     ~CurlTransport() override;
     CurlTransport(const CurlTransport &) = delete;
     CurlTransport &operator=(const CurlTransport &) = delete;

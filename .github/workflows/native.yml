@@ -45,11 +45,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev libgl-dev libegl-dev libopengl-dev libxkbcommon-x11-0 libxcb-cursor0 libpulse0
+          sudo apt-get install -y libssl-dev libgl-dev libegl-dev libopengl-dev libxkbcommon-x11-0 libxcb-cursor0 libpulse0 libpipewire-0.3-0
       - name: macOS crypto
         if: runner.os == 'macOS'
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
           brew --prefix openssl@3 >/dev/null || brew install openssl@3
       - name: Install Qt
         run: |

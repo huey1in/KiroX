@@ -40,8 +40,9 @@ cpack -G TGZ                 # Linux
 Homebrew OpenSSL can be added to `CMAKE_PREFIX_PATH`, separated from Qt by a
 semicolon. Linux needs system graphics/XCB and audio libraries; CI records the
 packages used on Ubuntu 24.04. Qt's Linux SDK also requires its `icu` archive.
-macOS CI pins macOS 15 and Xcode 16.4 because Qt 6.8.3's link interfaces
-require the older AGL SDK. The curl SDK is downloaded for the host architecture
+macOS CI uses Xcode 26.3's C++20 standard library. CMake removes Qt 6.8.3's
+obsolete AGL fallback link flag when that framework is absent from the SDK.
+The curl SDK is downloaded for the host architecture
 and verified by a pinned SHA-256. Supply an existing SDK with
 `-DKIROX_CURL_ROOT=/path/to/sdk`.
 

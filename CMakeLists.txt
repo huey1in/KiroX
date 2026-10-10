@@ -34,6 +34,13 @@ add_subdirectory(src/application)
 add_subdirectory(src/infrastructure)
 if(KIROX_BUILD_DESKTOP)
   find_package(Qt6 6.8 REQUIRED COMPONENTS Gui Quick QuickControls2 Svg Widgets Multimedia)
+  if(APPLE AND TARGET WrapOpenGL::WrapOpenGL AND NOT WrapOpenGL_AGL)
+    # Qt 6.8.3 adds an AGL fallback even when the SDK no longer provides it.
+    # Modern 64-bit Qt uses OpenGL/Metal; retain its available frameworks.
+    get_target_property(kirox_opengl_frameworks WrapOpenGL::WrapOpenGL INTERFACE_LINK_LIBRARIES)
+    list(FILTER kirox_opengl_frameworks EXCLUDE REGEX "(^|[ /])AGL([.]framework)?$")
+    set_property(TARGET WrapOpenGL::WrapOpenGL PROPERTY INTERFACE_LINK_LIBRARIES "${kirox_opengl_frameworks}")
+  endif()
   add_subdirectory(src/desktop)
 endif()
 if(BUILD_TESTING)
