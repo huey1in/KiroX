@@ -26,7 +26,7 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
 
 ---
 
-## Sponsorship
+## Sponsors & Acknowledgments
 
 <p align="center">
   <a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">
@@ -39,10 +39,6 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
   For KiroX batch imports, enter one <code>protocol://user:password@host:port</code> per line, using a separate session name and a fixed residential IP for each account.<br>
   The website offers a Chinese interface and accepts USDT payments. Use <code>KIROX30</code> for <b>30% off your first purchase</b>.
 </p>
-
----
-
-## Special Thanks
 
 <p align="center">
   <a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">
