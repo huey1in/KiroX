@@ -8,6 +8,7 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonParseError>
+#include <QLockFile>
 #include <QMap>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -76,6 +77,9 @@ JsonRepository::JsonRepository(QString root, QString legacyRoot)
 }
 void JsonRepository::initialize() {
     ensureDirectory(root_);
+    QLockFile initialization(QDir(root_).filePath(".initialize.lock"));
+    if (!initialization.tryLock(5000))
+        throw Error(ErrorCode::Conflict, "Another process is initializing this data directory");
     for (const auto &dir : {"data", "cache", "logs"})
         ensureDirectory(QDir(root_).filePath(dir));
     const auto settings = QDir(root_).filePath("settings.json");

@@ -1,17 +1,8 @@
 # 默认：所有文本文件统一使用 LF
 * text=auto eol=lf
 
-# Go 源码
-*.go text eol=lf
-*.mod text eol=lf
-*.sum text eol=lf
-
-# Web 前端
-*.html text eol=lf
-*.js text eol=lf
-*.css text eol=lf
+# 资源 / 数据
 *.json text eol=lf
-*.ts text eol=lf
 *.svg text eol=lf
 
 # 配置 / 文档

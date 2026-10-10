@@ -17,14 +17,31 @@ Dialog {
     header: Text {
         text: root.title
         color: root.dark ? "#f1f5ff" : "#24334e"
-        font { pixelSize: 18; weight: Font.DemiBold }
+        font {
+            pixelSize: 18
+            weight: Font.DemiBold
+        }
         padding: 24
         wrapMode: Text.Wrap
     }
     footer: RowLayout {
         spacing: 12
-        Item { Layout.fillWidth: true }
-        GlassButton { Layout.bottomMargin: 20; text: root.cancelText; dark: root.dark; onClicked: root.reject() }
-        GlassButton { Layout.rightMargin: 24; Layout.bottomMargin: 20; text: root.acceptText; dark: root.dark; primary: true; onClicked: root.accept() }
+        Item {
+            Layout.fillWidth: true
+        }
+        GlassButton {
+            Layout.bottomMargin: 20
+            text: root.cancelText
+            dark: root.dark
+            onClicked: root.reject()
+        }
+        GlassButton {
+            Layout.rightMargin: 24
+            Layout.bottomMargin: 20
+            text: root.acceptText
+            dark: root.dark
+            primary: true
+            onClicked: root.accept()
+        }
     }
 }

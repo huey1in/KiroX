@@ -27,7 +27,7 @@ jobs:
           - os: ubuntu-24.04
             host: linux
             arch: linux_gcc_64
-          - os: macos-latest
+          - os: macos-15
             host: mac
             arch: clang_64
     runs-on: ${{ matrix.os }}
@@ -48,14 +48,20 @@ jobs:
           sudo apt-get install -y libssl-dev libgl-dev libegl-dev libopengl-dev libxkbcommon-x11-0 libxcb-cursor0 libpulse0
       - name: macOS crypto
         if: runner.os == 'macOS'
-        run: brew list openssl@3 || brew install openssl@3
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          brew --prefix openssl@3 >/dev/null || brew install openssl@3
       - name: Install Qt
         run: |
           extractor=()
+          archives=(qtbase qtdeclarative qtsvg qttools)
+          if [ "$RUNNER_OS" = Linux ]; then
+            archives+=(icu)
+          fi
           if [ "$RUNNER_OS" = Windows ]; then
             extractor=(-E "C:/Program Files/7-Zip/7z.exe")
           fi
-          python -m aqt --config cmake/aqt.ini install-qt ${{ matrix.host }} desktop 6.8.3 ${{ matrix.arch }} -O .tools/qt -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 30 "${extractor[@]}"
+          python -m aqt --config cmake/aqt.ini install-qt ${{ matrix.host }} desktop 6.8.3 ${{ matrix.arch }} -O .tools/qt -m qtshadertools qtmultimedia --archives "${archives[@]}" --timeout 30 "${extractor[@]}"
       - name: Windows compiler
         if: runner.os == 'Windows'
         run: python -m aqt install-tool windows desktop tools_mingw1310 qt.tools.win64_mingw1310 -O .tools/qt --timeout 30
@@ -81,6 +87,8 @@ jobs:
         run: ctest --preset release
       - name: Install
         run: cmake --install out/release --prefix "$PWD/out/package"
+      - name: Verify installed application
+        run: python scripts/check-package.py out/package
       - name: Package Windows
         if: runner.os == 'Windows'
         run: cd out/release && cpack -G ZIP

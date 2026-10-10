@@ -12,27 +12,145 @@ ScrollView {
         spacing: 18
         ContentCard {
             Layout.fillWidth: true
-            implicitHeight: 300
+            implicitHeight: aboutDetails.implicitHeight + 56
             dark: root.shell.dark
             ColumnLayout {
-                anchors { fill: parent; margins: 28 }
+                id: aboutDetails
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    margins: 28
+                }
                 spacing: 14
                 RowLayout {
                     spacing: 18
-                    Image { source: "assets/kirox-light.svg"; Layout.preferredWidth: 68; Layout.preferredHeight: 68 }
+                    Image {
+                        source: "assets/kirox-light.svg"
+                        Layout.preferredWidth: 68
+                        Layout.preferredHeight: 68
+                    }
                     ColumnLayout {
-                        Text { text: "KiroX"; color: root.shell.ink; font { pixelSize: 25; weight: Font.Bold } }
-                        Text { text: "2.0.0"; color: root.shell.muted; font.pixelSize: 13 }
+                        Text {
+                            text: "KiroX"
+                            color: root.shell.ink
+                            font {
+                                pixelSize: 25
+                                weight: Font.Bold
+                            }
+                        }
+                        Text {
+                            text: "2.0.0"
+                            color: root.shell.muted
+                            font.pixelSize: 13
+                        }
                     }
                 }
-                Text { text: root.shell.t("一个清晰、专注的 Kiro 注册工作空间。", "A focused workspace for Kiro registration.", "Kiro 登録のための、集中できるワークスペース。"); color: root.shell.muted; font.pixelSize: 13 }
-                RowLayout {
-                    GlassButton { text: "GitHub"; dark: root.shell.dark; onClicked: backend.openUrl("https://github.com/huey1in/KiroX") }
-                    GlassButton { text: root.shell.t("加入交流群", "Community", "コミュニティ"); dark: root.shell.dark; onClicked: backend.openUrl("https://qm.qq.com/q/RXMTXUlc4w") }
-                    GlassButton { text: root.shell.t("检查更新", "Check updates", "更新を確認"); dark: root.shell.dark; enabled: !backend.updateChecking; onClicked: backend.checkUpdates() }
+                Text {
+                    text: root.shell.t("一个清晰、专注的 Kiro 注册工作空间。", "A focused workspace for Kiro registration.", "Kiro 登録のための、集中できるワークスペース。")
+                    color: root.shell.muted
+                    font.pixelSize: 13
                 }
-                Text { Layout.fillWidth: true; wrapMode: Text.Wrap; color: root.shell.muted; font.pixelSize: 12; text: backend.updateInfo.error ? root.shell.t("检查更新失败，请稍后重试。", "Update check failed. Try again later.", "更新の確認に失敗しました。後で再試行してください。") : backend.updateInfo.latestVersion ? (backend.updateInfo.hasUpdate ? root.shell.t("新版本：", "New version: ", "新しいバージョン：") : root.shell.t("当前已是最新版本。", "You are up to date. ", "最新バージョンです。")) + (backend.updateInfo.hasUpdate ? backend.updateInfo.latestVersion : "") : "" }
-                GlassButton { visible: !!backend.updateInfo.hasUpdate; text: root.shell.t("查看发布页", "View release", "リリースを表示"); dark: root.shell.dark; onClicked: backend.openUrl(backend.updateInfo.releaseURL) }
+                RowLayout {
+                    GlassButton {
+                        text: "GitHub"
+                        dark: root.shell.dark
+                        onClicked: backend.openUrl("https://github.com/huey1in/KiroX")
+                    }
+                    GlassButton {
+                        text: root.shell.t("加入交流群", "Community", "コミュニティ")
+                        dark: root.shell.dark
+                        onClicked: backend.openUrl("https://qm.qq.com/q/RXMTXUlc4w")
+                    }
+                    GlassButton {
+                        text: root.shell.t("检查更新", "Check updates", "更新を確認")
+                        dark: root.shell.dark
+                        enabled: !backend.updateChecking
+                        onClicked: backend.checkUpdates()
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: root.shell.muted
+                    font.pixelSize: 12
+                    text: backend.updateInfo.error ? root.shell.t("检查更新失败，请稍后重试。", "Update check failed. Try again later.", "更新の確認に失敗しました。後で再試行してください。") : backend.updateInfo.latestVersion ? (backend.updateInfo.hasUpdate ? root.shell.t("新版本：", "New version: ", "新しいバージョン：") : root.shell.t("当前已是最新版本。", "You are up to date. ", "最新バージョンです。")) + (backend.updateInfo.hasUpdate ? backend.updateInfo.latestVersion : "") : ""
+                }
+                GlassButton {
+                    visible: !!backend.updateInfo.hasUpdate
+                    text: root.shell.t("查看发布页", "View release", "リリースを表示")
+                    dark: root.shell.dark
+                    onClicked: backend.openUrl(backend.updateInfo.releaseURL)
+                }
+                Text {
+                    text: "© 2026 1in · Apache 2.0"
+                    color: root.shell.muted
+                    font.pixelSize: 12
+                }
+            }
+        }
+        ContentCard {
+            Layout.fillWidth: true
+            implicitHeight: support.implicitHeight + 48
+            dark: root.shell.dark
+            ColumnLayout {
+                id: support
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    margins: 24
+                }
+                spacing: 16
+                Text {
+                    text: root.shell.t("支持作者", "Support the author", "作者を支援")
+                    color: root.shell.ink
+                    font {
+                        pixelSize: 17
+                        weight: Font.DemiBold
+                    }
+                }
+                Text {
+                    text: root.shell.t("如果这个工具对你有帮助，欢迎请作者喝杯咖啡。", "If KiroX helps you, you can support the author with a coffee.", "KiroX が役立ったら、作者へのコーヒー代でご支援いただけます。")
+                    color: root.shell.muted
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 32
+                    ColumnLayout {
+                        Image {
+                            source: "assets/wx.jpg"
+                            Layout.preferredWidth: 140
+                            Layout.preferredHeight: 140
+                            fillMode: Image.PreserveAspectFit
+                            Accessible.name: root.shell.t("微信支付二维码", "WeChat Pay QR code", "WeChat Pay QR コード")
+                        }
+                        Text {
+                            text: root.shell.t("微信支付", "WeChat Pay", "WeChat Pay")
+                            color: root.shell.muted
+                            font.pixelSize: 12
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+                    }
+                    ColumnLayout {
+                        Image {
+                            source: "assets/zfb.jpg"
+                            Layout.preferredWidth: 140
+                            Layout.preferredHeight: 140
+                            fillMode: Image.PreserveAspectFit
+                            Accessible.name: root.shell.t("支付宝二维码", "Alipay QR code", "Alipay QR コード")
+                        }
+                        Text {
+                            text: root.shell.t("支付宝", "Alipay", "Alipay")
+                            color: root.shell.muted
+                            font.pixelSize: 12
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+                    }
+                }
             }
         }
         ContentCard {
@@ -41,16 +159,66 @@ ScrollView {
             dark: root.shell.dark
             ColumnLayout {
                 id: sponsors
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 24 }
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    margins: 24
+                }
                 spacing: 16
-                Text { text: root.shell.t("合作伙伴", "Partners", "パートナー"); color: root.shell.ink; font { pixelSize: 17; weight: Font.DemiBold } }
-                Text { text: "ProxyLane"; color: root.shell.ink; font { pixelSize: 16; weight: Font.DemiBold } }
-                Text { text: root.shell.t("住宅代理覆盖 195 个国家，95%+ IP 获低风险评级。中文界面，支持 USDT，首次购买优惠码 KIROX30 享 7 折。", "Residential proxies across 195 countries. Chinese interface and USDT payments. Use KIROX30 for 30% off your first purchase.", "195 か国の住宅プロキシ。中国語 UI、USDT 決済。初回購入は KIROX30 で 30% オフ。"); wrapMode: Text.Wrap; Layout.fillWidth: true; color: root.shell.muted; font.pixelSize: 13 }
-                GlassButton { text: root.shell.t("访问 ProxyLane", "Visit ProxyLane", "ProxyLane へ"); dark: root.shell.dark; onClicked: backend.openUrl("https://proxylane.dev/?utm_source=kirox&utm_medium=partnership&utm_campaign=kirox_sponsor_202610&utm_content=desktop") }
-                Rectangle { height: 1; Layout.fillWidth: true; color: root.shell.dark ? "#364155" : "#e4e9f2" }
-                Text { text: "IPWO"; color: root.shell.ink; font { pixelSize: 16; weight: Font.DemiBold } }
-                Text { text: root.shell.t("覆盖 195+ 国家和地区的住宅代理。专属折扣码：0205。", "Residential proxies in 195+ countries and regions. Discount code: 0205.", "195 以上の国・地域の住宅プロキシ。割引コード：0205。"); color: root.shell.muted; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.Wrap }
-                GlassButton { text: root.shell.t("访问 IPWO", "Visit IPWO", "IPWO へ"); dark: root.shell.dark; onClicked: backend.openUrl("https://www.ipwo.net/?ref=githubKiroX") }
+                Text {
+                    text: root.shell.t("合作伙伴", "Partners", "パートナー")
+                    color: root.shell.ink
+                    font {
+                        pixelSize: 17
+                        weight: Font.DemiBold
+                    }
+                }
+                Text {
+                    text: "ProxyLane"
+                    color: root.shell.ink
+                    font {
+                        pixelSize: 16
+                        weight: Font.DemiBold
+                    }
+                }
+                Text {
+                    text: root.shell.t("住宅代理覆盖 195 个国家，95%+ IP 获低风险评级。中文界面，支持 USDT，首次购买优惠码 KIROX30 享 7 折。", "Residential proxies across 195 countries. Chinese interface and USDT payments. Use KIROX30 for 30% off your first purchase.", "195 か国の住宅プロキシ。中国語 UI、USDT 決済。初回購入は KIROX30 で 30% オフ。")
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                    color: root.shell.muted
+                    font.pixelSize: 13
+                }
+                GlassButton {
+                    text: root.shell.t("访问 ProxyLane", "Visit ProxyLane", "ProxyLane へ")
+                    dark: root.shell.dark
+                    onClicked: backend.openUrl("https://proxylane.dev/?utm_source=kirox&utm_medium=partnership&utm_campaign=kirox_sponsor_202610&utm_content=desktop")
+                }
+                Rectangle {
+                    height: 1
+                    Layout.fillWidth: true
+                    color: root.shell.dark ? "#364155" : "#e4e9f2"
+                }
+                Text {
+                    text: "IPWO"
+                    color: root.shell.ink
+                    font {
+                        pixelSize: 16
+                        weight: Font.DemiBold
+                    }
+                }
+                Text {
+                    text: root.shell.t("覆盖 195+ 国家和地区的住宅代理。专属折扣码：0205。", "Residential proxies in 195+ countries and regions. Discount code: 0205.", "195 以上の国・地域の住宅プロキシ。割引コード：0205。")
+                    color: root.shell.muted
+                    font.pixelSize: 13
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                }
+                GlassButton {
+                    text: root.shell.t("访问 IPWO", "Visit IPWO", "IPWO へ")
+                    dark: root.shell.dark
+                    onClicked: backend.openUrl("https://www.ipwo.net/?ref=githubKiroX")
+                }
             }
         }
     }

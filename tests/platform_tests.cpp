@@ -47,8 +47,8 @@ class PlatformTests : public QObject {
         }
         QVERIFY(!newerVersion("v2.0.0+build.17", "2.0.0+build.18"));
         QVERIFY(newerVersion("99999999999999999999999999.0.0", "9999999999999999999999999.0.0"));
-        QVERIFY_EXCEPTION_THROWN(newerVersion("1.0.0-01", "1.0.0"), Error);
-        QVERIFY_EXCEPTION_THROWN(newerVersion("1.0junk", "1.0.0"), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(newerVersion("1.0.0-01", "1.0.0")));
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(newerVersion("1.0junk", "1.0.0")));
     }
     void updaterHasBoundedMetadataAndSafeReleaseLink() {
         Factory factory;
@@ -65,7 +65,7 @@ class PlatformTests : public QObject {
         factory.response = {404, {}, {}};
         QVERIFY(UpdateService(factory).check("2.0.0").value("noRelease").toBool());
         factory.response = {503, {}, {}};
-        QVERIFY_EXCEPTION_THROWN(UpdateService(factory).check("2.0.0"), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(UpdateService(factory).check("2.0.0")));
     }
     void persistentLogsExcludeCredentialsAndBoundMemory() {
         QTemporaryDir home;

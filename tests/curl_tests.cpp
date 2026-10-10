@@ -215,8 +215,8 @@ class CurlTests : public QObject {
         HttpRequest request;
         request.url = origin;
         request.headers["bad"] = "value\r\nInjected: true";
-        QVERIFY_EXCEPTION_THROWN(session.send(request), Error);
-        QVERIFY_EXCEPTION_THROWN(CurlTransport(TransportOptions{{}, {}, "unimplemented"}), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(session.send(request)));
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(CurlTransport(TransportOptions{{}, {}, "unimplemented"})));
     }
 };
 QTEST_GUILESS_MAIN(CurlTests)

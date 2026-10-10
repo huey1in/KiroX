@@ -8,7 +8,7 @@ endif()
 if(APPLE)
   target_sources(kirox PRIVATE ../../assets/kirox.icns)
   set_source_files_properties(../../assets/kirox.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-  set_target_properties(kirox PROPERTIES MACOSX_BUNDLE_ICON_FILE kirox.icns)
+  set_target_properties(kirox PROPERTIES MACOSX_BUNDLE_ICON_FILE kirox.icns OUTPUT_NAME KiroX)
 endif()
 if(UNIX AND NOT APPLE)
   install(IMPORTED_RUNTIME_ARTIFACTS KiroX::Curl LIBRARY DESTINATION lib)
@@ -20,18 +20,20 @@ target_link_libraries(kirox PRIVATE kirox_application kirox_infrastructure Qt6::
 qt_add_resources(kirox feedback PREFIX "/kirox" BASE "../../assets" FILES "../../assets/completion.wav")
 set_target_properties(kirox PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_BUNDLE_NAME KiroX MACOSX_BUNDLE_GUI_IDENTIFIER com.huey1in.kirox)
-foreach(qml Main GlassPane GlassButton GlassDialog GlassComboBox GlassToggle GlassTextField ServicesPage LineIcon ContentCard OverviewPage TasksPage ActivityPage AccountsPage ProxyPage SettingsPage AboutPage)
+foreach(qml Main GlassPane GlassButton GlassDialog GlassSpinBox GlassComboBox GlassToggle GlassTextField ServicesPage LineIcon ContentCard OverviewPage TasksPage ActivityPage AccountsPage ProxyPage SettingsPage AboutPage)
     set_source_files_properties("../../ui/${qml}.qml" PROPERTIES QT_RESOURCE_ALIAS "${qml}.qml")
 endforeach()
 set_source_files_properties("../../assets/kirox-light.svg" PROPERTIES QT_RESOURCE_ALIAS "assets/kirox-light.svg")
+set_source_files_properties("../../assets/wx.jpg" PROPERTIES QT_RESOURCE_ALIAS "assets/wx.jpg")
+set_source_files_properties("../../assets/zfb.jpg" PROPERTIES QT_RESOURCE_ALIAS "assets/zfb.jpg")
 qt_add_qml_module(kirox
     URI KiroX VERSION 1.0
     QML_FILES
-        ../../ui/Main.qml ../../ui/GlassPane.qml ../../ui/GlassButton.qml ../../ui/GlassDialog.qml
+        ../../ui/Main.qml ../../ui/GlassPane.qml ../../ui/GlassButton.qml ../../ui/GlassDialog.qml ../../ui/GlassSpinBox.qml
         ../../ui/GlassComboBox.qml ../../ui/GlassToggle.qml ../../ui/LineIcon.qml ../../ui/GlassTextField.qml ../../ui/ServicesPage.qml
         ../../ui/ContentCard.qml ../../ui/OverviewPage.qml ../../ui/TasksPage.qml ../../ui/ActivityPage.qml ../../ui/AccountsPage.qml
         ../../ui/ProxyPage.qml ../../ui/SettingsPage.qml ../../ui/AboutPage.qml
-    RESOURCES ../../assets/kirox-light.svg
+    RESOURCES ../../assets/kirox-light.svg ../../assets/wx.jpg ../../assets/zfb.jpg
 )
 install(TARGETS kirox BUNDLE DESTINATION . RUNTIME DESTINATION bin)
 if(WIN32)

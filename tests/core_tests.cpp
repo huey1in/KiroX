@@ -55,7 +55,7 @@ class CoreTests : public QObject {
         QVERIFY(independentlyChanged.open(QIODevice::WriteOnly));
         independentlyChanged.write("[]");
         independentlyChanged.close();
-        QVERIFY_EXCEPTION_THROWN(repository.relocateData({}), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(repository.relocateData({})));
         QCOMPARE(repository.paths().data, destination.path());
     }
     void settingsPatchesPreserveIndependentChanges() {
@@ -121,7 +121,7 @@ class CoreTests : public QObject {
         QVERIFY(file.open(QIODevice::WriteOnly));
         file.write("malformed");
         file.close();
-        QVERIFY_EXCEPTION_THROWN(repository.read(Document::Accounts), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(repository.read(Document::Accounts)));
         QVERIFY(file.open(QIODevice::ReadOnly));
         QCOMPARE(file.readAll(), QByteArray("malformed"));
     }
@@ -137,7 +137,7 @@ class CoreTests : public QObject {
         QVERIFY(conflictFile.open(QIODevice::WriteOnly));
         conflictFile.write("[]");
         conflictFile.close();
-        QVERIFY_EXCEPTION_THROWN(repository.relocateData(conflict.path()), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(repository.relocateData(conflict.path())));
         QCOMPARE(repository.paths().data, destination.path());
         QVERIFY(QFile::exists(dir.filePath("data/accounts.json")));
     }
@@ -194,7 +194,7 @@ class CoreTests : public QObject {
     }
     void invalidProxiesAreRejected() {
         for (const auto &input : {"ftp://host", "http://", "host:70000", "http://host/path", "http://host?secret=1"})
-            QVERIFY_EXCEPTION_THROWN(normalizeProxy(input), Error);
+            QVERIFY_THROWS_EXCEPTION(Error, (void)(normalizeProxy(input)));
         QCOMPARE(redactProxy("http://secret:password@host:80"), QString("http://host:80"));
     }
     void messageParsingAvoidsCssAndDecodesBody() {

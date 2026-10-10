@@ -2,12 +2,7 @@
 .tools/
 out/
 CMakeUserPresets.json
-build/bin/
-build/windows/
-build/linux/
-build/appicon.png
-build/darwin/iconfile.icns
-build/tools/
+build/
 *.exe
 *.exe~
 *.dll
@@ -15,14 +10,7 @@ build/tools/
 *.dylib
 *.syso
 
-# Frontend build artifacts
-frontend/dist/
-frontend/node_modules/
-package-lock.json
-
-# Go
-*.test
-*.out
+# Profiling
 *.prof
 
 # IDE
@@ -45,9 +33,6 @@ desktop.ini
 # Data & user config (runtime files, not source)
 results/
 output/
-
-# Wails
-wailsjs/
 
 # Secrets / credentials
 .env

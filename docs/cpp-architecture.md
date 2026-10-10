@@ -22,8 +22,8 @@ dependencies. It owns provider identity, account parsing, proxy validation,
 settings validation, errors and cancellation contracts.
 
 `kirox_application` coordinates use cases through the repository, transport,
-mailbox and registration interfaces. Services do not access files, instantiate
-HTTP clients or depend on desktop widgets. New mailbox and transport adapters
+mailbox and registration interfaces. Serialization belongs to the repository;
+services do not instantiate HTTP clients or depend on desktop widgets. New mailbox and transport adapters
 are registered in the composition root rather than added to UI conditionals.
 
 `kirox_infrastructure` implements those interfaces. A transport session belongs
@@ -67,6 +67,7 @@ with Qt Quick, without claiming use of Apple's SwiftUI material APIs.
 
 Use CMake presets for reproducible Debug and Release builds and CTest for
 isolated tests. Check the real rendered UI using `--screenshot` and `--page`.
-Before removing the Go implementation and its packaging, prove each capability
-in the migration checklist. Source-language conversion by itself does not prove
-protocol equivalence or TLS profile support.
+The superseded Go/Wails and web frontend sources have been removed. Native
+builds and installed packages are verified by the three-platform CI workflow.
+See the migration checklist for evidence and the development guide for protocol
+differences and manual verification limits.

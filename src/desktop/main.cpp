@@ -2,6 +2,7 @@
 #include "desktop_feedback.hpp"
 #include "desktop_instance.hpp"
 #include "kirox/application/registration_service.hpp"
+#include "kirox/domain/error.hpp"
 #include "kirox/infrastructure/activity_log.hpp"
 #include "kirox/infrastructure/app_script_cache.hpp"
 #include "kirox/infrastructure/curl_transport.hpp"
@@ -20,6 +21,7 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QTimer>
 #include <cstdio>
 
@@ -55,6 +57,7 @@ int main(int argc, char *argv[]) {
     parser.addOption({"data-home", "Use an isolated data directory", "directory"});
     parser.addOption({"screenshot", "Save the rendered window and exit", "file"});
     parser.addOption({"page", "Select an initial page", "name", "overview"});
+    parser.addOption({"window-size", "Set the initial window size (for example 820x580)", "size"});
     parser.process(app);
     try {
         kirox::JsonRepository repository(parser.value("data-home"));
@@ -79,6 +82,12 @@ int main(int argc, char *argv[]) {
         if (engine.rootObjects().isEmpty())
             return 1;
         auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        if (const auto size = parser.value("window-size"); !size.isEmpty()) {
+            const auto match = QRegularExpression("^(\\d{3,4})x(\\d{3,4})$").match(size);
+            if (!match.hasMatch() || match.captured(1).toInt() < 820 || match.captured(2).toInt() < 580)
+                throw kirox::Error(kirox::ErrorCode::InvalidInput, "Invalid window size; minimum is 820x580");
+            window->resize(match.captured(1).toInt(), match.captured(2).toInt());
+        }
         QObject::connect(&instance, &kirox::DesktopInstance::activationRequested, window, [window] {
             window->showNormal();
             window->raise();

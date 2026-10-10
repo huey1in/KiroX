@@ -62,18 +62,20 @@ class MailboxTests : public QObject {
         const QJsonDocument valid(QJsonArray{
             QJsonObject{{"name", "primary"}, {"url", "https://mail.example"}, {"apiKey", "key"}, {"extension", true}}});
         service.save(MailboxKind::MoeMail, valid);
-        QVERIFY_EXCEPTION_THROWN(
-            service.save(MailboxKind::MoeMail, QJsonDocument(QJsonArray{QJsonObject{{"name", "invalid"}}})), Error);
+        QVERIFY_THROWS_EXCEPTION(
+            Error,
+            (void)(service.save(MailboxKind::MoeMail, QJsonDocument(QJsonArray{QJsonObject{{"name", "invalid"}}}))));
         QCOMPARE(service.get(MailboxKind::MoeMail), valid);
-        QVERIFY_EXCEPTION_THROWN(service.upsert(MailboxKind::MoeMail, valid.array()[0].toObject()), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(service.upsert(MailboxKind::MoeMail, valid.array()[0].toObject())));
         QCOMPARE(service.get(MailboxKind::MoeMail), valid);
         auto renamed = valid.array()[0].toObject();
         renamed["name"] = "renamed";
         service.upsert(MailboxKind::MoeMail, renamed, "primary");
         QCOMPARE(service.get(MailboxKind::MoeMail).array()[0].toObject()["name"].toString(), QString("renamed"));
         QVERIFY(service.get(MailboxKind::MoeMail).array()[0].toObject()["extension"].toBool());
-        QVERIFY_EXCEPTION_THROWN(
-            service.save(MailboxKind::MoeMail, QJsonDocument(QJsonArray{valid.array()[0], valid.array()[0]})), Error);
+        QVERIFY_THROWS_EXCEPTION(
+            Error,
+            (void)(service.save(MailboxKind::MoeMail, QJsonDocument(QJsonArray{valid.array()[0], valid.array()[0]}))));
         service.save(MailboxKind::MailNest, QJsonDocument(QJsonObject{{"apiKey", "key"}, {"projectCode", "project"}}));
         service.save(MailboxKind::MailNest, QJsonDocument(QJsonObject{}));
         QVERIFY(service.get(MailboxKind::MailNest).object().isEmpty());
@@ -108,6 +110,30 @@ class MailboxTests : public QObject {
         QVERIFY(domainCorrect);
         QCOMPARE(session->poll(), QString("865204"));
         QCOMPARE(transports.script->options.proxy, request.transport.proxy);
+    }
+    void automaticDomainSelectionRotatesAcrossTasks() {
+        FakeFactory transports;
+        HttpMailboxFactory factory(transports);
+        QStringList selected;
+        transports.script->send = [&](const HttpRequest &request) {
+            if (request.url.path() == "/api/config")
+                return json(QJsonObject{{"emailDomains", "first.test,second.test"}});
+            if (request.url.path().endsWith("generate")) {
+                const auto domain = QJsonDocument::fromJson(request.body).object()["domain"].toString();
+                selected.append(domain);
+                return json(QJsonObject{{"id", "fixture"}, {"email", "fixture@" + domain}});
+            }
+            return json(QJsonObject{{"messages", QJsonArray{}}});
+        };
+        MailboxRequest request;
+        request.provider = MailboxKind::MoeMail;
+        request.configuration = {{"url", "https://mail.test"}, {"apiKey", "synthetic"}};
+        for (int i = 0; i < 3; ++i) {
+            request.domainIndex = i;
+            auto session = factory.create(request);
+            QCOMPARE(session->open(), "fixture@" + QString(i % 2 == 0 ? "first.test" : "second.test"));
+        }
+        QCOMPARE(selected, QStringList({"first.test", "second.test", "first.test"}));
     }
     void cloudUnauthorizedRefreshIsBoundedAndBaselineUsesId() {
         FakeFactory transports;
@@ -156,7 +182,7 @@ class MailboxTests : public QObject {
         request.configuration = {{"apiKey", "key"}, {"projectCode", "project"}};
         auto session = factory.create(request);
         QCOMPARE(session->open(), QString("paid@test"));
-        QVERIFY_EXCEPTION_THROWN(session->poll(), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(session->poll()));
         QCOMPARE(session->poll(), QString("987654"));
     }
     void iCloudFailedDetailsAreRetriedAndOldMessagesIgnored() {
@@ -182,7 +208,7 @@ class MailboxTests : public QObject {
         request.account.messagesUrl = "https://icloud.test/messages/key";
         auto session = factory.create(request);
         QCOMPARE(session->open(), QString("icloud@test"));
-        QVERIFY_EXCEPTION_THROWN(session->poll(), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(session->poll()));
         QCOMPARE(session->poll(), QString("987654"));
         QCOMPARE(details, 2);
     }
@@ -256,8 +282,8 @@ class MailboxTests : public QObject {
         worker.request_stop();
         worker.join();
         QVERIFY(cancelled);
-        QVERIFY_EXCEPTION_THROWN(
-            waitForVerificationCode(session, std::chrono::milliseconds(40), std::chrono::milliseconds(10)), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(waitForVerificationCode(session, std::chrono::milliseconds(40),
+                                                                       std::chrono::milliseconds(10))));
     }
     void imapUidBaselineSurvivesDeletedMessagesAndPollsJunk() {
         struct State {
@@ -317,7 +343,7 @@ class MailboxTests : public QObject {
         QCOMPARE(session->poll(), QString("876543"));
         QCOMPARE(imap.state->fetched, 1);
         imap.state->validityChanged = true;
-        QVERIFY_EXCEPTION_THROWN(session->poll(), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(session->poll()));
     }
     void mimeMultipartDecodesTextAndSkipsAttachments() {
         const auto message =

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/assets/kirox-light.svg" width="100" height="100" alt="KiroX">
+  <img src="assets/kirox-light.svg" width="100" height="100" alt="KiroX">
 </p>
 
 <h1 align="center">KiroX | Kiroプロトコル登録ツール</h1>
@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.4-6366f1?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v2.0.0-6366f1?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078d4?style=flat-square" alt="platform">
-  <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go" alt="go">
-  <img src="https://img.shields.io/badge/Wails-v2-red?style=flat-square" alt="wails">
+  <img src="https://img.shields.io/badge/C%2B%2B-20-00599C?style=flat-square" alt="C++20">
+  <img src="https://img.shields.io/badge/Qt-6.8.3-41CD52?style=flat-square" alt="Qt">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="license">
 </p>
 
@@ -22,7 +22,7 @@
 
 ## 概要
 
-KiroX は [Wails v2](https://wails.io) ベースの Kiro 登録ツールで、HTTP/TLS プロトコルだけで実装されています。プロトコルリクエストだけで AWS Builder ID のアカウント登録、メール認証、認可、Kiro トークン交換を行います。Outlook、MoeMail、Cloud-Mail、MailNest、iCloud の 5 種類のメールソースを利用でき、並列制御とプロキシにも対応します。
+KiroX は C++20 と Qt Quick によるネイティブデスクトップ登録ツールです。HTTP/TLS で AWS Builder ID 登録、メール認証、認可、Kiro トークン交換を行います。Outlook、iCloud、MoeMail、Cloud-Mail、MailNest、並列タスクとプロキシプールに対応します。Liquid Glass スタイルの UI は中国語・英語・日本語、ライト・ダークテーマ、視差効果・透明度の削減に対応します。
 
 ---
 
@@ -73,7 +73,7 @@ Kiro、AI コーディング、ブラウザ自動化、海外ネットワーク�
 
 **純粋なプロトコルとネットワーク**
 
-- `tls-client` による HTTP/TLS クライアントとリクエストパラメータ設定
+- `libcurl-impersonate` による HTTP/TLS クライアントとリクエストパラメータ設定
 
 **データ管理**
 
@@ -101,62 +101,32 @@ Kiro、AI コーディング、ブラウザ自動化、海外ネットワーク�
 
 ## 今後の方向性
 
-KiroX は現在、大規模なアーキテクチャリファクタリングを準備しています。今後は次の方向を予定しています：
+ネイティブ C++ モジュールを基盤として、今後は次の方向を予定しています：
 
 - **デスクトップ GUI から WebUI へ**：フロントエンドとバックエンドを段階的に分離し、ブラウザアクセスやサーバー運用などに対応します。
 - **2API を内蔵**：AWS CodeWhisperer の機能を標準的な OpenAI API および Anthropic API のエンドポイントへ適応し、既存のクライアントや開発ツールから利用しやすくします。
 - **登録タスクとアカウント管理の強化**：タスク編成、アカウント管理、認証情報のライフサイクル、実行監視を統合します。
 - **サービス境界の整理**：今後のモデルアダプター、プロキシ戦略、自動化機能の拡張に備えます。
 
-これらは開発状況に応じて段階的に実装します。現行版は引き続き Wails デスクトップ体験を中心とします。
+これらは開発状況に応じて段階的に実装します。future ブランチはネイティブ Qt Quick デスクトップ体験を提供します。
 
 ---
 
 ## クイックスタート
 
-### リリース版を使う
+`future` ブランチはネイティブ C++ アーキテクチャを使用します。ブランチのビルドは [Native C++ Actions](https://github.com/huey1in/KiroX/actions/workflows/native.yml)、公開版は [Releases](https://github.com/huey1in/KiroX/releases) から取得できます。Windows は ZIP を展開して `bin/kirox.exe`、Linux は TGZ を展開して `bin/kirox` を実行します。macOS は DMG の `KiroX.app` を使用します。
 
-[Releases](https://github.com/huey1in/kirox/releases/latest) から OS と CPU アーキテクチャに合ったインストーラーをダウンロードします。Windows は `.exe`、macOS は `.dmg`、Debian / Ubuntu Linux は `.deb` です。macOS では DMG を開いて KiroX を Applications にドラッグします。Linux では `sudo apt install ./kirox-linux-amd64.deb` でインストールできます。
+Windows のソースビルドは Python 3.11+ で開発ツールを準備します：
 
-Windows では WebView2、Linux のリリース版では GTK 3 / WebKitGTK 4.1 などのシステムランタイムが必要です。
-
-### ソースからビルド
-
-**必要環境**
-
-- Go 1.24.1 以上（`go.mod` の toolchain は Go 1.24.4）
-- Node.js 20+
-- Wails CLI v2.11.0 と OS ごとのビルド依存関係（`wails doctor` で確認）
-
-```bash
-# Wails CLI をインストール
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-# リポジトリをクローン
-git clone https://github.com/huey1in/kirox.git
-cd kirox
-
-# 環境を確認
-wails doctor
-
-# アプリアイコンを準備
-node -e "require('fs').copyFileSync('frontend/assets/appicon.png', 'build/appicon.png')"
-
-# 開発モード（ホットリロード）
-wails dev
-
-# 本番ビルド
-wails build
-
-# Windows インストーラー（NSIS 3 が必要）
-wails build -nsis
+```powershell
+git clone --branch future https://github.com/huey1in/KiroX.git
+cd KiroX
+powershell -ExecutionPolicy Bypass -File scripts/bootstrap-cpp.ps1
+powershell -ExecutionPolicy Bypass -File scripts/build-cpp.ps1 -Preset release -Deploy
+out/package/bin/kirox.exe
 ```
 
-ビルド成果物は `build/bin/` に出力されます。
-
-WebKitGTK 4.1 を使う Linux 環境では、`wails dev -tags webkit2_41` / `wails build -tags webkit2_41` を使用してください。
-
-Wails が実行する `frontend/build.js` は静的ファイルを `frontend/dist/` にまとめ、単独の Web サーバーは起動しません。Go の機能は Wails のバインディング経由で呼び出すため、アプリの開発には `wails dev` を使用します。
+実行時に Go、Node.js、Python、WebView2 は不要です。macOS/Linux の依存関係と CMake ビルド、検証は [開発ガイド](docs/cpp-development.md) を参照してください。
 
 ---
 
@@ -177,15 +147,15 @@ Wails が実行する `frontend/build.js` は静的ファイルを `frontend/dis
 
 **MoeMail 使い捨てメール**
 
-「メール」ページで MoeMail 設定を追加し、API アドレスと API キーを入力、接続テスト後に保存。登録時にランダム / 全て / 指定ドメインを選択可能。
+「メールサービス」ページで MoeMail 設定を追加し、API アドレスと API キーを入力、接続テスト後に保存。登録時にランダム / 全て / 指定ドメインを選択可能。
 
 **Cloud-Mail（セルフホスト）**
 
-「メール」ページで Cloud-Mail 設定を追加し、サーバー URL、管理者メール、パスワードを入力します。接続テスト後に設定を保存します。ドメインは接続テストや保存時に `/api/setting/websiteConfig` から自動取得するため、ドメインの入力欄はありません。
+「メールサービス」ページで Cloud-Mail 設定を追加し、サーバー URL、管理者メール、パスワードを入力します。接続テスト後に設定を保存します。ドメインは任意で入力できます。空欄の場合はサーバーのドメインを取得します。接続確認で利用可能なドメインを確認できます。
 
 **MailNest 一時メール**
 
-「メール」ページで API キーとプロジェクトコードを入力します。両方とも必須で、`aws001` は入力例でありデフォルト値ではありません。保存時に接続と残高を確認し、テストが成功すると設定を保存します。
+「メールサービス」ページで API キーとプロジェクトコードを入力します。両方とも必須で、`aws001` は入力例でありデフォルト値ではありません。設定を保存後、接続確認ボタンで接続と残高を確認できます。
 
 **iCloud メールボックスプール**
 
@@ -199,7 +169,7 @@ URL は本プロジェクトの取得処理に対応するメッセージ一覧�
 
 ### 2. 登録を開始
 
-「概要」ページの「新規タスク」を開きます：
+「登録タスク」ページでタスクを設定します：
 
 - 登録件数、並行数、タスク間隔（秒）を設定。間隔は並行数 1 の直列実行時にタスク間で適用
 - メールソースと、必要に応じて設定 / ドメインを選択
@@ -251,48 +221,40 @@ http://host:8080
 ## プロジェクト構成
 
 ```text
-kirox/
-├── main.go                    # エントリポイント、Wails 初期化
-├── app.go                     # App 構造体、Wails バインドメソッド
-├── internal/
-│   ├── core/                  # Kiro 登録コア
-│   │   ├── registrar.go       # Registrar、HTTP クライアント、ステップ 1–5
-│   │   ├── run.go             # ステップオーケストレーション
-│   │   ├── auth.go            # SSO ワークフロー、トークン取得
-│   │   ├── signup_flow.go     # 登録フロー、メール認証コード
-│   │   ├── signup_password.go # ID 作成、パスワード設定
-│   │   ├── kiro_auth.go       # Kiro 認可
-│   │   ├── kiro_exchange.go   # ステップ 15
-│   │   └── verify.go          # アカウント生存確認
-│   ├── browser/               # プロトコルリクエストの識別情報生成
-│   ├── email/                 # Outlook / MoeMail / Cloud-Mail / MailNest / iCloud
-│   ├── crypto/                # JWE 暗号化、XXTEA
-│   ├── storage/               # アカウント保存、設定永続化
-│   ├── task/                  # バッチスケジューリング、並行制御
-│   ├── data/                  # 結果 I/O
-│   ├── proxy/                 # プロキシプール管理、出口 IP / 地域検出
-│   ├── updater/               # バージョン確認
-│   └── http/                  # TLS クライアントヘルパ
-└── frontend/
-    ├── index.html             # シングルページエントリ
-    ├── js/                    # overview / accounts / moemail / cloudmail / mailnest / task / ip / app / ui / i18n / dropdown
-    ├── css/                   # layout / components / style / dashboard
-    └── build.js               # 静的ファイルを frontend/dist/ にコピー
+include/kirox/
+  domain/          # Value types and validation
+  application/     # Use cases and orchestration
+  ports/           # Adapter contracts
+  infrastructure/  # Adapter public interfaces
+src/
+  domain/          # Identity, fingerprints, MIME, settings
+  application/     # Registration, batch, mailbox/proxy/account services
+  infrastructure/  # Atomic JSON, native curl/IMAP, CNG/OpenSSL, logs
+  desktop/         # Composition root and queued UI controller
+ui/                # Native Qt Quick pages and glass controls
+assets/            # SVG logo, platform icons and completion sound
+cmake/             # Pinned native dependency setup
+scripts/           # Bootstrap, builds and isolated UI verification
+tests/             # Unit, local protocol and interoperability fixtures
+packaging/         # Platform integration
 ```
+
+[Architecture](docs/cpp-architecture.md) · [Development](docs/cpp-development.md) · [Migration evidence](docs/cpp-migration.md)
 
 ---
 
 ## 技術スタック
 
-| レイヤ | 技術 |
-|----|------|
-| デスクトップフレームワーク | [Wails v2.11.0](https://wails.io) |
-| バックエンド | Go 1.24.1+（toolchain 1.24.4） |
-| HTTP クライアント | [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) |
-| フロントエンド | ネイティブ HTML / CSS / JavaScript |
-| 暗号化 | RSA-OAEP-256 + AES-256-GCM (JWE) |
+| Layer | Technology |
+|-------|------------|
+| Language | C++20 |
+| Desktop | Qt 6.8.3 / Qt Quick / QML |
+| Build | CMake / Ninja / CPack |
+| HTTP / IMAP | Native libcurl-impersonate 2.2.3 |
+| Cryptography | Windows CNG / OpenSSL 3; RSA-OAEP-256 + AES-256-GCM |
+| Verification | Qt Test / local protocol fixtures / independent interoperability |
 
-フロントエンドは `window.go.main.App` 経由で Go メソッドを呼び出し、タスク状態とログを定期的に取得します。現行版は Wails デスクトップアプリで、独立した WebUI や 2API サービスはまだ実装されていません。
+各モジュールは明示的なインターフェースで分離されています。QML はレイアウトと操作、C++ ワーカーは登録とタスク制御を担当します。WebUI と 2API は今後の拡張です。
 
 ---
 

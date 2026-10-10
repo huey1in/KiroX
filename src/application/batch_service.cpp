@@ -180,6 +180,8 @@ void BatchService::process(const std::shared_ptr<Plan> &plan, int index, const B
         if (pool)
             claim();
         else {
+            request.mailbox.domainIndex = index;
+            request.mailbox.randomDomains = plan->request.randomDomains;
             if (!plan->request.domains.isEmpty()) {
                 const int selected = plan->request.randomDomains
                                          ? QRandomGenerator::system()->bounded(int(plan->request.domains.size()))
@@ -311,7 +313,8 @@ void BatchService::run(std::shared_ptr<Plan> plan, BatchObserver observer) {
                         break;
                     process(plan, index, observer);
                     try {
-                        if (plan->request.concurrency == 1 && plan->request.delaySeconds > 0 && index + 1 < plan->request.count)
+                        if (plan->request.concurrency == 1 && plan->request.delaySeconds > 0 &&
+                            index + 1 < plan->request.count)
                             interruptibleWait(stop, std::chrono::seconds(plan->request.delaySeconds));
                     } catch (const Error &) {
                         break;

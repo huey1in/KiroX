@@ -10,6 +10,8 @@ struct MailboxRequest {
     MailboxAccount account;
     QJsonObject configuration;
     QString name, domain;
+    int domainIndex = 0;
+    bool randomDomains = false;
     qint64 expiryMilliseconds = 3600000;
     TransportOptions transport;
 };

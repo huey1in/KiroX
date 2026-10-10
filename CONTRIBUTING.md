@@ -14,19 +14,21 @@
 
 ```bash
 # 依赖
-# - Go 1.24+
-# - Node.js 20+
-# - Wails CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+# - C++20 compiler, CMake, Ninja, Qt 6.8.3
 
-git clone https://github.com/huey1in/kirox.git
+git clone --branch future https://github.com/huey1in/kirox.git
 cd kirox
-wails dev   # 启动开发模式
+cmake --preset dev -DCMAKE_PREFIX_PATH=/path/to/qt
+cmake --build --preset dev
+ctest --preset dev
 ```
 
 ### 开发规范
 
-- **Go**：遵循标准 `gofmt` 格式，提交前运行 `go vet ./...`
-- **前端**：原生 JS，不引入 npm 依赖，修改后运行 `node frontend/build.js` 验证构建
+- **C++**：使用 C++20 和 `.clang-format`；提交前启用 `KIROX_WARNINGS_AS_ERRORS` 构建。
+- **界面**：使用 Qt Quick / QML；业务逻辑通过控制器调用应用服务，保持接口与模块边界。
+- **测试**：使用临时数据目录和本地协议夹具，避免真实账号、付费邮箱和线上注册请求。
+- Windows 工具准备、跨平台构建和扩展接口见 [开发指南](docs/cpp-development.md)。
 - **提交信息**：使用中文或英文均可，格式 `type: 简短描述`，例如：
   - `fix: 修复 MoeMail 域名加载失败`
   - `feat: 添加代理池支持`
@@ -35,13 +37,13 @@ wails dev   # 启动开发模式
 ### 分支规范
 
 - `main` — 稳定发布分支，不直接推送
-- 新功能请从 `main` 创建 `feat/xxx` 分支
+- `future` — C++ 原生重构分支；对应功能请从该分支创建 `feat/xxx`
 - Bug 修复请创建 `fix/xxx` 分支
 
 ### PR 要求
 
-1. 确保 `go build ./...` 无报错
-2. 确保 `node frontend/build.js` 无报错
+1. 确保对应 CMake 构建和 CTest 通过
+2. 界面变化验证浅深色、中英日语言、最小窗口和减少动态/透明效果
 3. 简要描述改动内容和原因
 
 ## 行为准则

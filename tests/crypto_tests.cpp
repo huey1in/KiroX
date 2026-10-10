@@ -69,7 +69,7 @@ class CryptoTests : public QObject {
         const auto result = crypto.aes256Gcm(QByteArray(32, 0), QByteArray(12, 0), QByteArray(16, 0), {});
         QCOMPARE(result.ciphertext.toHex(), QByteArray("cea7403d4d606b6e074ec5d3baf39d18"));
         QCOMPARE(result.tag.toHex(), QByteArray("d0d1c8a799996bf0265b98b5d48ab919"));
-        QVERIFY_EXCEPTION_THROWN(crypto.aes256Gcm(QByteArray(16, 0), QByteArray(12, 0), {}, {}), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(crypto.aes256Gcm(QByteArray(16, 0), QByteArray(12, 0), {}, {})));
         QCOMPARE(crypto.randomBytes(32).size(), qsizetype(32));
         QVERIFY(crypto.randomBytes(32) != crypto.randomBytes(32));
     }

@@ -8,7 +8,7 @@ $toolBin = Join-Path $repoRoot ".tools/python/Scripts"
 $env:PATH = "$qtRoot/bin;$compilerBin;$toolBin;$env:PATH"
 $cmakePath = Join-Path $toolBin "cmake.exe"
 if (-not (Test-Path -LiteralPath $cmakePath)) { throw "Run scripts/bootstrap-cpp.ps1 first" }
-& $cmakePath --preset $Preset "-DCMAKE_PREFIX_PATH=$qtRoot" "-DCMAKE_CXX_COMPILER=$compilerBin/g++.exe"
+& $cmakePath --preset $Preset "-DCMAKE_PREFIX_PATH=$qtRoot" "-DCMAKE_CXX_COMPILER=$compilerBin/g++.exe" -DKIROX_WARNINGS_AS_ERRORS=ON
 if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed" }
 & $cmakePath --build --preset $Preset --parallel $Jobs
 if ($LASTEXITCODE -ne 0) { throw "C++ build failed" }

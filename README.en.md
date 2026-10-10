@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/assets/kirox-light.svg" width="100" height="100" alt="KiroX">
+  <img src="assets/kirox-light.svg" width="100" height="100" alt="KiroX">
 </p>
 
 <h1 align="center">KiroX | Kiro Protocol Registration Tool</h1>
@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.4-6366f1?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v2.0.0-6366f1?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078d4?style=flat-square" alt="platform">
-  <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go" alt="go">
-  <img src="https://img.shields.io/badge/Wails-v2-red?style=flat-square" alt="wails">
+  <img src="https://img.shields.io/badge/C%2B%2B-20-00599C?style=flat-square" alt="C++20">
+  <img src="https://img.shields.io/badge/Qt-6.8.3-41CD52?style=flat-square" alt="Qt">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="license">
 </p>
 
@@ -22,7 +22,7 @@
 
 ## Overview
 
-KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and implemented entirely over HTTP/TLS protocols. It completes account registration, email verification, authorization, and Kiro token exchange directly through protocol requests. It supports Outlook, MoeMail, Cloud-Mail, MailNest, and iCloud email sources, with batch scheduling, concurrency control, proxy management, and live logs.
+KiroX is a native C++20 and Qt Quick desktop registration tool. It uses HTTP/TLS protocols for AWS Builder ID signup, email verification, authorization and Kiro token exchange. Outlook, iCloud, MoeMail, Cloud-Mail and MailNest are supported, with concurrent batches and proxy pools. The Liquid Glass interface offers Chinese, English and Japanese, light/dark themes and reduced effects.
 
 ---
 
@@ -60,7 +60,7 @@ Free trial supported. Exclusive discount code: <code>0205</code>
 - Protocol-based registration flow (OIDC signup → device authorization → email verification → password setup → SSO → Kiro token exchange)
 - Liveness check on each account after registration
 - Batch mode with configurable count and concurrency; the delay applies between registrations in serial mode
-- Create tasks from Overview, monitor progress in Logs, and stop the active batch
+- Create batches on Tasks, monitor progress in Logs, and stop the active batch
 
 **Email sources**
 - **Outlook mailbox pool** — import accounts in `email----password----clientID----RefreshToken[----imap/graph]` format; supports IMAP and Microsoft Graph, with IMAP as the default
@@ -70,7 +70,7 @@ Free trial supported. Exclusive discount code: <code>0205</code>
 - **iCloud mailbox pool** — import `email----messages URL` entries; verification codes are fetched from a compatible message-list page
 
 **Pure protocol and networking**
-- HTTP/TLS client and request parameter configuration via `tls-client`
+- HTTP/TLS client and request parameter configuration via `libcurl-impersonate`
 
 **Data management**
 - Successful accounts written as plain JSON to a configurable output directory
@@ -94,59 +94,32 @@ Free trial supported. Exclusive discount code: <code>0205</code>
 
 ## Roadmap
 
-KiroX is preparing for a substantial architecture refactor. Planned directions include:
+The native C++ modules provide the foundation for these future directions:
 
 - **Move from desktop GUI toward WebUI**: gradually separate the frontend and backend to support browser access, server deployment, and broader usage scenarios.
 - **Built-in 2API support**: adapt AWS CodeWhisperer capabilities to standard OpenAI API and Anthropic API endpoints, making them easier to use with existing clients, workflows, and development tools.
 - **Upgrade registration tasks and account management**: unify task orchestration, account management, credential lifecycle, and runtime monitoring.
 - **Clearer service boundaries**: create room for more model adapters, proxy strategies, and automation capabilities.
 
-These directions will be delivered incrementally as development progresses. The current release remains focused on the existing Wails desktop experience.
+These directions will be delivered incrementally as development progresses. The future branch now provides a native Qt Quick desktop experience.
 
 ---
 
 ## Quick start
 
-### Use a release
+The `future` branch uses the native C++ architecture. Download branch builds from [Native C++ Actions](https://github.com/huey1in/KiroX/actions/workflows/native.yml), or published versions from [Releases](https://github.com/huey1in/KiroX/releases). Extract the Windows ZIP and run `bin/kirox.exe`; extract the Linux TGZ and run `bin/kirox`; on macOS open the DMG and use `KiroX.app`.
 
-Download the installer matching your operating system and architecture from [Releases](https://github.com/huey1in/kirox/releases/latest): `.exe` for Windows, `.dmg` for macOS, and `.deb` for Debian/Ubuntu Linux. On macOS, open the DMG and drag KiroX to Applications. On Linux, install it with `sudo apt install ./kirox-linux-amd64.deb`.
+Windows source builds use Python 3.11+ to provision development tools:
 
-### Build from source
-
-**Requirements**
-- Go 1.24.1+ (`go.mod` specifies the Go 1.24.4 toolchain)
-- Node.js 20+
-- Wails CLI v2.11.0 and the platform dependencies reported by `wails doctor`
-
-```bash
-# Install the Wails CLI
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-# Clone
-git clone https://github.com/huey1in/kirox.git
-cd kirox
-
-# Check the local environment
-wails doctor
-
-# Prepare the application icon
-node -e "require('fs').copyFileSync('frontend/assets/appicon.png', 'build/appicon.png')"
-
-# Dev mode
-wails dev
-
-# Production build
-wails build
-
-# Windows installer (requires NSIS 3)
-wails build -nsis
+```powershell
+git clone --branch future https://github.com/huey1in/KiroX.git
+cd KiroX
+powershell -ExecutionPolicy Bypass -File scripts/bootstrap-cpp.ps1
+powershell -ExecutionPolicy Bypass -File scripts/build-cpp.ps1 -Preset release -Deploy
+out/package/bin/kirox.exe
 ```
 
-The output binary is located under `build/bin/`.
-
-On Linux, install the required GTK 3 and WebKitGTK development packages. If your system uses WebKitGTK 4.1, run `wails dev -tags webkit2_41` or `wails build -tags webkit2_41`.
-
-Wails runs the frontend build automatically; `node frontend/build.js` assembles the static assets into `frontend/dist/` and does not start a web server. Application functions require the Wails bridge, so use `wails dev` to run the desktop app.
+The packaged app needs no Go, Node.js, Python or WebView2. See the [development guide](docs/cpp-development.md) for macOS/Linux dependencies, CMake builds and verification.
 
 ---
 
@@ -165,15 +138,15 @@ The fifth field is optional and defaults to `imap`. Batch import from `.txt` / `
 
 **MoeMail disposable mail**
 
-On the Emails page, add a MoeMail configuration with its API URL and API key, test the connection, and save. During registration you can pick random, all, or specific domains.
+On the Mail services page, add a MoeMail configuration with its API URL and API key, test the connection, and save. During registration you can pick random, all, or specific domains.
 
 **Cloud-Mail (self-hosted)**
 
-On the Emails page, add a Cloud-Mail configuration with its base URL, admin email, and password. Test the connection and save. KiroX fetches domains automatically from `/api/setting/websiteConfig`; the configuration form has no domain input. During registration, choose random, round-robin, or a specific domain.
+On the Mail services page, add a Cloud-Mail configuration with its base URL, admin email, and password. Use Check to retrieve domains, or enter an optional domain list. Empty domain selections use the service domain list. During registration, choose random, round-robin, or a specific domain.
 
 **MailNest temporary mail**
 
-On the Emails page, enter the MailNest API key and project code. Both are required; `aws001` is only an example placeholder, not a default project code. Saving first tests the connection and checks the balance.
+On the Mail services page, enter the MailNest API key and project code. Both are required; `aws001` is only an example placeholder, not a default project code. Use Check after saving to inspect the connection and balance.
 
 **iCloud mailbox pool**
 
@@ -187,7 +160,7 @@ Paste entries or import a `.txt` / `.csv` file. Each URL must provide a compatib
 
 ### 2. Start registration
 
-On the Overview page, click "New task" to open the registration dialog:
+Create a batch on the Tasks page:
 - Set the count, concurrency (1–5 recommended), and delay in seconds; the delay only applies between registrations when concurrency is 1
 - Choose the email source and its available domain options
 - Select an enabled proxy or a direct connection for this batch
@@ -235,49 +208,41 @@ In the New task dialog, choose an enabled proxy or a direct connection. Registra
 
 ## Project layout
 
+```text
+include/kirox/
+  domain/          # Value types and validation
+  application/     # Use cases and orchestration
+  ports/           # Adapter contracts
+  infrastructure/  # Adapter public interfaces
+src/
+  domain/          # Identity, fingerprints, MIME, settings
+  application/     # Registration, batch, mailbox/proxy/account services
+  infrastructure/  # Atomic JSON, native curl/IMAP, CNG/OpenSSL, logs
+  desktop/         # Composition root and queued UI controller
+ui/                # Native Qt Quick pages and glass controls
+assets/            # SVG logo, platform icons and completion sound
+cmake/             # Pinned native dependency setup
+scripts/           # Bootstrap, builds and isolated UI verification
+tests/             # Unit, local protocol and interoperability fixtures
+packaging/         # Platform integration
 ```
-kirox/
-├── main.go                    # Entry; Wails initialization
-├── app.go                     # App struct; methods bound to Wails
-├── internal/
-│   ├── core/                  # Kiro registration core
-│   │   ├── registrar.go       # Registrar; HTTP client; steps 1–5
-│   │   ├── run.go             # Step orchestration
-│   │   ├── auth.go            # SSO workflow; token retrieval
-│   │   ├── signup_flow.go     # Signup flow; email verification codes
-│   │   ├── signup_password.go # Identity creation; password setup
-│   │   ├── kiro_auth.go       # Kiro authorization
-│   │   ├── kiro_exchange.go   # Step 15
-│   │   └── verify.go          # Liveness check
-│   ├── browser/               # Protocol request identity parameters
-│   ├── email/                 # Outlook / MoeMail / Cloud-Mail / MailNest / iCloud
-│   ├── crypto/                # JWE encryption; XXTEA
-│   ├── storage/               # Account storage; config persistence
-│   ├── task/                  # Batch scheduling; concurrency
-│   ├── data/                  # Result I/O
-│   ├── proxy/                 # Proxy pool; connectivity / egress IP / geo detection
-│   ├── updater/               # Version checks
-│   └── http/                  # TLS-client helpers
-└── frontend/
-    ├── index.html             # Single-page entry
-    ├── js/                    # overview / accounts / moemail / cloudmail / mailnest / task / ip / app / ui / i18n / dropdown
-    ├── css/                   # layout / components / style / dashboard
-    └── build.js               # Copies static assets to dist/
-```
+
+[Architecture](docs/cpp-architecture.md) · [Development](docs/cpp-development.md) · [Migration evidence](docs/cpp-migration.md)
 
 ---
 
 ## Tech stack
 
 | Layer | Technology |
-|----|------|
-| Desktop framework | [Wails v2.11.0](https://wails.io) |
-| Backend | Go 1.24.1+; Go 1.24.4 toolchain |
-| HTTP client | [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) |
-| Frontend | Vanilla HTML / CSS / JavaScript |
-| Crypto | RSA-OAEP-256 + AES-256-GCM (JWE) |
+|-------|------------|
+| Language | C++20 |
+| Desktop | Qt 6.8.3 / Qt Quick / QML |
+| Build | CMake / Ninja / CPack |
+| HTTP / IMAP | Native libcurl-impersonate 2.2.3 |
+| Cryptography | Windows CNG / OpenSSL 3; RSA-OAEP-256 + AES-256-GCM |
+| Verification | Qt Test / local protocol fixtures / independent interoperability |
 
-The frontend calls Go methods through `window.go.main.App` and polls task status and logs. The current release is a Wails desktop application; standalone WebUI and 2API services are not implemented yet.
+Modules depend on explicit contracts. QML owns layout and interaction; C++ workers handle registration and scheduling. WebUI and 2API remain future extensions.
 
 ---
 

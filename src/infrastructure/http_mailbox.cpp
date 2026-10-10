@@ -2,6 +2,7 @@
 #include "kirox/domain/cancellation.hpp"
 #include "kirox/infrastructure/imap_mailbox.hpp"
 #include <QJsonArray>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSet>
 #include <QUrlQuery>
@@ -40,7 +41,7 @@ class HttpMailboxSession final : public IMailboxSession {
             auto domain = request_.domain;
             const auto available = moeDomains();
             if (!available.contains(domain))
-                domain = available.front();
+                domain = chooseDomain(available);
             const auto value = object(
                 send("POST", base() + "/api/emails/generate",
                      {{"name", request_.name}, {"expiryTime", request_.expiryMilliseconds}, {"domain", domain}}));
@@ -57,7 +58,7 @@ class HttpMailboxSession final : public IMailboxSession {
                     domains = cloudDomains();
                 if (domains.isEmpty())
                     throw Error(ErrorCode::Protocol, "Cloud-Mail returned no domains");
-                domain = domains.front();
+                domain = chooseDomain(domains);
             }
             address_ = request_.name + "@" + domain;
             (void)cloudAuthorized("/api/public/addUser", {{"list", QJsonArray{QJsonObject{{"email", address_}}}}});
@@ -159,6 +160,10 @@ class HttpMailboxSession final : public IMailboxSession {
 
   private:
     using Clock = std::chrono::steady_clock;
+    QString chooseDomain(const QStringList &domains) const {
+        return domains.at(request_.randomDomains ? QRandomGenerator::system()->bounded(int(domains.size()))
+                                                 : std::max(0, request_.domainIndex) % domains.size());
+    }
     static QJsonObject object(const QJsonValue &value) {
         if (!value.isObject())
             throw Error(ErrorCode::Protocol, "Expected JSON object from mailbox provider");

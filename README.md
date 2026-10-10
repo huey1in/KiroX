@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/assets/kirox-light.svg" width="100" height="100" alt="KiroX">
+  <img src="assets/kirox-light.svg" width="100" height="100" alt="KiroX">
 </p>
 
 <h1 align="center">KiroX | kiro协议注册机</h1>
@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.0.4-6366f1?style=flat-square" alt="version">
+  <img src="https://img.shields.io/badge/version-v2.0.0-6366f1?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078d4?style=flat-square" alt="platform">
-  <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go" alt="go">
-  <img src="https://img.shields.io/badge/Wails-v2-red?style=flat-square" alt="wails">
+  <img src="https://img.shields.io/badge/C%2B%2B-20-00599C?style=flat-square" alt="C++20">
+  <img src="https://img.shields.io/badge/Qt-6.8.3-41CD52?style=flat-square" alt="Qt">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green?style=flat-square" alt="license">
 </p>
 
@@ -22,7 +22,7 @@
 
 ## 简介
 
-KiroX 是一款基于 [Wails v2](https://wails.io) 构建的 Kiro 桌面注册工具，采用 HTTP/TLS 协议完成 AWS Builder ID 账号注册、邮箱验证、授权和 Kiro Token 交换。项目支持 Outlook 邮箱池、iCloud 消息列表取件、MoeMail 临时邮箱、MailNest 临时邮箱以及自部署的 Cloud-Mail，并提供批量任务、并发控制和代理管理。
+KiroX 是使用 C++20 和 Qt Quick 构建的 Kiro 桌面注册工具，采用 HTTP/TLS 协议完成 AWS Builder ID 注册、邮箱验证、授权和 Kiro Token 交换。支持 Outlook、iCloud、MoeMail、Cloud-Mail、MailNest 五种邮箱来源、批量并发任务与代理池。界面采用 Liquid Glass 风格，支持中英日三种语言、浅深色主题与减少动态/透明效果。
 
 ---
 
@@ -72,7 +72,7 @@ KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>�
 
 **纯协议与网络**
 
-- 基于 `tls-client` 的 HTTP/TLS 客户端与请求参数配置
+- 原生 `libcurl-impersonate` HTTP/TLS 客户端，每个任务独立会话与 Cookie
 
 **数据管理**
 
@@ -89,7 +89,7 @@ KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>�
 
 **界面与监控**
 
-- 概览、运行日志、邮箱池、IP 管理、关于、设置六个页面
+- 概览、注册任务、邮箱池、邮箱服务、IP 管理、运行日志、设置、关于八个页面
 - 中 / 英 / 日语言切换，浅色 / 深色主题，任务完成提示音
 - 轮询更新任务统计和运行日志
 
@@ -103,46 +103,19 @@ KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>�
 
 ## 快速开始
 
-### 直接使用
+`future` 分支使用原生 C++ 架构。当前分支的构建包可从 [Native C++ Actions](https://github.com/huey1in/KiroX/actions/workflows/native.yml) 下载；正式发布版本见 [Releases](https://github.com/huey1in/KiroX/releases)。Windows 解压 ZIP 后运行 `bin/kirox.exe`；Linux 解压 TGZ 后运行 `bin/kirox`；macOS 使用 DMG 中的 `KiroX.app`。
 
-从 [Releases](https://github.com/huey1in/kirox/releases/latest) 下载匹配系统和 CPU 架构的安装包：Windows 使用 `.exe`，macOS 使用 `.dmg`，Debian / Ubuntu Linux 使用 `.deb`。macOS 打开 DMG 后将 KiroX 拖入 Applications；Linux 可运行 `sudo apt install ./kirox-linux-amd64.deb` 安装。
+Windows 从源码构建需要 Python 3.11+ 来准备开发工具：
 
-### 从源码构建
-
-**环境要求**
-
-- Go 1.24.1+（`go.mod` 指定工具链 Go 1.24.4）
-- Node.js 20+
-- Wails CLI v2.11.0
-- 对应系统的桌面依赖，可用 `wails doctor` 检查；Windows 需要 WebView2，Linux 需要 GTK3 和 WebKitGTK 开发库
-
-```bash
-# 安装 Wails CLI
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-# 克隆仓库
-git clone https://github.com/huey1in/kirox.git
-cd kirox
-
-# 检查桌面环境依赖
-wails doctor
-
-# 准备构建图标（与发布流程一致）
-node -e "require('fs').copyFileSync('frontend/assets/appicon.png', 'build/appicon.png')"
-
-# 开发模式
-wails dev
-
-# 生产构建
-wails build
-
-# Windows 安装包（需要 NSIS 3）
-wails build -nsis
+```powershell
+git clone --branch future https://github.com/huey1in/KiroX.git
+cd KiroX
+powershell -ExecutionPolicy Bypass -File scripts/bootstrap-cpp.ps1
+powershell -ExecutionPolicy Bypass -File scripts/build-cpp.ps1 -Preset release -Deploy
+out/package/bin/kirox.exe
 ```
 
-构建产物位于 `build/bin/`。Linux 使用 WebKitGTK 4.1 时，需安装 `libgtk-3-dev` 和 `libwebkit2gtk-4.1-dev`（Debian / Ubuntu 包名），并使用 `wails dev -tags webkit2_41` 或 `wails build -tags webkit2_41`。
-
-`node frontend/build.js` 会将静态资源整理到 `frontend/dist/`；前端的 `npm run dev` / `npm run build` 都执行这一构建脚本，不会启动独立 Web 服务。完整功能依赖 Wails 提供的 Go 方法绑定，应通过 `wails dev` 运行桌面应用。
+运行时无需 Go、Node.js、Python 或 WebView2。macOS / Linux 的 CMake 构建、依赖与测试说明见 [开发指南](docs/cpp-development.md)。
 
 ---
 
@@ -173,27 +146,27 @@ wails build -nsis
 
 **MoeMail 临时邮箱**
 
-在「邮箱池」页面添加 MoeMail 配置，填入 API 地址和 API Key，测试连接后保存。注册时可选择随机域名、全部域名或指定域名。
+在「邮箱服务」页面添加 MoeMail 配置，填入 API 地址和 API Key，测试连接后保存。注册时可选择随机域名、全部域名或指定域名。
 
 **Cloud-Mail 自部署邮箱**
 
-在「邮箱池」页面添加 Cloud-Mail 配置，填入服务地址、管理员邮箱和密码。测试连接或保存时会自动从服务器拉取可用域名，无需手动填写；创建任务时可选择随机、全部或指定域名。
+在「邮箱服务」页面添加 Cloud-Mail 配置，填入服务地址、管理员邮箱和密码。使用检查连接按钮获取可用域名；域名为空时从服务器获取，任务支持随机、轮询或指定域名。
 
 **MailNest-迈巢 Outlook 临时邮箱**
 
-在「邮箱池」页面添加 MailNest 配置，填入 API Key 和项目代码，通过测试连接按钮可以获取当前账户的余额，测试通过后点击添加配置按钮完成配置，即可使用。
+在「邮箱服务」页面添加 MailNest 配置，填入 API Key 和项目代码，通过测试连接按钮可以获取当前账户的余额，测试通过后点击添加配置按钮完成配置，即可使用。
 
 - `API Key`：从 [账户页面](https://mailnest.top/account) 获取。
 - 项目代码：根据 [购买邮箱页面](https://mailnest.top/buy-email) 的项目填写。输入框中的 `aws001` 是示例提示，项目代码需要手动填写。
 
 ### 2. 启动注册
 
-在「概览」页面点击「新建任务」：
+在「注册任务」页面创建任务：
 
 1. 设置注册数量、并发数和延迟（秒）。延迟仅用于串行模式下两项任务之间的等待。
 2. 选择邮箱来源；MoeMail / Cloud-Mail 还需选择域名模式。
 3. 选择本次任务的代理，默认直连；代理需先在「IP 管理」添加并启用。
-4. 点击「开始注册」，在概览查看统计，在「运行日志」查看过程；需要结束时点击「停止」。
+4. 点击「开始任务」，在任务页查看进度，在「运行日志」查看过程；需要结束时点击「停止」。
 
 ### 3. 查看结果
 
@@ -237,63 +210,54 @@ http://host:8080
 
 ## 项目结构
 
+```text
+include/kirox/
+  domain/          # Value types and validation
+  application/     # Use cases and orchestration
+  ports/           # Adapter contracts
+  infrastructure/  # Adapter public interfaces
+src/
+  domain/          # Identity, fingerprints, MIME, settings
+  application/     # Registration, batch, mailbox/proxy/account services
+  infrastructure/  # Atomic JSON, native curl/IMAP, CNG/OpenSSL, logs
+  desktop/         # Composition root and queued UI controller
+ui/                # Native Qt Quick pages and glass controls
+assets/            # SVG logo, platform icons and completion sound
+cmake/             # Pinned native dependency setup
+scripts/           # Bootstrap, builds and isolated UI verification
+tests/             # Unit, local protocol and interoperability fixtures
+packaging/         # Platform integration
 ```
-kirox/
-├── main.go                    # 入口，Wails 初始化
-├── app.go                     # App 结构体，Wails 绑定方法
-├── internal/
-│   ├── core/                  # Kiro 注册核心逻辑
-│   │   ├── registrar.go       # Registrar、HTTP 客户端、初始授权步骤
-│   │   ├── run.go             # 步骤编排
-│   │   ├── auth.go            # SSO 工作流、令牌获取
-│   │   ├── signup_flow.go     # 注册流程、邮箱验证码
-│   │   ├── signup_password.go # 身份创建、密码设置
-│   │   ├── kiro_auth.go       # Kiro 授权
-│   │   ├── kiro_exchange.go   # 步骤 15
-│   │   └── verify.go          # 账号验证
-│   ├── browser/               # 协议请求身份参数生成
-│   ├── email/                 # Outlook / iCloud / MoeMail / Cloud-Mail / MailNest
-│   ├── crypto/                # JWE 加密、XXTEA
-│   ├── storage/               # 账号存储、配置持久化
-│   ├── task/                  # 批量任务调度、并发控制
-│   ├── data/                  # 注册结果读写
-│   ├── proxy/                 # 代理池持久化、出口 IP / 归属检测
-│   ├── updater/               # 版本检查
-│   └── http/                  # TLS 客户端工具
-└── frontend/
-    ├── index.html             # 单页应用入口
-    ├── js/                    # app / ui / task / overview / accounts / ip /
-    │                          # moemail / cloudmail / mailnest / dropdown / i18n
-    ├── css/                   # layout / components / style / dashboard
-    └── build.js               # 静态资源复制到 dist/
-```
+
+[Architecture](docs/cpp-architecture.md) · [Development](docs/cpp-development.md) · [Migration evidence](docs/cpp-migration.md)
 
 ---
 
 ## 技术栈
 
-| 层 | 技术 |
-|----|------|
-| 桌面框架 | [Wails v2.11.0](https://wails.io) |
-| 后端语言 | Go 1.24.1+，工具链 1.24.4 |
-| HTTP 客户端 | [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) |
-| 前端 | 原生 HTML / CSS / JavaScript |
-| 加密 | RSA-OAEP-256 + AES-256-GCM (JWE) |
+| Layer | Technology |
+|-------|------------|
+| Language | C++20 |
+| Desktop | Qt 6.8.3 / Qt Quick / QML |
+| Build | CMake / Ninja / CPack |
+| HTTP / IMAP | Native libcurl-impersonate 2.2.3 |
+| Cryptography | Windows CNG / OpenSSL 3; RSA-OAEP-256 + AES-256-GCM |
+| Verification | Qt Test / local protocol fixtures / independent interoperability |
 
-前端通过 `window.go.main.App` 调用 Go 方法，定时读取任务状态和日志。当前版本是 Wails 桌面应用，尚未提供独立 WebUI 或 2API 服务。
+各模块通过接口解耦，QML 只负责布局和交互；注册与调度在 C++ 工作线程中运行。当前提供桌面应用，WebUI 和 2API 仍为后续扩展方向。
 
 ---
 
 ## 后续规划
 
-KiroX 正准备进行一次较大规模的架构重构，后续方向包括：
+C++ 模块已完成分层重构，后续方向包括：
 
 - **从桌面 GUI 走向 WebUI**：逐步拆分前后端，支持浏览器访问、服务端部署和更多使用场景。
 - **内置 2API 能力**：计划将 AWS CodeWhisperer 能力适配为标准 OpenAI API 与 Anthropic API 端点，方便接入现有客户端、工作流和开发工具。
 - **注册任务与账号管理升级**：统一任务编排、账号管理、凭证生命周期和运行监控。
 - **更清晰的服务化边界**：为后续扩展更多模型适配、代理策略和自动化能力做准备。
 
-以上方向会根据实际开发进度逐步落地，当前版本仍以现有桌面端体验为主。
+以上方向会根据实际开发进度逐步落地，当前分支已完成原生桌面架构迁移，继续通过接口扩展新能力。
 
 ---
 

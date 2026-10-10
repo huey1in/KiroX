@@ -13,9 +13,10 @@ Item {
         anchors.fill: parent
         sourceItem: root.backgroundSource
         sourceRect: {
-            if (!root.backgroundSource) return Qt.rect(0, 0, width, height)
-            const point = root.mapToItem(root.backgroundSource, 0, 0)
-            return Qt.rect(point.x, point.y, width, height)
+            if (!root.backgroundSource)
+                return Qt.rect(0, 0, width, height);
+            const point = root.mapToItem(root.backgroundSource, 0, 0);
+            return Qt.rect(point.x, point.y, width, height);
         }
         live: true
         visible: false
@@ -47,14 +48,28 @@ Item {
         border.width: 1
         border.color: root.dark ? "#556f809c" : "#eeffffff"
         Rectangle {
-            anchors { top: parent.top; left: parent.left; right: parent.right; margins: 1 }
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                margins: 1
+            }
             height: Math.min(72, parent.height / 2)
             radius: parent.radius
             gradient: Gradient {
-                GradientStop { position: 0; color: root.dark ? "#1affffff" : "#44ffffff" }
-                GradientStop { position: 1; color: "transparent" }
+                GradientStop {
+                    position: 0
+                    color: root.dark ? "#1affffff" : "#44ffffff"
+                }
+                GradientStop {
+                    position: 1
+                    color: "transparent"
+                }
             }
         }
     }
-    Item { id: body; anchors.fill: parent }
+    Item {
+        id: body
+        anchors.fill: parent
+    }
 }

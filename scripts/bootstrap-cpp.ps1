@@ -1,4 +1,4 @@
-param([string]$QtVersion = "6.8.3")
+param([ValidateSet("6.8.3")][string]$QtVersion = "6.8.3")
 $ErrorActionPreference = "Stop"
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 Set-Location -LiteralPath $repoRoot
@@ -10,13 +10,14 @@ if (-not (Test-Path -LiteralPath $pythonPath)) {
 & $pythonPath -m pip install aqtinstall==3.3.0 cmake==3.31.6 ninja==1.11.1.3
 if ($LASTEXITCODE -ne 0) { throw "Build tool installation failed" }
 $qtRoot = Join-Path $repoRoot ".tools/qt"
+$aqtConfig = Join-Path $repoRoot "cmake/aqt.ini"
 $qtBin = Join-Path $qtRoot "$QtVersion/mingw_64/bin"
 if (-not (Test-Path -LiteralPath (Join-Path $qtBin "moc.exe"))) {
-    & $pythonPath -m aqt install-qt windows desktop $QtVersion win64_mingw -O $qtRoot -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 20
+    & $pythonPath -m aqt --config $aqtConfig install-qt windows desktop $QtVersion win64_mingw -O $qtRoot -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 20
     if ($LASTEXITCODE -ne 0) { throw "Qt installation failed" }
 }
 if (-not (Test-Path -LiteralPath (Join-Path $qtBin "Qt6Multimedia.dll"))) {
-    & $pythonPath -m aqt install-qt windows desktop $QtVersion win64_mingw -O $qtRoot -m qtmultimedia --noarchives --timeout 20
+    & $pythonPath -m aqt --config $aqtConfig install-qt windows desktop $QtVersion win64_mingw -O $qtRoot -m qtmultimedia --noarchives --timeout 20
     if ($LASTEXITCODE -ne 0) { throw "Qt multimedia installation failed" }
 }
 $compilerPath = Join-Path $qtRoot "Tools/mingw1310_64/bin/g++.exe"

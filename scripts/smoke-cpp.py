@@ -28,12 +28,14 @@ def main():
     if fonts.is_dir():
         environment["QT_QPA_FONTDIR"] = str(fonts)
     pages = ["overview", "tasks", "accounts", "services", "proxies", "logs", "settings", "about"]
-    scenarios = [(theme, language, page, False) for theme in ["light", "dark"] for language in ["zh", "en", "ja"] for page in pages]
-    scenarios += [(theme, "zh", "settings", True) for theme in ["light", "dark"]]
+    scenarios = [(theme, language, page, False, False) for theme in ["light", "dark"] for language in ["zh", "en", "ja"] for page in pages]
+    scenarios += [(theme, "zh", "settings", True, False) for theme in ["light", "dark"]]
+
+    scenarios += [(theme, "ja", page, False, True) for theme in ["light", "dark"] for page in pages]
 
     def render(scenario):
-        theme, language, page, accessibility = scenario
-        name = f"{theme}-{language}-{page}" + ("-reduced" if accessibility else "")
+        theme, language, page, accessibility, compact = scenario
+        name = f"{theme}-{language}-{page}" + ("-reduced" if accessibility else "") + ("-compact" if compact else "")
         root = output / name / "data-home"
         data = root / "data"
         data.mkdir(parents=True, exist_ok=True)
@@ -50,7 +52,7 @@ def main():
         save(data / "mailnest.json", {"apiKey": "synthetic", "projectCode": "KiroX"})
         save(data / "proxy_pool.json", {"entries": [{"id": f"proxy-{i}", "name": f"Residential {i + 1}", "url": f"http://user:synthetic@proxy{i}.example.test:8080", "weight": 1, "enabled": True} for i in range(4)]})
         image = output / name / "window.png"
-        result = subprocess.run([str(executable), "--data-home", str(root), "--page", page, "--screenshot", str(image)],
+        result = subprocess.run([str(executable), "--data-home", str(root), "--page", page, "--screenshot", str(image)] + (["--window-size", "820x580"] if compact else []),
                                 env=environment, capture_output=True, timeout=20)
         warnings = result.stderr.decode("utf-8", errors="replace").strip()
         if result.returncode or warnings or not image.is_file():

@@ -91,7 +91,7 @@ class BatchTests : public QObject {
         options.outputDirectory = output.path();
         batch.start(options, Settings{});
         QTRY_COMPARE_WITH_TIMEOUT(registrar.active.load(), 3, 1000);
-        QVERIFY_EXCEPTION_THROWN(batch.start(options, Settings{}), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(batch.start(options, Settings{})));
         registrar.release = true;
         batch.wait();
         const auto state = batch.status();
@@ -189,11 +189,11 @@ class BatchTests : public QObject {
         populate(repository, 1);
         Registrar registrar;
         BatchService batch(repository, registrar);
-        QVERIFY_EXCEPTION_THROWN(batch.start(request(2), Settings{}), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(batch.start(request(2), Settings{})));
         auto options = request(1);
         options.proxyMode = "selected";
         options.proxyId = "removed";
-        QVERIFY_EXCEPTION_THROWN(batch.start(options, Settings{}), Error);
+        QVERIFY_THROWS_EXCEPTION(Error, (void)(batch.start(options, Settings{})));
         QCOMPARE(registrar.calls.load(), 0);
         QVERIFY(!batch.status().value("running").toBool());
     }

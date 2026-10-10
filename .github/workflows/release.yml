@@ -2,210 +2,32 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux/amd64
-            output: kiro-reg-linux-amd64
-            artifact: kirox-linux-amd64.deb
-            build_tags: webkit2_41
-          - os: windows-latest
-            platform: windows/amd64
-            output: kiro-reg-windows-amd64.exe
-            artifact: kirox-windows-amd64-installer.exe
-            build_tags: ""
-          - os: windows-latest
-            platform: windows/arm64
-            output: kiro-reg-windows-arm64.exe
-            artifact: kirox-windows-arm64-installer.exe
-            build_tags: ""
-          - os: macos-latest
-            platform: darwin/arm64
-            output: kiro-reg-macos-arm64
-            artifact: kirox-macos-arm64.dmg
-            build_tags: ""
-          - os: macos-latest
-            platform: darwin/amd64
-            output: kiro-reg-macos-amd64
-            artifact: kirox-macos-amd64.dmg
-            build_tags: ""
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.24'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '20'
-
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
-
-      - name: Install NSIS
-        if: runner.os == 'Windows'
-        run: |
-          choco install nsis --yes --no-progress
-          $nsisDir = "${env:ProgramFiles(x86)}\NSIS"
-          $makensis = Join-Path $nsisDir "makensis.exe"
-          if (-not (Test-Path -LiteralPath $makensis)) {
-            throw "NSIS installation completed but makensis.exe was not found at $makensis"
-          }
-          $nsisDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          & $makensis /VERSION
-
-      - name: Copy app icon
-        run: cp frontend/assets/appicon.png build/appicon.png
-
-      - name: Build
-        if: runner.os != 'Windows'
-        run: |
-          if [ -n "${{ matrix.build_tags }}" ]; then
-            wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }} -tags "${{ matrix.build_tags }}"
-          else
-            wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }}
-          fi
-        shell: bash
-
-      - name: Build Windows installer
-        if: runner.os == 'Windows'
-        run: wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }} -nsis
-
-      - name: Replace macOS icon with iconutil
-        if: runner.os == 'macOS'
-        run: |
-          APP=$(find build/bin -type d -name "*.app" -prune | head -n 1)
-          if [ -z "$APP" ] || [ ! -d "$APP" ]; then
-            echo "::error::Wails did not produce a macOS app bundle"
-            exit 1
-          fi
-          ICONSET=$(mktemp -d)/appicon.iconset
-          mkdir -p "$ICONSET"
-          SRC="frontend/assets/appicon.png"
-          sips -z 16 16 "$SRC" --out "$ICONSET/icon_16x16.png"
-          sips -z 32 32 "$SRC" --out "$ICONSET/icon_16x16@2x.png"
-          sips -z 32 32 "$SRC" --out "$ICONSET/icon_32x32.png"
-          sips -z 64 64 "$SRC" --out "$ICONSET/icon_32x32@2x.png"
-          sips -z 128 128 "$SRC" --out "$ICONSET/icon_128x128.png"
-          sips -z 256 256 "$SRC" --out "$ICONSET/icon_128x128@2x.png"
-          sips -z 256 256 "$SRC" --out "$ICONSET/icon_256x256.png"
-          sips -z 512 512 "$SRC" --out "$ICONSET/icon_256x256@2x.png"
-          sips -z 512 512 "$SRC" --out "$ICONSET/icon_512x512.png"
-          sips -z 1024 1024 "$SRC" --out "$ICONSET/icon_512x512@2x.png"
-          iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/iconfile.icns"
-          rm -rf "$(dirname "$ICONSET")"
-
-      - name: Package macOS DMG
-        if: runner.os == 'macOS'
-        run: |
-          APP=$(find build/bin -type d -name "*.app" -prune | head -n 1)
-          if [ -z "$APP" ] || [ ! -d "$APP" ]; then
-            echo "::error::Wails did not produce a macOS app bundle"
-            exit 1
-          fi
-          DMG_ROOT=$(mktemp -d)
-          cp -R "$APP" "$DMG_ROOT/KiroX.app"
-          ln -s /Applications "$DMG_ROOT/Applications"
-          hdiutil create -volname "KiroX" -srcfolder "$DMG_ROOT" -ov -format UDZO "build/bin/${{ matrix.artifact }}"
-          rm -rf "$DMG_ROOT"
-
-      - name: Package Linux DEB
-        if: runner.os == 'Linux'
-        run: |
-          PACKAGE_ROOT=$(mktemp -d)
-          VERSION="${GITHUB_REF_NAME#v}"
-          install -Dm755 "build/bin/${{ matrix.output }}" "$PACKAGE_ROOT/usr/bin/kirox"
-          install -Dm644 "packaging/linux/kirox.desktop" "$PACKAGE_ROOT/usr/share/applications/kirox.desktop"
-          install -Dm644 "frontend/assets/appicon.png" "$PACKAGE_ROOT/usr/share/icons/hicolor/512x512/apps/kirox.png"
-          mkdir -p "$PACKAGE_ROOT/DEBIAN"
-          INSTALLED_SIZE=$(du -sk "$PACKAGE_ROOT/usr" | cut -f1)
-          {
-            echo "Package: kirox"
-            echo "Version: $VERSION"
-            echo "Section: utils"
-            echo "Priority: optional"
-            echo "Architecture: amd64"
-            echo "Installed-Size: $INSTALLED_SIZE"
-            echo "Maintainer: huey1in <2926957031@qq.com>"
-            echo "Depends: libgtk-3-0 | libgtk-3-0t64, libwebkit2gtk-4.1-0"
-            echo "Homepage: https://github.com/huey1in/KiroX"
-            echo "Description: KiroX desktop application"
-          } > "$PACKAGE_ROOT/DEBIAN/control"
-          dpkg-deb --build --root-owner-group "$PACKAGE_ROOT" "build/bin/${{ matrix.artifact }}"
-
-      - name: Name Windows installer
-        if: runner.os == 'Windows'
-        run: |
-          $installers = @(Get-ChildItem -LiteralPath "build/bin" -Filter "*-installer.exe" -File)
-          if ($installers.Count -ne 1) {
-            throw "Expected exactly one NSIS installer, found $($installers.Count): $($installers.Name -join ', ')"
-          }
-          Move-Item -LiteralPath $installers[0].FullName -Destination "build/bin/${{ matrix.artifact }}"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.output }}
-          path: build/bin/${{ matrix.artifact }}
-
+    uses: ./.github/workflows/native.yml
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
-
-      - name: Extract changelog
-        id: changelog
-        run: |
-          # Extract content between first ## and second ##
-          changelog=$(sed -n '/^## \[/,/^## \[/{/^## \[.*\]/!p}' CHANGELOG.md | sed '/^---$/d' | sed '/^$/d')
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "$changelog" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Remove previous release assets
+      - name: Verify release version
         env:
-          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
-            gh release view "${{ github.ref_name }}" --json assets --jq '.assets[].name' |
-              while IFS= read -r asset; do
-                if [ -n "$asset" ]; then
-                  gh release delete-asset "${{ github.ref_name }}" "$asset" --yes
-                fi
-              done
-          fi
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+          version=$(sed -n 's/^project(KiroX VERSION \([^ ]*\).*/\1/p' CMakeLists.txt)
+          test "${RELEASE_TAG#v}" = "$version"
+      - uses: softprops/action-gh-release@v2
         with:
-          body: ${{ steps.changelog.outputs.body }}
-          files: artifacts/**/*
+          generate_release_notes: true
+          files: artifacts/*
