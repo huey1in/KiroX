@@ -2,6 +2,9 @@
 .tools/
 out/
 CMakeUserPresets.json
+# Cached artifacts from the retired development toolchain
+frontend/
+wailsjs/
 build/
 *.exe
 *.exe~

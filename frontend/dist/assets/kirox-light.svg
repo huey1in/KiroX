@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="kirox-title kirox-desc">
-  <title id="kirox-title">KiroX</title>
-  <desc id="kirox-desc">A handwritten lowercase k with a tall loop and an upward sweeping finish, drawn in a rounded black line on a white tile.</desc>
-  <rect width="512" height="512" rx="112" fill="#FFFFFF" />
-  <g fill="none" stroke="#000000" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M82 300 C143 281 235 190 257 120 C272 72 239 68 217 107 C183 166 155 296 141 374" />
-    <path d="M340 176 C294 221 242 252 175 278 C223 255 245 291 276 328 C307 365 329 378 365 351 C393 330 416 304 437 282" />
-  </g>
-</svg>
