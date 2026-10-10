@@ -6,6 +6,9 @@ if(WIN32)
   install(FILES "$<TARGET_FILE:KiroX::Curl>" DESTINATION bin)
 endif()
 if(APPLE)
+  # Keep the native ABI names requested by dyld inside the application bundle.
+  install(FILES "$<TARGET_FILE:KiroX::Curl>" DESTINATION KiroX.app/Contents/Frameworks RENAME libcurl-impersonate.4.dylib)
+  install(FILES "$<TARGET_FILE:OpenSSL::Crypto>" DESTINATION KiroX.app/Contents/Frameworks RENAME libcrypto.3.dylib)
   # macdeployqt excludes offscreen by default. Include it before dependency
   # deployment so its install names are rewritten with the other bundle dylibs.
   install(FILES "$<TARGET_FILE:Qt6::QOffscreenIntegrationPlugin>" DESTINATION KiroX.app/Contents/PlugIns/platforms)

@@ -38,6 +38,12 @@ def main():
         executable = package / "KiroX.app/Contents/MacOS/KiroX"
     else:
         executable = package / "bin/kirox"
+    if sys.platform == "darwin":
+        dependencies = subprocess.check_output(["otool", "-L", str(executable)], text=True)
+        for dependency in dependencies.splitlines()[1:]:
+            name = dependency.strip().split(" (", 1)[0]
+            if name.startswith("/") and not name.startswith(("/System/Library/", "/usr/lib/")):
+                raise RuntimeError(f"Application depends on an external development library: {name}")
     env = os.environ.copy()
     env["PATH"] = os.pathsep.join(part for part in env.get("PATH", "").split(os.pathsep) if ".tools" not in part)
     for key in ["QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH", "LD_LIBRARY_PATH"]:
