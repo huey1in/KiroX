@@ -24,6 +24,9 @@
 
 KiroX は C++20 と Qt Quick によるネイティブデスクトップ登録ツールです。HTTP/TLS で AWS Builder ID 登録、メール認証、認可、Kiro トークン交換を行います。Outlook、iCloud、MoeMail、Cloud-Mail、MailNest、並列タスクとプロキシプールに対応します。Liquid Glass スタイルの UI は中国語・英語・日本語、ライト・ダークテーマ、視差効果・透明度の削減に対応します。
 
+
+![ネイティブデスクトップ（サンプルデータ）](docs/images/native-desktop.png)
+
 ---
 
 ## スポンサー・謝辞

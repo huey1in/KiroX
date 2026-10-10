@@ -24,6 +24,9 @@
 
 KiroX is a native C++20 and Qt Quick desktop registration tool. It uses HTTP/TLS protocols for AWS Builder ID signup, email verification, authorization and Kiro token exchange. Outlook, iCloud, MoeMail, Cloud-Mail and MailNest are supported, with concurrent batches and proxy pools. The Liquid Glass interface offers Chinese, English and Japanese, light/dark themes and reduced effects.
 
+
+![Native desktop with example data](docs/images/native-desktop.png)
+
 ---
 
 ## Sponsors & Acknowledgments
