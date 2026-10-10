@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// ──────────────────── Chrome 多版本支持 ────────────────────
+// Chrome 多版本支持
 
 type chromeVersion struct {
 	Version string
@@ -33,11 +33,11 @@ func genChromeVersion() chromeVersion {
 	}
 }
 
-// ──────────────────── lsUbid 前缀池 ────────────────────
+//  lsUbid 前缀池
 
 var lsubidPrefixes = []string{"X10", "X19", "X42", "X55", "X73", "X81", "X96"}
 
-// ──────────────────── WebGL 扩展 ────────────────────
+// WebGL 扩展
 
 var webglExtCore = []string{
 	"ANGLE_instanced_arrays", "EXT_blend_minmax", "EXT_color_buffer_half_float",
@@ -59,7 +59,7 @@ var webglExtOptional = []string{
 	"EXT_color_buffer_float",
 }
 
-// ──────────────────── 插件 (Chrome 固有) ────────────────────
+// 插件 (Chrome 固有)
 
 var pluginsPool = []map[string]string{
 	{"name": "PDF Viewer", "filename": "internal-pdf-viewer", "description": "Portable Document Format"},
@@ -69,7 +69,7 @@ var pluginsPool = []map[string]string{
 	{"name": "WebKit built-in PDF", "filename": "internal-pdf-viewer", "description": "Portable Document Format"},
 }
 
-// ──────────────────── 数据结构 ────────────────────
+// 数据结构
 
 // ScreenInfo 屏幕信息
 type ScreenInfo struct {
@@ -100,9 +100,9 @@ type BrowserIdentity struct {
 	TimezoneHours       int
 }
 
-// ──────────────────── 算法: GPU 配置生成 ────────────────────
-// 规律: Vendor = "Google Inc. ({芯片厂商})"
-//       Model  = "ANGLE ({芯片厂商}, {芯片型号} Direct3D11 vs_5_0 ps_5_0, D3D11)"
+// GPU 配置生成
+// Vendor = "Google Inc. ({芯片厂商})"
+// Model  = "ANGLE ({芯片厂商}, {芯片型号} Direct3D11 vs_5_0 ps_5_0, D3D11)"
 
 func genGPU() (vendor, model string) {
 	type gpuFamily struct {
@@ -158,8 +158,8 @@ func genGPU() (vendor, model string) {
 	return
 }
 
-// ──────────────────── 算法: 屏幕分辨率生成 ────────────────────
-// 规律: AvailHeight = Height - taskbar(32~48), AvailWidth = Width, ColorDepth = 24
+// 屏幕分辨率生成
+// AvailHeight = Height - taskbar(32~48), AvailWidth = Width, ColorDepth = 24
 
 func genScreen() ScreenInfo {
 	type resolution struct {
@@ -207,8 +207,8 @@ func genMath() (tan, sin, cos string) {
 	return "-1.4214488238747245", "0.8178819121159085", "-0.5753861119575491"
 }
 
-// ──────────────────── 算法: Canvas Histogram 模拟 ────────────────────
-// 分析 collect_histogram.html 的渲染逻辑 (150×60 canvas, 36000 RGBA 样本):
+// Canvas Histogram 模拟
+// collect_histogram.html 的渲染逻辑 (150×60 canvas, 36000 RGBA 样本):
 //
 // 1. 大量透明背景 → bins[0] 极大 (R=0,G=0,B=0,A=0 → 每个透明像素贡献 4 个 0)
 // 2. 绘制区域 alpha=255 → bins[255] 极大
@@ -220,11 +220,11 @@ func generateCanvasData() (int32, [256]int) {
 	var bins [256]int
 	const totalSamples = 36000 // 150×60×4(RGBA)
 
-	// ── 主峰: 背景透明区 + Alpha 通道 ──
+	// 主峰: 背景透明区 + Alpha 通道
 	bins[0] = 5000 + rand.Intn(10001)   // 5000~15000
 	bins[255] = 6000 + rand.Intn(10001) // 6000~16000
 
-	// ── 次要 spike: 来自特定颜色值 ──
+	// 次要 spike: 来自特定颜色值
 	// #f60 矩形的 G 通道 = 102
 	spike1Pos := 100 + rand.Intn(6) // 100~105, 围绕 102
 	bins[spike1Pos] = 500 + rand.Intn(200)
@@ -233,11 +233,11 @@ func generateCanvasData() (int32, [256]int) {
 	spike2Pos := 150 + rand.Intn(8) // 150~157, 围绕 153
 	bins[spike2Pos] = 400 + rand.Intn(300)
 
-	// ── 计算已分配的样本数 ──
+	// 计算已分配的样本数
 	assigned := bins[0] + bins[255] + bins[spike1Pos] + bins[spike2Pos]
 	remaining := totalSamples - assigned
 
-	// ── 特征颜色区 (中等值, 来自绘图操作) ──
+	// 特征颜色区 (中等值, 来自绘图操作)
 	// 这些是 circle/gradient/text 渲染常产生的值范围
 	featureBins := []struct {
 		lo, hi   int // bin 范围
@@ -278,7 +278,7 @@ func generateCanvasData() (int32, [256]int) {
 		}
 	}
 
-	// ── 未分配的 bins 补充少量噪声 ──
+	// 未分配的 bins 补充少量噪声
 	for i := 1; i < 255; i++ {
 		if bins[i] == 0 && remaining > 0 {
 			v := 2 + rand.Intn(8) // 2-9 的微小噪声
@@ -290,7 +290,7 @@ func generateCanvasData() (int32, [256]int) {
 		}
 	}
 
-	// ── 余量归入 bins[0] (最大的 bin 微调不影响分布形状) ──
+	// 余量归入 bins[0] (最大的 bin 微调不影响分布形状)
 	if remaining > 0 {
 		bins[0] += remaining
 	}
@@ -310,7 +310,7 @@ func abs(x int) int {
 	return x
 }
 
-// ──────────────────── 核心: 随机身份生成 ────────────────────
+// 随机身份生成
 
 // RandomIdentity 创建随机浏览器身份
 func RandomIdentity() *BrowserIdentity {
