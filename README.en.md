@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/assets/app.svg" width="100" height="100" alt="KiroX">
+  <img src="frontend/assets/kirox-light.svg" width="100" height="100" alt="KiroX">
 </p>
 
 <h1 align="center">KiroX | Kiro Protocol Registration Tool</h1>
