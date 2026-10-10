@@ -1,6 +1,5 @@
 #pragma once
 #include "kirox/ports/fingerprint_configuration.hpp"
-#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -18,8 +17,8 @@ class AppScriptCache final : public IFingerprintConfiguration {
   private:
     const ITransportFactory &transport_;
     QUrl endpoint_;
-    std::atomic<std::shared_ptr<const FingerprintCryptoConfig>> configuration_;
-    std::mutex mutex_;
+    std::shared_ptr<const FingerprintCryptoConfig> configuration_;
+    mutable std::mutex mutex_;
     std::condition_variable_any ready_;
     bool started_ = false, complete_ = false;
     std::jthread loader_;

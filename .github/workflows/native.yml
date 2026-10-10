@@ -45,7 +45,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev libgl1 libegl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libpulse0
+          sudo apt-get install -y libssl-dev libgl-dev libegl-dev libopengl-dev libxkbcommon-x11-0 libxcb-cursor0 libpulse0
       - name: macOS crypto
         if: runner.os == 'macOS'
         run: brew list openssl@3 || brew install openssl@3
@@ -55,7 +55,7 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then
             extractor=(-E "C:/Program Files/7-Zip/7z.exe")
           fi
-          python -m aqt install-qt ${{ matrix.host }} desktop 6.8.3 ${{ matrix.arch }} -O .tools/qt -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 30 "${extractor[@]}"
+          python -m aqt --config cmake/aqt.ini install-qt ${{ matrix.host }} desktop 6.8.3 ${{ matrix.arch }} -O .tools/qt -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 30 "${extractor[@]}"
       - name: Windows compiler
         if: runner.os == 'Windows'
         run: python -m aqt install-tool windows desktop tools_mingw1310 qt.tools.win64_mingw1310 -O .tools/qt --timeout 30

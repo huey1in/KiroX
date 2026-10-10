@@ -33,9 +33,9 @@ void AppScriptCache::warm(const TransportOptions &options, const QString &secUse
             // The baseline implementation also falls back when the remote bundle
             // cannot be loaded. Publish one immutable snapshot to every task.
         }
-        configuration_.store(std::move(configuration));
         {
             std::lock_guard lock(mutex_);
+            configuration_ = std::move(configuration);
             complete_ = true;
         }
         ready_.notify_all();
@@ -51,6 +51,7 @@ void AppScriptCache::wait(std::stop_token stop) {
     checkCancelled(stop);
 }
 std::shared_ptr<const FingerprintCryptoConfig> AppScriptCache::snapshot() const {
-    return configuration_.load();
+    std::lock_guard lock(mutex_);
+    return configuration_;
 }
 } // namespace kirox
