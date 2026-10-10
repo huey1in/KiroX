@@ -6,6 +6,9 @@ if(WIN32)
   install(FILES "$<TARGET_FILE:KiroX::Curl>" DESTINATION bin)
 endif()
 if(APPLE)
+  # macdeployqt excludes offscreen by default. Include it before dependency
+  # deployment so its install names are rewritten with the other bundle dylibs.
+  install(FILES "$<TARGET_FILE:Qt6::QOffscreenIntegrationPlugin>" DESTINATION KiroX.app/Contents/PlugIns/platforms)
   target_sources(kirox PRIVATE ../../assets/kirox.icns)
   set_source_files_properties(../../assets/kirox.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   set_target_properties(kirox PROPERTIES MACOSX_BUNDLE_ICON_FILE kirox.icns OUTPUT_NAME KiroX)
