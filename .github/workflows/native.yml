@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [future]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -49,7 +50,12 @@ jobs:
         if: runner.os == 'macOS'
         run: brew list openssl@3 || brew install openssl@3
       - name: Install Qt
-        run: python -m aqt install-qt ${{ matrix.host }} desktop 6.8.3 ${{ matrix.arch }} -O .tools/qt -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 30
+        run: |
+          extractor=()
+          if [ "$RUNNER_OS" = Windows ]; then
+            extractor=(-E "C:/Program Files/7-Zip/7z.exe")
+          fi
+          python -m aqt install-qt ${{ matrix.host }} desktop 6.8.3 ${{ matrix.arch }} -O .tools/qt -m qtshadertools qtmultimedia --archives qtbase qtdeclarative qtsvg qttools --timeout 30 "${extractor[@]}"
       - name: Windows compiler
         if: runner.os == 'Windows'
         run: python -m aqt install-tool windows desktop tools_mingw1310 qt.tools.win64_mingw1310 -O .tools/qt --timeout 30

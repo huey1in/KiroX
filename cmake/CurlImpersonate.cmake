@@ -34,7 +34,7 @@ if(WIN32)
     IMPORTED_IMPLIB "${KIROX_CURL_ROOT}/lib/libcurl-impersonate_imp.lib")
 else()
   find_library(kirox_curl_library NAMES curl-impersonate curl-impersonate-chrome
-    PATHS "${KIROX_CURL_ROOT}/lib" NO_DEFAULT_PATH REQUIRED)
+    PATHS "${KIROX_CURL_ROOT}/lib" "${KIROX_CURL_ROOT}" NO_DEFAULT_PATH REQUIRED)
   set_target_properties(KiroX::Curl PROPERTIES IMPORTED_LOCATION "${kirox_curl_library}")
 endif()
 file(GLOB kirox_curl_licenses "${KIROX_CURL_ROOT}/LICENSE*")
