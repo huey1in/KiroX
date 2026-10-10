@@ -10,26 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"reg_go/internal/storage"
 )
-
-// 默认缓存有效期：6 小时
-var identityCacheTTLHours atomic.Int64
-
-func init() {
-	identityCacheTTLHours.Store(6)
-}
-
-// SetIdentityCacheTTLHours changes the TTL used for subsequent cache lookups.
-func SetIdentityCacheTTLHours(hours int) {
-	if hours < 1 || hours > 168 {
-		hours = 6
-	}
-	identityCacheTTLHours.Store(int64(hours))
-}
 
 type cachedIdentity struct {
 	Identity  *BrowserIdentity `json:"identity"`
@@ -256,7 +240,7 @@ func cachedIdentityForProxy(proxyURL string, refreshSession bool) *BrowserIdenti
 
 	now := time.Now().Unix()
 	if entry, ok := idCache[key]; ok && entry.Identity != nil {
-		if identityMatchesTLSProfiles(entry.Identity) && now-entry.CreatedAt < int64((time.Duration(identityCacheTTLHours.Load())*time.Hour).Seconds()) {
+		if identityMatchesTLSProfiles(entry.Identity) && now-entry.CreatedAt < int64((6*time.Hour).Seconds()) {
 			if refreshSession {
 				return refreshVolatile(entry.Identity)
 			}

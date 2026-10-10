@@ -146,7 +146,7 @@ The output binary is located under `build/bin/`.
 
 On Linux, install the required GTK 3 and WebKitGTK development packages. If your system uses WebKitGTK 4.1, run `wails dev -tags webkit2_41` or `wails build -tags webkit2_41`.
 
-The frontend uses `d3@7.9.0` for the fingerprint offset curve. Wails runs the frontend build automatically; `node frontend/build.js` assembles the static assets and required dependency into `frontend/dist/` and does not start a web server. Application functions require the Wails bridge, so use `wails dev` to run the desktop app.
+Wails runs the frontend build automatically; `node frontend/build.js` assembles the static assets into `frontend/dist/` and does not start a web server. Application functions require the Wails bridge, so use `wails dev` to run the desktop app.
 
 ---
 
@@ -217,7 +217,7 @@ Successful accounts are streamed to the output directory (default `~/Documents/K
 
 The credit values above are examples; `creditUsed` and `creditLimit` depend on the account check and may be absent or `null`. A new successful record replaces the previous record for the same email. Passwords and access tokens are not written to this file; failed or banned accounts remain in the logs.
 
-Installed builds keep runtime files under `%LOCALAPPDATA%\KiroX` by default. `settings.json` stores task defaults, network policies, interface settings, and advanced overrides; `data` stores mailbox pools, mail service settings, and the proxy pool; `cache` stores rebuildable browser identity data; and `logs` stores optional redacted runtime logs. The business data directory can be changed in Settings, while settings and cache remain in local app data. On first launch, data from the old `%APPDATA%\kirox` layout is copied into the new layout without deleting sources or overwriting existing destination files.
+Installed builds keep runtime files under `%LOCALAPPDATA%\KiroX` by default. `settings.json` stores task defaults, network policies, interface settings; `data` stores mailbox pools, mail service settings, and the proxy pool; `cache` stores rebuildable browser identity data; and `logs` stores optional redacted runtime logs. The business data directory can be changed in Settings, while settings and cache remain in local app data. On first launch, data from the old `%APPDATA%\kirox` layout is copied into the new layout without deleting sources or overwriting existing destination files.
 
 Both the business data directory and result output directory contain a file named `accounts.json`, but they have different formats and purposes, so keep the directories separate. Changing the result directory does not move existing result files.
 

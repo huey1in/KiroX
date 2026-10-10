@@ -429,7 +429,7 @@
         <div class="settings-page-header">
           <div>
             <div class="settings-page-title" data-i18n="settings.title">设置</div>
-            <div class="settings-page-subtitle" data-i18n="settings.subtitle">配置通知、运行策略和高级选项</div>
+            <div class="settings-page-subtitle" data-i18n="settings.subtitle">配置通知与运行策略</div>
           </div>
           <button type="button" id="settings-save-button" class="btn btn-dark" onclick="saveAppSettings()" data-i18n="settings.save" disabled>保存设置</button>
         </div>
@@ -531,73 +531,6 @@
             <div class="settings-item settings-inline-item"><div><div class="settings-item-title" data-i18n="settings.persistentLogs">持久化运行日志</div><div class="settings-item-desc" data-i18n="settings.persistentLogsDesc">落盘前自动遮蔽验证码与令牌</div></div><label class="toggle-switch"><input type="checkbox" id="setting-persistent-logs"><span class="toggle-slider"></span></label></div>
             <div class="settings-item settings-inline-item"><div><div class="settings-item-title" data-i18n="settings.autoProbe">进入 IP 管理时探测新代理</div></div><label class="toggle-switch"><input type="checkbox" id="setting-auto-probe"><span class="toggle-slider"></span></label></div>
             <div class="settings-maintenance-actions"><button class="btn btn-secondary btn-sm" onclick="openLogsDirectory()" data-i18n="settings.openLogs">打开日志目录</button><button class="btn btn-secondary btn-sm" onclick="clearPersistentLogs()" data-i18n="settings.clearLogs">清理日志</button><button class="btn btn-secondary btn-sm" onclick="clearFingerprintCache()" data-i18n="settings.clearFingerprint">清理指纹缓存</button></div>
-          </div>
-        </div>
-
-        <div class="card settings-card advanced-settings-card">
-          <button type="button" class="advanced-settings-trigger" onclick="requestAdvancedSettings()" aria-expanded="false" id="advanced-settings-trigger">
-            <span><strong data-i18n="settings.advanced">高级配置</strong><small data-i18n="settings.advancedDesc">服务端点与底层网络参数</small></span><span class="advanced-chevron">⌄</span>
-          </button>
-          <div id="advanced-settings-content" hidden>
-            <div class="advanced-warning" data-i18n="settings.advancedInlineWarning">这些参数直接影响注册协议，修改后请先用少量任务验证。</div>
-            <div class="fingerprint-curve-section">
-              <div class="fingerprint-curve-heading">
-                <div>
-                  <div class="settings-item-title" data-i18n="settings.fingerprintAlgorithm">指纹偏移曲线</div>
-                  <div class="settings-item-desc" data-i18n="settings.fingerprintAlgorithmDesc">控制各指纹域相对缓存身份的重采样强度</div>
-                </div>
-              </div>
-              <input id="setting-fingerprint-offsets" type="hidden" value="0,0,0,0,0,0,0,15,15,100">
-              <div id="fingerprint-curve-editor" class="fingerprint-curve-editor">
-                <div class="fp-curve-toolbar">
-                  <div class="fp-curve-channel"><span></span><strong data-i18n="settings.fpCompositeCurve">综合偏移</strong></div>
-                  <div class="fp-curve-meter"><span data-i18n="settings.fpAverageOffset">平均偏移</span><output id="fp-curve-average">23%</output></div>
-                </div>
-                <div class="fp-curve-stage">
-                  <svg id="fp-curve-svg" viewBox="0 0 980 260" preserveAspectRatio="none" role="group" aria-label="指纹偏移曲线" data-i18n-aria-label="settings.fingerprintAlgorithm">
-                    <g class="fp-curve-grid" aria-hidden="true">
-                      <line x1="56" y1="24" x2="956" y2="24"></line><line x1="56" y1="74" x2="956" y2="74"></line><line x1="56" y1="124" x2="956" y2="124"></line><line x1="56" y1="174" x2="956" y2="174"></line><line x1="56" y1="224" x2="956" y2="224"></line>
-                      <line x1="56" y1="24" x2="56" y2="224"></line><line x1="156" y1="24" x2="156" y2="224"></line><line x1="256" y1="24" x2="256" y2="224"></line><line x1="356" y1="24" x2="356" y2="224"></line><line x1="456" y1="24" x2="456" y2="224"></line><line x1="556" y1="24" x2="556" y2="224"></line><line x1="656" y1="24" x2="656" y2="224"></line><line x1="756" y1="24" x2="756" y2="224"></line><line x1="856" y1="24" x2="856" y2="224"></line><line x1="956" y1="24" x2="956" y2="224"></line>
-                    </g>
-                    <g class="fp-curve-scale" aria-hidden="true"><text x="12" y="28">100</text><text x="19" y="78">75</text><text x="19" y="128">50</text><text x="19" y="178">25</text><text x="27" y="228">0</text></g>
-                    <path id="fp-curve-area" class="fp-curve-area" aria-hidden="true"></path>
-                    <path id="fp-curve-line" class="fp-curve-line" aria-hidden="true"></path>
-                    <g id="fp-curve-handles"></g>
-                  </svg>
-                  <div class="fp-curve-x-axis" aria-hidden="true"><span data-i18n="settings.fpBrowser">浏览器</span><span data-i18n="settings.fpPlatform">平台</span><span data-i18n="settings.fpPlugins">插件</span><span data-i18n="settings.fpResources">CPU / 内存</span><span data-i18n="settings.fpGPU">GPU / WebGL</span><span data-i18n="settings.fpScreen">屏幕</span><span data-i18n="settings.fpTimezone">时区</span><span data-i18n="settings.fpCanvas">Canvas</span><span data-i18n="settings.fpMath">数学运行时</span><span data-i18n="settings.fpSession">会话</span></div>
-                </div>
-                <div class="fp-curve-footer"><span><i class="fp-curve-low"></i><span data-i18n="settings.fpReuse">复用缓存</span></span><span><i class="fp-curve-high"></i><span data-i18n="settings.fpRegenerate">重新采样</span></span></div>
-              </div>
-            </div>
-            <div class="settings-grid">
-              <label class="settings-field"><span>AWS Region</span><input id="setting-aws-region" class="form-input" onchange="syncAWSRegionEndpoints()"></label>
-              <label class="settings-field"><span data-i18n="settings.requestTimeout">网络请求超时（秒）</span><input id="setting-request-timeout" class="form-input" type="number" min="10" max="180"></label>
-              <label class="settings-field"><span data-i18n="settings.fingerprintTTL">指纹缓存时长（小时）</span><input id="setting-fingerprint-ttl" class="form-input" type="number" min="1" max="168"></label>
-            </div>
-            <div class="settings-item settings-inline-item"><div class="settings-item-title" data-i18n="settings.telemetry">协议遥测</div><label class="toggle-switch"><input type="checkbox" id="setting-telemetry"><span class="toggle-slider"></span></label></div>
-            <div class="advanced-subsection">
-              <div class="settings-item settings-inline-item">
-                <div><div class="settings-item-title" data-i18n="settings.wafSolver">AWS WAF 打码</div><div class="settings-item-desc" data-i18n="settings.wafSolverDesc">通过 2Captcha 处理 AWS WAF；静态参数留空时自动处理登录过程中返回的动态挑战</div></div>
-                <label class="toggle-switch"><input type="checkbox" id="setting-waf-enabled" onchange="syncWAFSettings()"><span class="toggle-slider"></span></label>
-              </div>
-              <div id="setting-waf-fields" class="settings-grid advanced-endpoints">
-                <label class="settings-field"><span data-i18n="settings.twoCaptchaAPIKey">2Captcha API Key</span><input id="setting-two-captcha-api-key" class="form-input" type="password" autocomplete="off"></label>
-                <label class="settings-field"><span data-i18n="settings.wafWebsiteURL">WAF Website URL</span><input id="setting-waf-website-url" class="form-input"></label>
-                <label class="settings-field"><span data-i18n="settings.wafWebsiteKey">WAF Website Key</span><input id="setting-waf-website-key" class="form-input"></label>
-                <label class="settings-field"><span>IV</span><input id="setting-waf-iv" class="form-input"></label>
-                <label class="settings-field settings-field-full"><span>Context</span><input id="setting-waf-context" class="form-input"></label>
-                <label class="settings-field settings-field-full"><span data-i18n="settings.wafJSAPIScript">jsapiScript</span><input id="setting-waf-jsapi-script" class="form-input"></label>
-                <label class="settings-field"><span>challengeScript</span><input id="setting-waf-challenge-script" class="form-input"></label>
-                <label class="settings-field"><span>captchaScript</span><input id="setting-waf-captcha-script" class="form-input"></label>
-              </div>
-            </div>
-            <div class="settings-grid advanced-endpoints">
-              <label class="settings-field"><span>OIDC Base</span><input id="setting-oidc-base" class="form-input"></label><label class="settings-field"><span>Signin Base</span><input id="setting-signin-base" class="form-input"></label>
-              <label class="settings-field"><span>Profile Base</span><input id="setting-profile-base" class="form-input"></label><label class="settings-field"><span>View Base</span><input id="setting-view-base" class="form-input"></label>
-              <label class="settings-field"><span>Portal Base</span><input id="setting-portal-base" class="form-input"></label><label class="settings-field"><span>Start URL</span><input id="setting-start-url" class="form-input"></label>
-              <label class="settings-field"><span>Kiro Base</span><input id="setting-kiro-base" class="form-input"></label><label class="settings-field"><span>Kiro Redirect URI</span><input id="setting-kiro-redirect" class="form-input"></label>
-              <label class="settings-field settings-field-full"><span>Directory ID</span><input id="setting-directory-id" class="form-input"></label>
-            </div>
           </div>
         </div>
 
@@ -1165,7 +1098,6 @@
 <script src="js/overview.js"></script>
 <script src="js/dropdown.js"></script>
 <script src="js/ui.js"></script>
-<script src="js/vendor/d3.min.js"></script>
 <script src="js/app.js"></script>
 <script src="js/ip.js"></script>
 </body>

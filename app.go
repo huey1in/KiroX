@@ -395,7 +395,7 @@ func (a *App) GetLanguage() string {
 	return storage.GetLanguage()
 }
 
-// GetAppSettings returns the unified task, interface, notification and advanced settings.
+// GetAppSettings returns the unified task, interface and notification settings.
 func (a *App) GetAppSettings() storage.AppSettings {
 	return storage.GetAppSettings()
 }

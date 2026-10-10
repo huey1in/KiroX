@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,18 +138,12 @@ func TestSchemaTwoSettingsGainRecommendedRuntimeDefaults(t *testing.T) {
 	if settings.EmailProxyMode != "follow-task" || settings.OTPTimeoutSeconds != 120 || !settings.StopOnRisk {
 		t.Fatalf("unexpected resilience defaults: %+v", settings)
 	}
-	if got := fmt.Sprint(settings.FingerprintOffsets); got != "[0 0 0 0 0 0 0 15 15 100]" {
-		t.Fatalf("unexpected fingerprint offsets: %s", got)
-	}
-	if got := fmt.Sprint(settings.FingerprintCurvePositions); got != "[0 11 22 33 44 56 67 78 89 100]" {
-		t.Fatalf("unexpected fingerprint curve positions: %s", got)
-	}
 	if settings.Language != "en" || settings.Theme != "system" || !settings.AutoCheckUpdates {
 		t.Fatalf("legacy language or interface defaults were not migrated: %+v", settings)
 	}
 }
 
-func TestSaveAppSettingsNormalizesBoundsAndRejectsInvalidEndpoint(t *testing.T) {
+func TestSaveAppSettingsNormalizesBounds(t *testing.T) {
 	isolateStorageLayout(t)
 	settings := DefaultAppSettings()
 	settings.SoundVolume = 150
@@ -167,79 +160,56 @@ func TestSaveAppSettingsNormalizesBoundsAndRejectsInvalidEndpoint(t *testing.T) 
 	if saved.EmailProxy != "socks5://127.0.0.1:1080" {
 		t.Fatalf("custom email proxy = %q", saved.EmailProxy)
 	}
-	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 0 0 0 0 0 0 15 15 100]" {
-		t.Fatalf("fingerprint defaults = %s", got)
-	}
-
-	settings = saved
-	settings.FingerprintOffsets = []int{-10, 25, 50, 75, 120}
-	saved, err = SaveAppSettings(settings)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 25 0 25 25 50 50 75 75 100]" {
-		t.Fatalf("legacy fingerprint curve was not migrated: %s", got)
-	}
-
-	settings = saved
-	settings.FingerprintOffsets = []int{-10, 10, 20, 30, 40, 50, 60, 70, 80, 120}
-	settings.FingerprintCurvePositions = []int{-10, 50, 51, 52, 53, 54, 55, 56, 57, 120}
-	saved, err = SaveAppSettings(settings)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := fmt.Sprint(saved.FingerprintOffsets); got != "[0 10 20 30 40 50 60 70 80 100]" {
-		t.Fatalf("expanded fingerprint curve was not normalized: %s", got)
-	}
-	if got := fmt.Sprint(saved.FingerprintCurvePositions); got != "[0 50 52 54 56 58 60 62 64 100]" {
-		t.Fatalf("fingerprint curve positions were not normalized: %s", got)
-	}
-
-	settings = saved
-	settings.OIDCBase = "not a URL"
-	if _, err := SaveAppSettings(settings); err == nil {
-		t.Fatal("invalid advanced endpoint was accepted")
-	}
 }
 
-func TestSaveAppSettingsValidatesWAFSolver(t *testing.T) {
-	isolateStorageLayout(t)
-	settings := DefaultAppSettings()
-	settings.WAFEnabled = true
-	if _, err := SaveAppSettings(settings); err == nil {
-		t.Fatal("expected missing 2Captcha configuration error")
+func TestStoredSettingsDiscardRetiredRuntimeFields(t *testing.T) {
+	localBase, _ := isolateStorageLayout(t)
+	path := filepath.Join(localBase, "KiroX", "settings.json")
+	retired := map[string]interface{}{
+		"awsRegion": "other-region", "oidcBase": "not a URL",
+		"requestTimeoutSeconds": 180, "fingerprintTTLHours": 168,
+		"fingerprintOffsets": []int{100, 100, 100, 100, 100},
+		"wafEnabled":         true, "twoCaptchaAPIKey": "old-key",
 	}
-
-	settings.TwoCaptchaAPIKey = "api-key"
-	settings.WAFJSAPIScript = "https://example.com/jsapi.js"
-	saved, err := SaveAppSettings(settings)
-	if err != nil {
-		t.Fatal(err)
+	runtime := map[string]interface{}{
+		"language": "en", "soundEnabled": false, "otpTimeoutSeconds": 300,
 	}
-	if !saved.WAFEnabled || saved.TwoCaptchaAPIKey != "api-key" || saved.WAFJSAPIScript == "" {
-		t.Fatalf("unexpected WAF settings: %+v", saved)
+	for key, value := range retired {
+		runtime[key] = value
 	}
-
-	settings = DefaultAppSettings()
-	settings.WAFEnabled = true
-	settings.TwoCaptchaAPIKey = "api-key"
-	settings.WAFWebsiteKey = "site-key"
-	if _, err := SaveAppSettings(settings); err == nil {
-		t.Fatal("expected incomplete websiteKey challenge parameters to fail")
-	}
-}
-
-func TestDefaultAppSettingsIncludesWAFDiscoveryValues(t *testing.T) {
-	settings := DefaultAppSettings()
-	if settings.WAFWebsiteURL == "" || settings.WAFJSAPIScript != "" {
-		t.Fatalf("WAF defaults must include only the website URL: %+v", settings)
-	}
-
-	normalized := normalizeAppSettings(AppSettings{
-		WAFJSAPIScript: "https://us-east-1.signin.aws/assets/js/app.js",
+	data, err := json.Marshal(map[string]interface{}{
+		"schemaVersion": 3, "runtime": runtime,
 	})
-	if normalized.WAFWebsiteURL != settings.WAFWebsiteURL || normalized.WAFJSAPIScript != "" {
-		t.Fatalf("legacy WAF defaults were not migrated: %+v", normalized)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, path, string(data))
+
+	settings := GetAppSettings()
+	if settings.Language != "en" || settings.SoundEnabled || settings.OTPTimeoutSeconds != 300 {
+		t.Fatalf("existing runtime preferences were changed: %+v", settings)
+	}
+	if _, err := SaveAppSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	data, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored struct {
+		SchemaVersion int                        `json:"schemaVersion"`
+		Runtime       map[string]json.RawMessage `json:"runtime"`
+	}
+	if err := json.Unmarshal(data, &stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored.SchemaVersion != settingsSchemaVersion {
+		t.Fatalf("settings schema = %d, want %d", stored.SchemaVersion, settingsSchemaVersion)
+	}
+	for key := range retired {
+		if _, exists := stored.Runtime[key]; exists {
+			t.Errorf("retired field %q survived in settings.json", key)
+		}
 	}
 }
 

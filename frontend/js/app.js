@@ -476,28 +476,8 @@ function renderAppSettings(s) {
   setSettingValue('setting-log-retention', s.logRetentionDays);
   setSettingChecked('setting-auto-probe', s.autoProbeProxies);
   setSettingValue('setting-moe-expiry', s.moeMailExpiryMinutes);
-  setSettingValue('setting-aws-region', s.awsRegion);
-  setSettingValue('setting-request-timeout', s.requestTimeoutSeconds);
-  setSettingValue('setting-fingerprint-ttl', s.fingerprintTTLHours);
-  setFingerprintCurveValues(s.fingerprintOffsets, s.fingerprintCurvePositions);
-  setSettingChecked('setting-telemetry', s.telemetryEnabled);
-  setSettingChecked('setting-waf-enabled', s.wafEnabled);
-  setSettingValue('setting-two-captcha-api-key', s.twoCaptchaAPIKey);
-  setSettingValue('setting-waf-website-url', s.wafWebsiteURL);
-  setSettingValue('setting-waf-website-key', s.wafWebsiteKey);
-  setSettingValue('setting-waf-iv', s.wafIV);
-  setSettingValue('setting-waf-context', s.wafContext);
-  setSettingValue('setting-waf-jsapi-script', s.wafJSAPIScript);
-  setSettingValue('setting-waf-challenge-script', s.wafChallengeScript);
-  setSettingValue('setting-waf-captcha-script', s.wafCaptchaScript);
-  setSettingValue('setting-oidc-base', s.oidcBase); setSettingValue('setting-signin-base', s.signinBase);
-  setSettingValue('setting-profile-base', s.profileBase); setSettingValue('setting-view-base', s.viewBase);
-  setSettingValue('setting-portal-base', s.portalBase); setSettingValue('setting-start-url', s.startURL);
-  setSettingValue('setting-kiro-base', s.kiroBase); setSettingValue('setting-kiro-redirect', s.kiroRedirectURI);
-  setSettingValue('setting-directory-id', s.directoryID);
   applyThemePreference(s.theme);
   syncEmailProxyField();
-  syncWAFSettings();
   syncVolumeLabel();
   savedSettingsSnapshot = snapshotAppSettings(collectAppSettings());
   updateSettingsDirtyState();
@@ -514,7 +494,7 @@ async function loadAppSettings() {
 }
 
 function collectAppSettings() {
-  var s = Object.assign({}, window.appSettings || {});
+  var s = {};
   s.emailProxyMode = settingValue('setting-email-proxy-mode', 'follow-task');
   s.emailProxy = settingValue('setting-email-proxy', '').trim();
   s.otpTimeoutSeconds = parseInt(settingValue('setting-otp-timeout', 120));
@@ -530,26 +510,6 @@ function collectAppSettings() {
   s.logRetentionDays = parseInt(settingValue('setting-log-retention', 7));
   s.autoProbeProxies = settingChecked('setting-auto-probe', true);
   s.moeMailExpiryMinutes = parseInt(settingValue('setting-moe-expiry', 60));
-  s.awsRegion = settingValue('setting-aws-region', 'us-east-1').trim();
-  s.requestTimeoutSeconds = parseInt(settingValue('setting-request-timeout', 60));
-  s.fingerprintTTLHours = parseInt(settingValue('setting-fingerprint-ttl', 6));
-  s.fingerprintOffsets = getFingerprintCurveValues();
-  s.fingerprintCurvePositions = getFingerprintCurvePositions();
-  s.telemetryEnabled = settingChecked('setting-telemetry', true);
-  s.wafEnabled = settingChecked('setting-waf-enabled', false);
-  s.twoCaptchaAPIKey = settingValue('setting-two-captcha-api-key', '').trim();
-  s.wafWebsiteURL = settingValue('setting-waf-website-url', '').trim();
-  s.wafWebsiteKey = settingValue('setting-waf-website-key', '').trim();
-  s.wafIV = settingValue('setting-waf-iv', '').trim();
-  s.wafContext = settingValue('setting-waf-context', '').trim();
-  s.wafJSAPIScript = settingValue('setting-waf-jsapi-script', '').trim();
-  s.wafChallengeScript = settingValue('setting-waf-challenge-script', '').trim();
-  s.wafCaptchaScript = settingValue('setting-waf-captcha-script', '').trim();
-  s.oidcBase = settingValue('setting-oidc-base', '').trim(); s.signinBase = settingValue('setting-signin-base', '').trim();
-  s.profileBase = settingValue('setting-profile-base', '').trim(); s.viewBase = settingValue('setting-view-base', '').trim();
-  s.portalBase = settingValue('setting-portal-base', '').trim(); s.startURL = settingValue('setting-start-url', '').trim();
-  s.kiroBase = settingValue('setting-kiro-base', '').trim(); s.kiroRedirectURI = settingValue('setting-kiro-redirect', '').trim();
-  s.directoryID = settingValue('setting-directory-id', '').trim();
   return s;
 }
 
@@ -576,185 +536,12 @@ function syncEmailProxyField() {
   if (field) field.disabled = settingValue('setting-email-proxy-mode', 'follow-task') !== 'custom';
 }
 
-function syncWAFSettings() {
-  var fields = document.querySelectorAll('#setting-waf-fields input');
-  var enabled = settingChecked('setting-waf-enabled', false);
-  fields.forEach(function(field) { field.disabled = !enabled; });
-}
-
 function syncVolumeLabel() {
   var slider = document.getElementById('setting-sound-volume');
   var output = document.getElementById('setting-sound-volume-label');
   var value = Number(settingValue('setting-sound-volume', 70));
   if (slider) slider.style.setProperty('--range-progress', value + '%');
   if (output) output.textContent = value + '%';
-}
-
-function syncAWSRegionEndpoints() {
-  var region = settingValue('setting-aws-region', 'us-east-1').trim() || 'us-east-1';
-  setSettingValue('setting-oidc-base', 'https://oidc.' + region + '.amazonaws.com');
-  setSettingValue('setting-signin-base', 'https://' + region + '.signin.aws');
-  setSettingValue('setting-portal-base', 'https://portal.sso.' + region + '.amazonaws.com');
-}
-
-var fingerprintCurveDefaults = [0, 0, 0, 0, 0, 0, 0, 15, 15, 100];
-var fingerprintCurveDefaultPositions = [0, 11, 22, 33, 44, 56, 67, 78, 89, 100];
-var fingerprintCurveValues = fingerprintCurveDefaults.slice();
-var fingerprintCurvePositions = fingerprintCurveDefaultPositions.slice();
-
-function normalizeFingerprintCurve(values) {
-  if (Array.isArray(values) && values.length === 5) {
-    values = [values[0], values[1], values[0], values[1], values[1], values[2], values[2], values[3], values[3], values[4]];
-  }
-  if (!Array.isArray(values) || values.length !== fingerprintCurveDefaults.length) values = fingerprintCurveDefaults;
-  return values.map(function(value) { return Math.max(0, Math.min(100, Math.round(Number(value) || 0))); });
-}
-
-function normalizeFingerprintCurvePositions(positions) {
-  if (!Array.isArray(positions) || positions.length !== fingerprintCurveDefaultPositions.length) return fingerprintCurveDefaultPositions.slice();
-  var normalized = [];
-  positions.forEach(function(position, index) {
-    var min = index === 0 ? 0 : normalized[index - 1] + 2;
-    var max = 100 - (positions.length - 1 - index) * 2;
-    normalized.push(Math.max(min, Math.min(max, Math.round(Number(position) || 0))));
-  });
-  return normalized;
-}
-
-function getFingerprintCurveValues() {
-  return fingerprintCurveValues.slice();
-}
-
-function getFingerprintCurvePositions() {
-  return fingerprintCurvePositions.slice();
-}
-
-function fingerprintCurvePoints(values) {
-  return values.map(function(value, index) {
-    return { x: 56 + fingerprintCurvePositions[index] * 9, y: 224 - value * 2 };
-  });
-}
-
-function fingerprintEffectiveValues() {
-  return fingerprintCurveDefaultPositions.map(function(position) {
-    if (position <= fingerprintCurvePositions[0]) return fingerprintCurveValues[0];
-    for (var i = 1; i < fingerprintCurvePositions.length; i++) {
-      if (position <= fingerprintCurvePositions[i]) {
-        var leftX = fingerprintCurvePositions[i - 1];
-        var ratio = (position - leftX) / (fingerprintCurvePositions[i] - leftX);
-        return Math.round(fingerprintCurveValues[i - 1] + (fingerprintCurveValues[i] - fingerprintCurveValues[i - 1]) * ratio);
-      }
-    }
-    return fingerprintCurveValues[fingerprintCurveValues.length - 1];
-  });
-}
-
-function fingerprintCurvePath(points) {
-  if (!window.d3 || !points.length) return '';
-  return d3.line().x(function(point) { return point.x; }).y(function(point) { return point.y; }).curve(d3.curveMonotoneX)(points);
-}
-
-function fingerprintCurveAreaPath(points) {
-  if (!window.d3 || !points.length) return '';
-  return d3.area().x(function(point) { return point.x; }).y0(224).y1(function(point) { return point.y; }).curve(d3.curveMonotoneX)(points);
-}
-
-function ensureFingerprintCurveHandles() {
-  var handles = document.getElementById('fp-curve-handles');
-  if (!handles || !window.d3) return;
-  var entered = d3.select(handles).selectAll('.fp-curve-handle').data(fingerprintCurveDefaultPositions).enter().append('g')
-    .attr('class', 'fp-curve-handle')
-    .attr('data-fp-index', function(_, index) { return index; })
-    .attr('tabindex', 0)
-    .attr('role', 'slider')
-    .attr('aria-valuemin', 0)
-    .attr('aria-valuemax', 100);
-  entered.append('line').attr('class', 'fp-curve-guide').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 0);
-  entered.append('circle').attr('class', 'fp-curve-handle-hit').attr('r', 16);
-  entered.append('circle').attr('class', 'fp-curve-handle-ring').attr('r', 6);
-  entered.append('circle').attr('class', 'fp-curve-handle-core').attr('r', 2);
-  entered.append('text').attr('class', 'fp-curve-handle-value').attr('x', 0).attr('y', -13);
-}
-
-function renderFingerprintCurve() {
-  var line = document.getElementById('fp-curve-line');
-  var area = document.getElementById('fp-curve-area');
-  if (!line || !area) return;
-  ensureFingerprintCurveHandles();
-  var points = fingerprintCurvePoints(fingerprintCurveValues);
-  d3.select(line).attr('d', fingerprintCurvePath(points));
-  d3.select(area).attr('d', fingerprintCurveAreaPath(points));
-  d3.selectAll('.fp-curve-handle').each(function(_, index) {
-    var handle = this;
-    var point = points[index];
-    handle.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
-    handle.setAttribute('aria-label', tr('settings.fpControlPoint', '曲线控制点') + ' ' + (index + 1));
-    handle.setAttribute('aria-valuenow', String(fingerprintCurveValues[index]));
-    handle.setAttribute('aria-valuetext', 'X ' + fingerprintCurvePositions[index] + '%, Y ' + fingerprintCurveValues[index] + '%');
-    handle.querySelector('.fp-curve-guide').setAttribute('y2', String(224 - point.y));
-    handle.querySelector('.fp-curve-handle-value').textContent = fingerprintCurveValues[index] + '%';
-  });
-  var effectiveValues = fingerprintEffectiveValues();
-  var average = Math.round(effectiveValues.reduce(function(total, value) { return total + value; }, 0) / effectiveValues.length);
-  var meter = document.getElementById('fp-curve-average');
-  if (meter) meter.textContent = average + '%';
-  setSettingValue('setting-fingerprint-offsets', fingerprintCurveValues.join(','));
-  updateSettingsDirtyState();
-}
-
-function setFingerprintCurveValues(values, positions) {
-  fingerprintCurveValues = normalizeFingerprintCurve(values);
-  fingerprintCurvePositions = normalizeFingerprintCurvePositions(positions);
-  initFingerprintCurve();
-  renderFingerprintCurve();
-}
-
-function initFingerprintCurve() {
-  var svg = document.getElementById('fp-curve-svg');
-  if (!svg || !window.d3) return;
-  ensureFingerprintCurveHandles();
-  if (svg.dataset.ready === 'true') return;
-  svg.dataset.ready = 'true';
-  d3.select(svg).selectAll('.fp-curve-handle')
-    .call(d3.drag().container(svg)
-      .on('start', function() { this.classList.add('dragging'); })
-      .on('drag', function(event) {
-        var index = Number(this.dataset.fpIndex);
-        var minX = index === 0 ? 0 : fingerprintCurvePositions[index - 1] + 2;
-        var maxX = index === fingerprintCurvePositions.length - 1 ? 100 : fingerprintCurvePositions[index + 1] - 2;
-        fingerprintCurvePositions[index] = Math.round(Math.max(minX, Math.min(maxX, (event.x - 56) / 9)));
-        fingerprintCurveValues[index] = Math.round(Math.max(0, Math.min(100, (224 - event.y) / 2)));
-        renderFingerprintCurve();
-      })
-      .on('end', function() { this.classList.remove('dragging'); }))
-    .on('keydown', function(event) {
-    var index = Number(this.dataset.fpIndex);
-    var step = event.shiftKey ? 5 : 1;
-    if (event.key === 'ArrowUp') fingerprintCurveValues[index] += step;
-    else if (event.key === 'ArrowDown') fingerprintCurveValues[index] -= step;
-    else if (event.key === 'ArrowRight') {
-      var rightMax = index === fingerprintCurvePositions.length - 1 ? 100 : fingerprintCurvePositions[index + 1] - 2;
-      fingerprintCurvePositions[index] = Math.min(rightMax, fingerprintCurvePositions[index] + step);
-    } else if (event.key === 'ArrowLeft') {
-      var leftMin = index === 0 ? 0 : fingerprintCurvePositions[index - 1] + 2;
-      fingerprintCurvePositions[index] = Math.max(leftMin, fingerprintCurvePositions[index] - step);
-    }
-    else return;
-    event.preventDefault();
-    fingerprintCurveValues[index] = Math.max(0, Math.min(100, fingerprintCurveValues[index]));
-    renderFingerprintCurve();
-  });
-  renderFingerprintCurve();
-}
-
-function requestAdvancedSettings() {
-  var content = document.getElementById('advanced-settings-content');
-  var trigger = document.getElementById('advanced-settings-trigger');
-  if (!content || !trigger) return;
-  if (!content.hidden) { content.hidden = true; trigger.setAttribute('aria-expanded', 'false'); return; }
-  showConfirmModal(tr('settings.advancedWarningTitle', '打开高级配置？'), tr('settings.advancedWarning', '修改服务端点或底层网络参数可能导致注册失败、账号风控或接口不可用。仅在明确知道参数用途时继续。'), tr('settings.continueOpen', '继续打开'), function() {
-    content.hidden = false; trigger.setAttribute('aria-expanded', 'true'); initFingerprintCurve(); requestAnimationFrame(renderFingerprintCurve);
-  });
 }
 
 async function openLogsDirectory() { try { await window.go.main.App.OpenLogsDir(); } catch (e) {} }
@@ -854,7 +641,6 @@ window.addEventListener('DOMContentLoaded', async function() {
       savedSettingsSnapshot = snapshotAppSettings(savedLanguageState);
     }
     renderInfoChangelogState();
-    renderFingerprintCurve();
     renderProxyDetectCard(proxyDetectView.state, proxyDetectView.payload);
     updateSettingsDirtyState();
   });

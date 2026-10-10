@@ -14,6 +14,7 @@ function copyDir(src, dest) {
   }
 }
 
+fs.rmSync(distDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
 copyDir(path.join(__dirname, 'wailsjs'), path.join(distDir, 'wailsjs'));
 fs.copyFileSync(path.join(__dirname, 'index.html'), path.join(distDir, 'index.html'));
@@ -29,9 +30,5 @@ fs.mkdirSync(distJsDir, { recursive: true });
 for (const file of fs.readdirSync(jsDir)) {
   if (file.endsWith('.js')) fs.copyFileSync(path.join(jsDir, file), path.join(distJsDir, file));
 }
-
-const vendorDir = path.join(distJsDir, 'vendor');
-fs.mkdirSync(vendorDir, { recursive: true });
-fs.copyFileSync(path.join(__dirname, 'node_modules', 'd3', 'dist', 'd3.min.js'), path.join(vendorDir, 'd3.min.js'));
 
 console.log('Build completed: frontend/dist/');

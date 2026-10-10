@@ -10,12 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"reg_go/internal/browser"
-	"reg_go/internal/captcha"
 	"reg_go/internal/core"
 	"reg_go/internal/data"
 	"reg_go/internal/email"
-	httputil "reg_go/internal/http"
 	"reg_go/internal/storage"
 )
 
@@ -201,8 +198,6 @@ func StopTask(force bool) map[string]interface{} {
 func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outlookAccounts []email.OutlookAccount, icloudAccounts []email.ICloudAccount) {
 	taskCtx := batch.ctx
 	settings := storage.GetAppSettings()
-	httputil.SetRequestTimeoutSeconds(settings.RequestTimeoutSeconds)
-	browser.SetIdentityCacheTTLHours(settings.FingerprintTTLHours)
 	defer Manager.finishBatch(batch)
 	if taskCtx.Err() != nil {
 		return
@@ -215,22 +210,8 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	os.MkdirAll(outDir, 0755)
 
 	taskConfig := core.NewConfig()
-	taskConfig.OIDCBase = settings.OIDCBase
-	taskConfig.SigninBase = settings.SigninBase
-	taskConfig.ProfileBase = settings.ProfileBase
-	taskConfig.ViewBase = settings.ViewBase
-	taskConfig.PortalBase = settings.PortalBase
-	taskConfig.StartURL = settings.StartURL
-	taskConfig.KiroBase = settings.KiroBase
-	taskConfig.KiroRedirectURI = settings.KiroRedirectURI
-	taskConfig.DirectoryID = settings.DirectoryID
 	taskConfig.OTPTimeout = settings.OTPTimeoutSeconds
-	taskConfig.TelemetryEnabled = settings.TelemetryEnabled
 	taskConfig.HTTPRetries = map[string]int{"fast": 0, "standard": 2, "stable": 3}[settings.RetryProfile]
-	taskConfig.FingerprintOffsets = append([]int(nil), settings.FingerprintOffsets...)
-	taskConfig.FingerprintCurvePositions = append([]int(nil), settings.FingerprintCurvePositions...)
-	taskConfig.WAFEnabled = settings.WAFEnabled
-	taskConfig.TwoCaptchaAPIKey = settings.TwoCaptchaAPIKey
 	taskConfig.EmailProvider = emailProvider
 	taskConfig.Proxy = req.Proxy
 	switch settings.EmailProxyMode {
@@ -241,42 +222,6 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	}
 	if taskConfig.Proxy != "" {
 		log.Printf("[Kiro] 已启用代理")
-	}
-	hasWAFChallengeParams := settings.WAFWebsiteKey != "" && settings.WAFIV != "" && settings.WAFContext != ""
-	hasWAFJSAPIParams := settings.WAFJSAPIScript != ""
-	if settings.WAFEnabled && (hasWAFChallengeParams || hasWAFJSAPIParams) {
-		log.Println("[WAF] 正在通过 2Captcha 获取 aws-waf-token")
-		solverProxy := captcha.RemoteWorkerProxy(taskConfig.Proxy)
-		if strings.TrimSpace(taskConfig.Proxy) != "" && solverProxy == "" {
-			log.Println("[WAF] 当前任务代理仅本机可访问，2Captcha 将使用代理池")
-		}
-		solveCtx, cancelSolve := context.WithTimeout(taskCtx, 3*time.Minute)
-		token, err := captcha.NewClient(settings.TwoCaptchaAPIKey).SolveAWSWAF(solveCtx, captcha.AWSWAFOptions{
-			WebsiteURL:      settings.WAFWebsiteURL,
-			WebsiteKey:      settings.WAFWebsiteKey,
-			IV:              settings.WAFIV,
-			Context:         settings.WAFContext,
-			JSAPIScript:     settings.WAFJSAPIScript,
-			ChallengeScript: settings.WAFChallengeScript,
-			CaptchaScript:   settings.WAFCaptchaScript,
-			Proxy:           solverProxy,
-		})
-		cancelSolve()
-		if err != nil {
-			if taskCtx.Err() != nil {
-				return
-			}
-			log.Printf("[WAF] 获取 aws-waf-token 失败: %v", err)
-			Manager.mu.Lock()
-			Manager.completed = req.Count
-			Manager.failed = req.Count
-			Manager.mu.Unlock()
-			return
-		}
-		taskConfig.WAFToken = token
-		log.Println("[WAF] aws-waf-token 已就绪，将复用于本批注册任务")
-	} else if settings.WAFEnabled {
-		log.Println("[WAF] 已启用动态验证，将在 AWS 返回挑战后自动处理")
 	}
 	if emailProvider == "icloud" {
 		taskConfig.UseICloud = true

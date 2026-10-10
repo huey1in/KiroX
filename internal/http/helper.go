@@ -8,27 +8,12 @@ import (
 	"math/rand"
 	"net/url"
 	"strings"
-	"sync/atomic"
 
 	fhttp "github.com/bogdanfinn/fhttp"
 	"github.com/bogdanfinn/fhttp/cookiejar"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
 )
-
-var requestTimeoutSeconds atomic.Int64
-
-func init() {
-	requestTimeoutSeconds.Store(60)
-}
-
-// SetRequestTimeoutSeconds changes the timeout used by newly created TLS clients.
-func SetRequestTimeoutSeconds(seconds int) {
-	if seconds < 10 || seconds > 180 {
-		seconds = 60
-	}
-	requestTimeoutSeconds.Store(int64(seconds))
-}
 
 const (
 	DefaultUA    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
@@ -96,7 +81,7 @@ func NewTLSClient(proxy string, followRedirect bool, chromeVer ...string) tls_cl
 		panic(fmt.Sprintf("创建 Cookie Jar 失败: %v", err))
 	}
 	opts := []tls_client.HttpClientOption{
-		tls_client.WithTimeoutSeconds(int(requestTimeoutSeconds.Load())),
+		tls_client.WithTimeoutSeconds(60),
 		tls_client.WithClientProfile(tlsProfileForChrome(chromeVer...)),
 		tls_client.WithInsecureSkipVerify(),
 		tls_client.WithCookieJar(jar),

@@ -142,7 +142,7 @@ wails build -nsis
 
 构建产物位于 `build/bin/`。Linux 使用 WebKitGTK 4.1 时，需安装 `libgtk-3-dev` 和 `libwebkit2gtk-4.1-dev`（Debian / Ubuntu 包名），并使用 `wails dev -tags webkit2_41` 或 `wails build -tags webkit2_41`。
 
-前端使用 `d3@7.9.0` 绘制指纹偏移曲线。`node frontend/build.js` 会将静态资源和所需依赖整理到 `frontend/dist/`；前端的 `npm run dev` / `npm run build` 都执行这一构建脚本，不会启动独立 Web 服务。完整功能依赖 Wails 提供的 Go 方法绑定，应通过 `wails dev` 运行桌面应用。
+`node frontend/build.js` 会将静态资源整理到 `frontend/dist/`；前端的 `npm run dev` / `npm run build` 都执行这一构建脚本，不会启动独立 Web 服务。完整功能依赖 Wails 提供的 Go 方法绑定，应通过 `wails dev` 运行桌面应用。
 
 ---
 
@@ -217,7 +217,7 @@ wails build -nsis
 
 同一邮箱再次保存时覆盖旧记录。`creditUsed` / `creditLimit` 来自注册后的验证结果，可能缺失或为 `null`。结果文件不包含注册密码和访问令牌，失败记录仅保留在运行日志中。
 
-安装版的运行时文件默认位于 `%LOCALAPPDATA%\KiroX`：`settings.json` 保存任务默认值、网络策略、界面与高级配置，`data` 保存邮箱池、邮箱服务配置和代理池，`cache` 保存可重建的浏览器指纹缓存，`logs` 保存可选的脱敏运行日志。可在「设置」中更改业务数据目录；缓存和设置仍固定在本机应用数据目录。旧版 `%APPDATA%\kirox` 数据会在首次启动时复制到新结构，源文件保留且不会覆盖已有目标文件。
+安装版的运行时文件默认位于 `%LOCALAPPDATA%\KiroX`：`settings.json` 保存任务默认值、网络策略、界面配置，`data` 保存邮箱池、邮箱服务配置和代理池，`cache` 保存可重建的浏览器指纹缓存，`logs` 保存可选的脱敏运行日志。可在「设置」中更改业务数据目录；缓存和设置仍固定在本机应用数据目录。旧版 `%APPDATA%\kirox` 数据会在首次启动时复制到新结构，源文件保留且不会覆盖已有目标文件。
 
 业务数据目录和结果输出目录中都有一个 `accounts.json`，两者用途与格式不同，应分开设置。修改结果目录不会迁移已有结果文件。
 

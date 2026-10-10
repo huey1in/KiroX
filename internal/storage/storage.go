@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"maps"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,7 +14,7 @@ import (
 )
 
 const (
-	settingsSchemaVersion = 3
+	settingsSchemaVersion = 4
 	keyDataDir            = "data_dir"
 	keyResultOutputDir    = "result_output_dir"
 	keyProxy              = "proxy"
@@ -44,81 +43,41 @@ type settingsFile struct {
 	Runtime         AppSettings `json:"runtime"`
 }
 
-// AppSettings contains user-facing runtime and advanced service overrides.
+// AppSettings contains user-facing runtime settings.
 // Directory settings stay at the root of settings.json because they are needed before
 // the rest of the application is initialized.
 type AppSettings struct {
-	EmailProxyMode            string `json:"emailProxyMode"`
-	EmailProxy                string `json:"emailProxy"`
-	OTPTimeoutSeconds         int    `json:"otpTimeoutSeconds"`
-	RetryProfile              string `json:"retryProfile"`
-	StopOnRisk                bool   `json:"stopOnRisk"`
-	SoundEnabled              bool   `json:"soundEnabled"`
-	DesktopNotifications      bool   `json:"desktopNotifications"`
-	SoundVolume               int    `json:"soundVolume"`
-	AutoCheckUpdates          bool   `json:"autoCheckUpdates"`
-	Theme                     string `json:"theme"`
-	Language                  string `json:"language"`
-	PersistentLogs            bool   `json:"persistentLogs"`
-	LogRetentionDays          int    `json:"logRetentionDays"`
-	AutoProbeProxies          bool   `json:"autoProbeProxies"`
-	MoeMailExpiryMinutes      int    `json:"moeMailExpiryMinutes"`
-	AWSRegion                 string `json:"awsRegion"`
-	RequestTimeoutSeconds     int    `json:"requestTimeoutSeconds"`
-	FingerprintTTLHours       int    `json:"fingerprintTTLHours"`
-	FingerprintOffsets        []int  `json:"fingerprintOffsets"`
-	FingerprintCurvePositions []int  `json:"fingerprintCurvePositions"`
-	TelemetryEnabled          bool   `json:"telemetryEnabled"`
-	WAFEnabled                bool   `json:"wafEnabled"`
-	TwoCaptchaAPIKey          string `json:"twoCaptchaAPIKey"`
-	WAFWebsiteURL             string `json:"wafWebsiteURL"`
-	WAFWebsiteKey             string `json:"wafWebsiteKey"`
-	WAFIV                     string `json:"wafIV"`
-	WAFContext                string `json:"wafContext"`
-	WAFJSAPIScript            string `json:"wafJSAPIScript"`
-	WAFChallengeScript        string `json:"wafChallengeScript"`
-	WAFCaptchaScript          string `json:"wafCaptchaScript"`
-	OIDCBase                  string `json:"oidcBase"`
-	SigninBase                string `json:"signinBase"`
-	ProfileBase               string `json:"profileBase"`
-	ViewBase                  string `json:"viewBase"`
-	PortalBase                string `json:"portalBase"`
-	StartURL                  string `json:"startURL"`
-	KiroBase                  string `json:"kiroBase"`
-	KiroRedirectURI           string `json:"kiroRedirectURI"`
-	DirectoryID               string `json:"directoryID"`
+	EmailProxyMode       string `json:"emailProxyMode"`
+	EmailProxy           string `json:"emailProxy"`
+	OTPTimeoutSeconds    int    `json:"otpTimeoutSeconds"`
+	RetryProfile         string `json:"retryProfile"`
+	StopOnRisk           bool   `json:"stopOnRisk"`
+	SoundEnabled         bool   `json:"soundEnabled"`
+	DesktopNotifications bool   `json:"desktopNotifications"`
+	SoundVolume          int    `json:"soundVolume"`
+	AutoCheckUpdates     bool   `json:"autoCheckUpdates"`
+	Theme                string `json:"theme"`
+	Language             string `json:"language"`
+	PersistentLogs       bool   `json:"persistentLogs"`
+	LogRetentionDays     int    `json:"logRetentionDays"`
+	AutoProbeProxies     bool   `json:"autoProbeProxies"`
+	MoeMailExpiryMinutes int    `json:"moeMailExpiryMinutes"`
 }
 
 func DefaultAppSettings() AppSettings {
 	return AppSettings{
-		EmailProxyMode:            "follow-task",
-		OTPTimeoutSeconds:         120,
-		RetryProfile:              "standard",
-		StopOnRisk:                true,
-		SoundEnabled:              true,
-		DesktopNotifications:      true,
-		SoundVolume:               70,
-		AutoCheckUpdates:          true,
-		Theme:                     "system",
-		LogRetentionDays:          7,
-		AutoProbeProxies:          true,
-		MoeMailExpiryMinutes:      60,
-		AWSRegion:                 "us-east-1",
-		RequestTimeoutSeconds:     60,
-		FingerprintTTLHours:       6,
-		FingerprintOffsets:        []int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100},
-		FingerprintCurvePositions: []int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100},
-		TelemetryEnabled:          true,
-		WAFWebsiteURL:             "https://us-east-1.signin.aws/platform/d-9067642ac7/signup",
-		OIDCBase:                  "https://oidc.us-east-1.amazonaws.com",
-		SigninBase:                "https://us-east-1.signin.aws",
-		ProfileBase:               "https://profile.aws.amazon.com",
-		ViewBase:                  "https://view.awsapps.com",
-		PortalBase:                "https://portal.sso.us-east-1.amazonaws.com",
-		StartURL:                  "https://view.awsapps.com/start",
-		KiroBase:                  "https://app.kiro.dev",
-		KiroRedirectURI:           "https://app.kiro.dev/signin/oauth",
-		DirectoryID:               "d-9067642ac7",
+		EmailProxyMode:       "follow-task",
+		OTPTimeoutSeconds:    120,
+		RetryProfile:         "standard",
+		StopOnRisk:           true,
+		SoundEnabled:         true,
+		DesktopNotifications: true,
+		SoundVolume:          70,
+		AutoCheckUpdates:     true,
+		Theme:                "system",
+		LogRetentionDays:     7,
+		AutoProbeProxies:     true,
+		MoeMailExpiryMinutes: 60,
 	}
 }
 
@@ -146,54 +105,6 @@ func normalizeAppSettings(s AppSettings) AppSettings {
 	}
 	s.LogRetentionDays = clampDefault(s.LogRetentionDays, 1, 90, d.LogRetentionDays)
 	s.MoeMailExpiryMinutes = clampDefault(s.MoeMailExpiryMinutes, 10, 1440, d.MoeMailExpiryMinutes)
-	s.RequestTimeoutSeconds = clampDefault(s.RequestTimeoutSeconds, 10, 180, d.RequestTimeoutSeconds)
-	s.FingerprintTTLHours = clampDefault(s.FingerprintTTLHours, 1, 168, d.FingerprintTTLHours)
-	s.FingerprintOffsets = normalizeFingerprintOffsets(s.FingerprintOffsets)
-	s.FingerprintCurvePositions = normalizeFingerprintCurvePositions(s.FingerprintCurvePositions)
-	if strings.TrimSpace(s.AWSRegion) == "" {
-		s.AWSRegion = d.AWSRegion
-	}
-	if strings.TrimSpace(s.OIDCBase) == "" {
-		s.OIDCBase = d.OIDCBase
-	}
-	if strings.TrimSpace(s.SigninBase) == "" {
-		s.SigninBase = d.SigninBase
-	}
-	if strings.TrimSpace(s.ProfileBase) == "" {
-		s.ProfileBase = d.ProfileBase
-	}
-	if strings.TrimSpace(s.ViewBase) == "" {
-		s.ViewBase = d.ViewBase
-	}
-	if strings.TrimSpace(s.PortalBase) == "" {
-		s.PortalBase = d.PortalBase
-	}
-	if strings.TrimSpace(s.StartURL) == "" {
-		s.StartURL = d.StartURL
-	}
-	if strings.TrimSpace(s.KiroBase) == "" {
-		s.KiroBase = d.KiroBase
-	}
-	if strings.TrimSpace(s.KiroRedirectURI) == "" {
-		s.KiroRedirectURI = d.KiroRedirectURI
-	}
-	if strings.TrimSpace(s.DirectoryID) == "" {
-		s.DirectoryID = d.DirectoryID
-	}
-	s.TwoCaptchaAPIKey = strings.TrimSpace(s.TwoCaptchaAPIKey)
-	s.WAFWebsiteURL = strings.TrimSpace(s.WAFWebsiteURL)
-	s.WAFWebsiteKey = strings.TrimSpace(s.WAFWebsiteKey)
-	s.WAFIV = strings.TrimSpace(s.WAFIV)
-	s.WAFContext = strings.TrimSpace(s.WAFContext)
-	s.WAFJSAPIScript = strings.TrimSpace(s.WAFJSAPIScript)
-	s.WAFChallengeScript = strings.TrimSpace(s.WAFChallengeScript)
-	s.WAFCaptchaScript = strings.TrimSpace(s.WAFCaptchaScript)
-	if s.WAFJSAPIScript == "https://us-east-1.signin.aws/assets/js/app.js" {
-		s.WAFJSAPIScript = ""
-	}
-	if s.WAFWebsiteURL == "" {
-		s.WAFWebsiteURL = d.WAFWebsiteURL
-	}
 	return s
 }
 
@@ -202,46 +113,6 @@ func clampDefault(value, minValue, maxValue, fallback int) int {
 		return fallback
 	}
 	return value
-}
-
-func normalizeFingerprintOffsets(values []int) []int {
-	if len(values) == 5 {
-		values = []int{values[0], values[1], values[0], values[1], values[1], values[2], values[2], values[3], values[3], values[4]}
-	}
-	if len(values) != 10 {
-		values = []int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100}
-	}
-	normalized := make([]int, 10)
-	for i, value := range values {
-		if value < 0 {
-			value = 0
-		} else if value > 100 {
-			value = 100
-		}
-		normalized[i] = value
-	}
-	return normalized
-}
-
-func normalizeFingerprintCurvePositions(values []int) []int {
-	if len(values) != 10 {
-		return []int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100}
-	}
-	normalized := make([]int, 10)
-	for i, value := range values {
-		minValue := 0
-		if i > 0 {
-			minValue = normalized[i-1] + 2
-		}
-		maxValue := 100 - (len(values)-1-i)*2
-		if value < minValue {
-			value = minValue
-		} else if value > maxValue {
-			value = maxValue
-		}
-		normalized[i] = value
-	}
-	return normalized
 }
 
 func oneOf(value string, allowed ...string) bool {
@@ -452,42 +323,6 @@ func GetAppSettings() AppSettings {
 // SaveAppSettings validates and atomically persists runtime settings.
 func SaveAppSettings(appSettings AppSettings) (AppSettings, error) {
 	appSettings = normalizeAppSettings(appSettings)
-	for name, value := range map[string]string{
-		"OIDC Base": appSettings.OIDCBase, "Signin Base": appSettings.SigninBase,
-		"Profile Base": appSettings.ProfileBase, "View Base": appSettings.ViewBase,
-		"Portal Base": appSettings.PortalBase, "Start URL": appSettings.StartURL,
-		"Kiro Base": appSettings.KiroBase, "Kiro Redirect URI": appSettings.KiroRedirectURI,
-	} {
-		parsed, err := url.ParseRequestURI(value)
-		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-			return AppSettings{}, fmt.Errorf("%s 必须是有效的 HTTP(S) URL", name)
-		}
-	}
-	if appSettings.WAFEnabled {
-		if appSettings.TwoCaptchaAPIKey == "" {
-			return AppSettings{}, fmt.Errorf("启用 AWS WAF 打码时必须填写 2Captcha API Key")
-		}
-		hasAnyStaticParam := appSettings.WAFWebsiteKey != "" || appSettings.WAFIV != "" || appSettings.WAFContext != "" || appSettings.WAFJSAPIScript != "" || appSettings.WAFChallengeScript != "" || appSettings.WAFCaptchaScript != ""
-		hasChallengeParams := appSettings.WAFWebsiteKey != "" && appSettings.WAFIV != "" && appSettings.WAFContext != ""
-		hasJSAPIParams := appSettings.WAFJSAPIScript != ""
-		if hasAnyStaticParam && !hasChallengeParams && !hasJSAPIParams {
-			return AppSettings{}, fmt.Errorf("静态 AWS WAF 参数需要 websiteKey + iv + context，或 jsapiScript；全部留空时将自动处理动态挑战")
-		}
-		for name, value := range map[string]string{
-			"WAF Website URL":     appSettings.WAFWebsiteURL,
-			"WAF jsapiScript":     appSettings.WAFJSAPIScript,
-			"WAF challengeScript": appSettings.WAFChallengeScript,
-			"WAF captchaScript":   appSettings.WAFCaptchaScript,
-		} {
-			if value == "" && name != "WAF Website URL" {
-				continue
-			}
-			parsed, err := url.ParseRequestURI(value)
-			if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-				return AppSettings{}, fmt.Errorf("%s 必须是有效的 HTTP(S) URL", name)
-			}
-		}
-	}
 	if err := updateSettings(func(settings *settingsFile) {
 		settings.Runtime = appSettings
 		settings.Language = appSettings.Language
