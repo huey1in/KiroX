@@ -343,7 +343,7 @@ class HttpMailboxSession final : public IMailboxSession {
         return response.json().object();
     }
     int graphCount(const QString &folder) {
-        const auto value = graph("/me/mailFolders/" + folder + "?$select=totalItemCount")["totalItemCount"];
+        const auto value = graph("/me/mailFolders/" + folder + "?$select=totalItemCount").value("totalItemCount");
         if (!value.isDouble() || value.toInt(-1) < 0)
             throw Error(ErrorCode::Protocol, "Graph returned no message count");
         return value.toInt();

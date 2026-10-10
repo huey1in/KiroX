@@ -11,8 +11,10 @@ DesktopInstance::DesktopInstance(const QString &root, QObject *parent)
 #ifdef Q_OS_WIN
     path = path.toLower();
 #endif
+    // Leave space for macOS's long temporary-directory prefix in sockaddr_un.
     const auto name =
-        "kirox-" + QString::fromLatin1(QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha256).toHex());
+        "kirox-" +
+        QString::fromLatin1(QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha256).toHex().left(32));
     lock_.setStaleLockTime(0);
     primary_ = lock_.tryLock(100);
     if (!primary_) {
@@ -27,7 +29,7 @@ DesktopInstance::DesktopInstance(const QString &root, QObject *parent)
     server_.setSocketOptions(QLocalServer::UserAccessOption);
     QLocalServer::removeServer(name);
     if (!server_.listen(name))
-        throw Error(ErrorCode::Conflict, "Cannot listen for desktop activation");
+        throw Error(ErrorCode::Conflict, "Cannot listen for desktop activation: " + server_.errorString());
     connect(&server_, &QLocalServer::newConnection, this, [this] {
         while (auto *socket = server_.nextPendingConnection()) {
             connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
