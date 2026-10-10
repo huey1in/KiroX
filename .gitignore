@@ -1,4 +1,7 @@
 # Build output
+.tools/
+out/
+CMakeUserPresets.json
 build/bin/
 build/windows/
 build/linux/

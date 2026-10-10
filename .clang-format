@@ -1,0 +1,11 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 120
+AllowShortFunctionsOnASingleLine: Empty
+NamespaceIndentation: None
+SortIncludes: CaseSensitive
+IncludeCategories:
+  - Regex: '^<windows\.h>$'
+    Priority: -1
+  - Regex: '.*'
+    Priority: 1

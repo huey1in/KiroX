@@ -1,0 +1,3 @@
+add_library(kirox_application STATIC settings_service.cpp account_service.cpp proxy_service.cpp mailbox_service.cpp password_encryptor.cpp identity_service.cpp
+  registration_service.cpp registration_profile.cpp registration_tokens.cpp registration_telemetry.cpp batch_service.cpp update_service.cpp)
+target_link_libraries(kirox_application PUBLIC kirox_domain)

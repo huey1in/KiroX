@@ -23,6 +23,14 @@
 .gitignore text eol=lf
 .gitattributes text eol=lf
 LICENSE text eol=lf
+licenses/** -whitespace
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.qml text eol=lf
+*.cmake text eol=lf
+*.ps1 text eol=lf
+*.py text eol=lf
+*.wav binary
 
 # Windows 批处理脚本保留 CRLF（cmd.exe 要求）
 *.bat text eol=crlf
