@@ -1,9 +1,9 @@
 # C++ architecture
 
-The `future` branch migrates the complete KiroX application to C++20 and Qt Quick.
-Migration is complete only when the native implementation covers the existing
-registration workflow, all mailbox providers, task scheduling, persistence,
-proxy management, updates, notifications, localization and release packaging.
+The `future` branch implements KiroX in C++20 and Qt Quick. Native modules cover
+registration, all mailbox providers, task scheduling, persistence, proxies,
+updates, notifications, localization and release packaging. Verification
+evidence and platform limits are recorded in the migration checklist.
 
 ## Dependency direction
 

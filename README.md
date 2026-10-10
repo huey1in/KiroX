@@ -25,8 +25,6 @@
 KiroX 是使用 C++20 和 Qt Quick 构建的 Kiro 桌面注册工具，采用 HTTP/TLS 协议完成 AWS Builder ID 注册、邮箱验证、授权和 Kiro Token 交换。支持 Outlook、iCloud、MoeMail、Cloud-Mail、MailNest 五种邮箱来源、批量并发任务与代理池。界面采用 Liquid Glass 风格，支持中英日三种语言、浅深色主题与减少动态/透明效果。
 
 
-![原生桌面界面（示例数据）](docs/images/native-desktop.png)
-
 ---
 
 ## 赞助与鸣谢
@@ -54,6 +52,8 @@ KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>�
 适用于 Kiro、AI Coding、浏览器自动化及海外网络访问，可根据不同地区和业务需求选择相应的网络环境。<br>
 支持免费测试，专属折扣码：<code>0205</code>
 </p>
+
+![原生桌面界面（示例数据）](docs/images/native-desktop.png)
 
 ---
 

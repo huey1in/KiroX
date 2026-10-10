@@ -1,7 +1,7 @@
 # Native migration checklist
 
-Reference baseline: `2bd6bd6` on `main`. This file records native capabilities,
-verification evidence and the remaining release checks on `future`.
+Reference baseline: `2bd6bd6` on `main`. The native rewrite and packaging are
+complete on `future`. Verification limits are recorded below.
 
 - [x] C++20 domain/application/infrastructure/desktop build targets.
 - [x] CMake Debug/Release configure, build and test presets.
@@ -30,9 +30,9 @@ verification evidence and the remaining release checks on `future`.
 - [x] Release update checks with semantic version comparison.
 - [x] Desktop text translated into Chinese, English and Japanese.
 - [x] Native single-instance reactivation and desktop platform behavior.
-- [ ] Windows/macOS/Linux build and installation packaging.
+- [x] Windows/macOS/Linux build and installation packaging.
 - [x] Remove superseded Go/Wails/web frontend source and build dependencies.
-- [ ] Full functional and visual completion audit; push completed rewrite to `future`.
+- [x] Functional and visual completion audit; push completed rewrite to `future`.
 
 Automated evidence must be recorded after tests run successfully. Implemented
 interfaces and placeholder screens do not count as migrated features.
@@ -52,14 +52,27 @@ The final Windows package passed 66 offscreen rendering scenarios: eight pages
 in Chinese/English/Japanese and light/dark themes, two reduced-effects variants
 and sixteen Japanese scenarios at the minimum 820x580 window size. Tests fail
 on QML warnings and missing screenshots. Installed application startup was
-also verified with Qt/MinGW SDK search paths removed.
+also verified with development SDKs hidden and SDK search paths removed.
 
 TLS fixtures verify cipher and extension order for the three browser profiles.
 Chrome 133 uses curl's 133a implementation: its ALPN/ALPS protocols differ from
 the Go baseline. This is explicitly not a claim of byte-for-byte TLS parity.
 
-Cross-platform packaging is exercised by `.github/workflows/native.yml`;
-passing results must be recorded before completing the remaining release checks.
+The [Native C++ run for d495687](https://github.com/huey1in/KiroX/actions/runs/38055504519)
+passed all three platforms: builds with warnings as errors, twelve CTest
+suites per platform, installation, independent installed-application startup
+with SDKs hidden, packaging and artifact upload.
+
+| Verified platform | Architecture | Compiler | Artifact |
+| --- | --- | --- | --- |
+| Windows | x86-64 | MinGW 13.1 | ZIP |
+| Ubuntu 24.04 | x86-64 | GCC 13 | TGZ |
+| macOS 15.7 | ARM64 | Xcode 26.3 | DMG |
+
+Tracked Go sources, Go module files, Wails manifests/bindings and the web
+frontend have been removed. Sponsor material, the project license, donation
+assets and existing data compatibility are retained. Changes following the
+verified commit only update README placement and this verification record.
 
 ## Verification limits
 
