@@ -15,8 +15,6 @@ import (
 // MailNestResponse 统一响应类型
 type MailNestResponse[T any] struct {
 	Code string `json:"code"`
-	Msg  string `json:"msg"`
-	Type string `json:"type"`
 	Data T      `json:"data"`
 }
 
@@ -41,9 +39,7 @@ type MailNestProvider struct {
 
 // MailNestBalanceData MailNest 余额
 type MailNestBalanceData struct {
-	Balance          string `json:"balance"`
-	FrozenBalance    string `json:"frozen_balance"`
-	AvailableBalance string `json:"available_balance"`
+	Balance string `json:"balance"`
 }
 
 // MailNestEmailData MailNest 余额
@@ -75,10 +71,6 @@ func newMailNestClient(ctx context.Context, config MailNestConfig) *MailNestClie
 			Transport: tr,
 		},
 	}
-}
-
-func NewMailNestProviderContext(ctx context.Context, config MailNestConfig) *MailNestProvider {
-	return NewMailNestProviderContextWithProxy(ctx, config, "")
 }
 
 func NewMailNestProviderContextWithProxy(ctx context.Context, config MailNestConfig, proxyURL string) *MailNestProvider {

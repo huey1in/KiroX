@@ -166,7 +166,6 @@ func (r *Registrar) Step12SetPassword() error {
 		"userEvents":  []interface{}{userEvent},
 	}
 	fingerprintInput := map[string]string{"input_type": "FingerPrintRequestInput", "fingerPrint": fp}
-	r.PasswordPageStartedAt = time.Now().Add(-5 * time.Second)
 	passwordPayload := map[string]interface{}{
 		"stepId":              passwordStepID,
 		"workflowStateHandle": r.WorkflowHandle,
@@ -187,18 +186,13 @@ func (r *Registrar) Step12SetPassword() error {
 			passwordPayload["builderIdSession"] = builderIDSession
 		}
 	}
-	submitPassword := func() ([]byte, map[string][]string, error) {
-		rid = NewUUID()
-		passwordPayload["requestId"] = rid
-		h = r.BuildHeaders(ref, r.Cfg.SigninBase)
-		h["x-amzn-requestid"] = rid
-		h["x-amz-date"] = GmtDate()
-		h["priority"] = "u=1, i"
-		responseBody, _, responseHeaders, submitErr := r.DoPostRaw(api, passwordPayload, h)
-		return responseBody, responseHeaders, submitErr
-	}
-
-	body, respH, err = submitPassword()
+	rid = NewUUID()
+	passwordPayload["requestId"] = rid
+	h = r.BuildHeaders(ref, r.Cfg.SigninBase)
+	h["x-amzn-requestid"] = rid
+	h["x-amz-date"] = GmtDate()
+	h["priority"] = "u=1, i"
+	body, _, respH, err = r.DoPostRaw(api, passwordPayload, h)
 	if err != nil {
 		return err
 	}

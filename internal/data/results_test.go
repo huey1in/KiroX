@@ -8,6 +8,43 @@ import (
 	"time"
 )
 
+// loadAccounts 读取 outDir/accounts.json 中保存的账号列表（按写入顺序返回）。
+func loadAccounts(outDir string) ([]map[string]interface{}, error) {
+	path := filepath.Join(outDir, "accounts.json")
+	mu := accountsFileMutex(path)
+	mu.RLock()
+	defer mu.RUnlock()
+	return loadJSONArray(path)
+}
+
+// deleteAccount 从 outDir/accounts.json 中移除指定邮箱的账号；返回是否实际删除。
+func deleteAccount(outDir, email string) (bool, error) {
+	path := filepath.Join(outDir, "accounts.json")
+	mu := accountsFileMutex(path)
+	mu.Lock()
+	defer mu.Unlock()
+	existing, err := loadJSONArray(path)
+	if err != nil || len(existing) == 0 {
+		return false, err
+	}
+	out := make([]map[string]interface{}, 0, len(existing))
+	removed := false
+	for _, e := range existing {
+		if em, _ := e["email"].(string); em == email {
+			removed = true
+			continue
+		}
+		out = append(out, e)
+	}
+	if !removed {
+		return false, nil
+	}
+	if err := writeJSONArrayAtomic(path, out); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func successResult(email, token string) map[string]interface{} {
 	return map[string]interface{}{
 		"status": "success",
@@ -50,7 +87,7 @@ func TestSaveKiroSuccessConcurrentEmails(t *testing.T) {
 	}
 	saveConcurrently(t, dir, results)
 
-	accounts, err := LoadAccounts(dir)
+	accounts, err := loadAccounts(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +115,7 @@ func TestSaveKiroSuccessConcurrentDuplicateEmails(t *testing.T) {
 	}
 	saveConcurrently(t, dir, results)
 
-	accounts, err := LoadAccounts(dir)
+	accounts, err := loadAccounts(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +125,7 @@ func TestSaveKiroSuccessConcurrentDuplicateEmails(t *testing.T) {
 	if err := SaveKiroSuccess(successResult(email, "latest-token"), dir); err != nil {
 		t.Fatal(err)
 	}
-	accounts, err = LoadAccounts(dir)
+	accounts, err = loadAccounts(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +151,7 @@ func TestSaveAndDeleteAccountsConcurrent(t *testing.T) {
 		go func() {
 			defer workers.Done()
 			<-start
-			removed, err := DeleteAccount(dir, fmt.Sprintf("old%d@example.com", i))
+			removed, err := deleteAccount(dir, fmt.Sprintf("old%d@example.com", i))
 			if err == nil && !removed {
 				err = fmt.Errorf("old account %d was not removed", i)
 			}
@@ -135,7 +172,7 @@ func TestSaveAndDeleteAccountsConcurrent(t *testing.T) {
 		}
 	}
 
-	accounts, err := LoadAccounts(dir)
+	accounts, err := loadAccounts(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

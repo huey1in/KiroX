@@ -13,15 +13,13 @@ import (
 )
 
 type outlookGraphBody struct {
-	ContentType string `json:"contentType"`
-	Content     string `json:"content"`
+	Content string `json:"content"`
 }
 
 type outlookGraphMessage struct {
-	Subject          string           `json:"subject"`
-	BodyPreview      string           `json:"bodyPreview"`
-	Body             outlookGraphBody `json:"body"`
-	ReceivedDateTime string           `json:"receivedDateTime"`
+	Subject     string           `json:"subject"`
+	BodyPreview string           `json:"bodyPreview"`
+	Body        outlookGraphBody `json:"body"`
 }
 
 func (m outlookGraphMessage) searchText() string {

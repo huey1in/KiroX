@@ -196,7 +196,7 @@ func fetchAppJS(proxy, chromeVer, userAgent, secUA string) string {
 	defer cancel()
 	client := httputil.NewTLSClient(proxy, true, chromeVer)
 	defer client.CloseIdleConnections()
-	js, err := downloadAppJS(ctx, client, appJSRequestHeaders(chromeVer, userAgent, secUA))
+	js, err := downloadAppJS(ctx, client, appJSRequestHeaders(userAgent, secUA))
 	if err != nil {
 		log.Printf("[xxtea] 下载 app.js 失败: %v", err)
 		return ""
@@ -229,10 +229,7 @@ func downloadAppJS(ctx context.Context, client appJSClient, headers map[string]s
 	return string(b), nil
 }
 
-func appJSRequestHeaders(chromeVer, userAgent, secUA string) map[string]string {
-	if chromeVer == "" {
-		chromeVer = "144.0.0.0"
-	}
+func appJSRequestHeaders(userAgent, secUA string) map[string]string {
 	if userAgent == "" {
 		userAgent = httputil.DefaultUA
 	}

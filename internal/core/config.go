@@ -17,9 +17,6 @@ type Config struct {
 	DirectoryID string
 	StartURL    string
 
-	KiroBase        string
-	KiroRedirectURI string
-
 	Password string
 	FullName string
 
@@ -50,19 +47,17 @@ type Config struct {
 // NewConfig 创建默认配置
 func NewConfig() *Config {
 	return &Config{
-		OIDCBase:        "https://oidc.us-east-1.amazonaws.com",
-		SigninBase:      "https://us-east-1.signin.aws",
-		ProfileBase:     "https://profile.aws.amazon.com",
-		ViewBase:        "https://view.awsapps.com",
-		PortalBase:      "https://portal.sso.us-east-1.amazonaws.com",
-		DirectoryID:     "d-9067642ac7",
-		StartURL:        "https://view.awsapps.com/start",
-		KiroBase:        "https://app.kiro.dev",
-		KiroRedirectURI: "https://app.kiro.dev/signin/oauth",
-		Password:        GenPassword(),
-		FullName:        "Test User",
-		OTPTimeout:      120,
-		HTTPRetries:     2,
+		OIDCBase:    "https://oidc.us-east-1.amazonaws.com",
+		SigninBase:  "https://us-east-1.signin.aws",
+		ProfileBase: "https://profile.aws.amazon.com",
+		ViewBase:    "https://view.awsapps.com",
+		PortalBase:  "https://portal.sso.us-east-1.amazonaws.com",
+		DirectoryID: "d-9067642ac7",
+		StartURL:    "https://view.awsapps.com/start",
+		Password:    GenPassword(),
+		FullName:    "Test User",
+		OTPTimeout:  120,
+		HTTPRetries: 2,
 	}
 }
 

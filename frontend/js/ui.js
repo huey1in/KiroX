@@ -55,28 +55,28 @@ function maximizeApp() {
 }
 
 // 主题切换（View Transition 圆形扩展动画）
-function toggleTheme(e) {
+function toggleTheme() {
   // 注入样式禁用所有 transition，防止主题切换闪烁
   var lockStyle = document.createElement('style');
   lockStyle.textContent = '*, *::before, *::after { transition-duration: 0s !important; }';
   document.head.appendChild(lockStyle);
 
   var applyTheme = function() {
-    var html = document.documentElement;
-    var isDark = html.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-      html.removeAttribute('data-theme');
-      if (window.appSettings) window.appSettings.theme = 'light';
-      document.getElementById('theme-icon-light').style.display = '';
-      document.getElementById('theme-icon-dark').style.display = 'none';
-    } else {
-      html.setAttribute('data-theme', 'dark');
-      if (window.appSettings) window.appSettings.theme = 'dark';
-      document.getElementById('theme-icon-light').style.display = 'none';
-      document.getElementById('theme-icon-dark').style.display = '';
-    }
+    var theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyThemePreference(theme);
+    setSettingValue('setting-theme', theme);
+    if (window.appSettings) window.appSettings.theme = theme;
+    updateSettingsDirtyState();
     if (window.appSettings && window.go && window.go.main && window.go.main.App && window.go.main.App.SaveAppSettings) {
-      window.go.main.App.SaveAppSettings(window.appSettings).catch(function() {});
+      window.go.main.App.SaveAppSettings(window.appSettings).then(function(result) {
+        if (result.error) return;
+        if (savedSettingsSnapshot !== null) {
+          var saved = JSON.parse(savedSettingsSnapshot);
+          saved.theme = result.settings.theme;
+          savedSettingsSnapshot = snapshotAppSettings(saved);
+        }
+        updateSettingsDirtyState();
+      }).catch(function() {});
     }
   };
 
@@ -312,7 +312,7 @@ function updateDomainOptionStyles() {
 }
 
 // 切换域名选择
-function toggleMoeMailDomain(domain, el) {
+function toggleMoeMailDomain(domain) {
   const isSelected = selectedMoeMailDomains.includes(domain);
 
   if (domain === '__random__' || domain === '__all__') {

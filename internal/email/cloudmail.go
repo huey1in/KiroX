@@ -34,17 +34,10 @@ type CloudMailClient struct {
 
 // CloudMailMessage 邮件信息（与 /api/public/emailList 响应对齐）
 type CloudMailMessage struct {
-	EmailID    int64  `json:"emailId"`
-	SendEmail  string `json:"sendEmail"`
-	SendName   string `json:"sendName"`
-	Subject    string `json:"subject"`
-	ToEmail    string `json:"toEmail"`
-	ToName     string `json:"toName"`
-	CreateTime string `json:"createTime"`
-	Type       int    `json:"type"`
-	Content    string `json:"content"`
-	Text       string `json:"text"`
-	IsDel      int    `json:"isDel"`
+	EmailID int64  `json:"emailId"`
+	Subject string `json:"subject"`
+	Content string `json:"content"`
+	Text    string `json:"text"`
 }
 
 // cloudMailResp 通用响应包装
@@ -328,10 +321,6 @@ type CloudMailProvider struct {
 	client            *CloudMailClient
 	address           string
 	initialMaxEmailID int64
-}
-
-func NewCloudMailProviderContext(ctx context.Context, config CloudMailConfig, name, domain string) (*CloudMailProvider, error) {
-	return NewCloudMailProviderContextWithProxy(ctx, config, name, domain, "")
 }
 
 func NewCloudMailProviderContextWithProxy(ctx context.Context, config CloudMailConfig, name, domain, proxyURL string) (*CloudMailProvider, error) {

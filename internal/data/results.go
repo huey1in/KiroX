@@ -86,43 +86,6 @@ func SaveKiroSuccess(result map[string]interface{}, outDir string) error {
 	return nil
 }
 
-// LoadAccounts 读取 outDir/accounts.json 中保存的账号列表（按写入顺序返回）。
-func LoadAccounts(outDir string) ([]map[string]interface{}, error) {
-	path := filepath.Join(outDir, "accounts.json")
-	mu := accountsFileMutex(path)
-	mu.RLock()
-	defer mu.RUnlock()
-	return loadJSONArray(path)
-}
-
-// DeleteAccount 从 outDir/accounts.json 中移除指定邮箱的账号；返回是否实际删除。
-func DeleteAccount(outDir, email string) (bool, error) {
-	path := filepath.Join(outDir, "accounts.json")
-	mu := accountsFileMutex(path)
-	mu.Lock()
-	defer mu.Unlock()
-	existing, err := loadJSONArray(path)
-	if err != nil || len(existing) == 0 {
-		return false, err
-	}
-	out := make([]map[string]interface{}, 0, len(existing))
-	removed := false
-	for _, e := range existing {
-		if em, _ := e["email"].(string); em == email {
-			removed = true
-			continue
-		}
-		out = append(out, e)
-	}
-	if !removed {
-		return false, nil
-	}
-	if err := writeJSONArrayAtomic(path, out); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func loadJSONArray(path string) ([]map[string]interface{}, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {

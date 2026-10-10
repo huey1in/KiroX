@@ -16,27 +16,13 @@ import (
 )
 
 // IdentityForRegistration keeps the cached hardware identity, refreshes the
-// session, and resamples canvas and math data with the built-in 15% probability.
+// session, and resamples canvas data with the built-in 15% probability.
 func IdentityForRegistration(proxyURL string) *BrowserIdentity {
 	identity := IdentityForProxy(proxyURL)
-	canvas := rand.Intn(100) < 15
-	mathRuntime := rand.Intn(100) < 15
-	if canvas || mathRuntime {
-		applyRegistrationIdentityDomains(identity, RandomIdentity(), canvas, mathRuntime)
+	if rand.Intn(100) < 15 {
+		identity.CanvasHash, identity.HistogramBase = generateCanvasData()
 	}
 	return identity
-}
-
-func applyRegistrationIdentityDomains(identity, fresh *BrowserIdentity, canvas, mathRuntime bool) {
-	if canvas {
-		identity.CanvasHash = fresh.CanvasHash
-		identity.HistogramBase = fresh.HistogramBase
-	}
-	if mathRuntime {
-		identity.MathTan = fresh.MathTan
-		identity.MathSin = fresh.MathSin
-		identity.MathCos = fresh.MathCos
-	}
 }
 
 type cachedIdentity struct {

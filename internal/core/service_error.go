@@ -41,7 +41,6 @@ type serviceErrorResponse struct {
 	Message   struct {
 		Text      string `json:"text"`
 		Heading   string `json:"heading"`
-		Type      string `json:"type"`
 		ErrorCode string `json:"errorCode"`
 		RequestID string `json:"requestId"`
 	} `json:"message"`

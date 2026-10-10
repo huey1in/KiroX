@@ -56,7 +56,7 @@ func (r *Registrar) Step14KiroAuthorize() (string, error) {
 	params.Set("code_challenge_method", "S256")
 	authURL := r.Cfg.OIDCBase + "/authorize?" + params.Encode()
 
-	noRedirect := httputil.NewNoRedirectTLSClient(r.Cfg.Proxy, r.Identity.ChromeVer)
+	noRedirect := httputil.NewTLSClient(r.Cfg.Proxy, false, r.Identity.ChromeVer)
 	defer noRedirect.CloseIdleConnections()
 	navHeaders := map[string]string{
 		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

@@ -456,7 +456,6 @@ function clearFingerprintCache() { showConfirmModal(tr('settings.clearFingerprin
 async function loadConfig() {
   console.log('[启动] 开始初始化...');
 
-  // 默认禁用所有功能，等待卡密验证
 
   let retries = 0;
   while ((!window.go || !window.go.main || !window.go.main.App) && retries < 100) {

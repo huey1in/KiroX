@@ -32,7 +32,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	close(a.startupDone)
 	// 重定向日志到内存
-	log.SetOutput(&logWriter{app: a})
+	log.SetOutput(&logWriter{})
 	log.SetFlags(log.Ltime)
 
 	// 初始化代理池（按数据目录持久化）
@@ -74,9 +74,7 @@ func (a *App) ShowDesktopNotification(title, message string) map[string]interfac
 }
 
 // logWriter 自定义日志写入器，根据运行状态路由日志
-type logWriter struct {
-	app *App
-}
+type logWriter struct{}
 
 func (w *logWriter) Write(p []byte) (int, error) {
 	msg := string(p)

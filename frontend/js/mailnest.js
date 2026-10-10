@@ -47,7 +47,6 @@ async function inlineAddMailNest() {
     setInlineTestButton(btn, true, 'moemail.testing');
     clearLocalizedStatus(statusEl);
     statusEl.style.color = '';
-    clearLocalizedStatus(statusEl);
     var testResult;
     try {
         testResult = await window.go.main.App.TestMailNestConnection(JSON.stringify({

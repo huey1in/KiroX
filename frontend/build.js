@@ -16,7 +16,6 @@ function copyDir(src, dest) {
 
 fs.rmSync(distDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
-copyDir(path.join(__dirname, 'wailsjs'), path.join(distDir, 'wailsjs'));
 fs.copyFileSync(path.join(__dirname, 'index.html'), path.join(distDir, 'index.html'));
 copyDir(path.join(__dirname, 'css'), path.join(distDir, 'css'));
 copyDir(path.join(__dirname, 'assets'), path.join(distDir, 'assets'));

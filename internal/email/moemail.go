@@ -34,30 +34,21 @@ type MoeMailSystemConfig struct {
 
 // MoeMailEmail 邮箱信息
 type MoeMailEmail struct {
-	ID         string `json:"id"`
-	Email      string `json:"email"`      // 完整邮箱地址
-	Address    string `json:"address"`    // 兼容旧格式
-	Name       string `json:"name"`       // 邮箱名称（@前面部分）
-	Domain     string `json:"domain"`     // 域名
-	ExpiryTime int64  `json:"expiryTime"` // 毫秒
-	CreatedAt  int64  `json:"createdAt"`
+	ID      string `json:"id"`
+	Email   string `json:"email"`   // 完整邮箱地址
+	Address string `json:"address"` // 兼容旧格式
 }
 
 // MoeMailMessage 邮件信息
 type MoeMailMessage struct {
-	ID          string `json:"id"`
-	FromAddress string `json:"from_address"`
-	ToAddress   string `json:"to_address"`
-	Subject     string `json:"subject"`
-	Content     string `json:"content"` // 纯文本内容
-	HTML        string `json:"html"`
-	CreatedAt   string `json:"createdAt"`
+	Subject string `json:"subject"`
+	Content string `json:"content"` // 纯文本内容
+	HTML    string `json:"html"`
 }
 
 // MoeMailMessagesResponse 邮件列表响应
 type MoeMailMessagesResponse struct {
-	Messages   []MoeMailMessage `json:"messages"`
-	NextCursor string           `json:"nextCursor"`
+	Messages []MoeMailMessage `json:"messages"`
 }
 
 // NewMoeMailClient 创建 MoeMail 客户端
@@ -163,11 +154,8 @@ func (c *MoeMailClient) GenerateEmail(name string, expiryTime int64, domain stri
 }
 
 // GetMessages 获取邮件列表
-func (c *MoeMailClient) GetMessages(emailID, cursor string) (*MoeMailMessagesResponse, error) {
+func (c *MoeMailClient) GetMessages(emailID string) (*MoeMailMessagesResponse, error) {
 	path := fmt.Sprintf("/api/emails/%s", emailID)
-	if cursor != "" {
-		path += "?cursor=" + cursor
-	}
 
 	resp, err := c.request("GET", path, nil)
 	if err != nil {
@@ -270,7 +258,7 @@ func NewMoeMailProviderContextWithProxy(ctx context.Context, config MoeMailConfi
 
 	// 立即记录初始邮件数量
 	initialCount := 0
-	initialMessages, err := client.GetMessages(email.ID, "")
+	initialMessages, err := client.GetMessages(email.ID)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -315,7 +303,7 @@ func (p *MoeMailProvider) WaitForCode(timeout, interval int) (string, error) {
 			return "", err
 		}
 		// 获取邮件列表
-		messages, err := p.client.GetMessages(p.emailID, "")
+		messages, err := p.client.GetMessages(p.emailID)
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}

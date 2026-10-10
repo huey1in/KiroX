@@ -9,7 +9,6 @@ html, body {
 }
 :root {
     --bg: linear-gradient(135deg, #eef2f7 0%, #e0e7ff 100%);
-    --bg-flat: #eef2f7;
     --bg-card: rgba(255, 255, 255, 0.9); 
     --bg-subtle: #f9fafb; 
     --bg-hover: #f3f4f6;
@@ -32,7 +31,6 @@ html, body {
 
 [data-theme="dark"] {
     --bg: linear-gradient(135deg, #0f1117 0%, #151825 100%);
-    --bg-flat: #0f1117;
     --bg-card: rgba(30, 32, 40, 0.9);
     --bg-subtle: #1e2028;
     --bg-hover: #282a34;

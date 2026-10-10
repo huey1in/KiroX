@@ -63,13 +63,10 @@ type Registrar struct {
 	OutlookMailCounts email.OutlookMailboxCounts
 
 	// 遥测/指纹计时: 记录各页面开始时间, 用于生成真实 timeSpentOnPage 与 D2C/katal 上报
-	SigninPageStartedAt          time.Time
-	SigninPageURL                string
 	LastD2CFetchDuration         time.Duration
 	ProfilePageStartedAt         time.Time
 	ProfileEmailStartedAt        time.Time
 	ProfileVerificationStartedAt time.Time
-	PasswordPageStartedAt        time.Time
 }
 
 // NewRegistrar 创建注册器
@@ -152,46 +149,8 @@ func (r *Registrar) wait(delay time.Duration) error {
 
 // DoPost 发送 POST 请求（带自动重试）
 func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]string) ([]byte, map[string][]string, error) {
-	maxRetries := r.maxHTTPRetries()
-	var lastErr error
-	var payloadBytes []byte
-	if payload != nil {
-		payloadBytes, _ = json.Marshal(payload)
-	}
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		if err := r.context().Err(); err != nil {
-			return nil, nil, err
-		}
-		if attempt > 0 {
-			log.Printf("[HTTP] POST 重试 (%d/%d), 等待退避...", attempt, maxRetries)
-			if err := r.wait(retryBackoff(attempt)); err != nil {
-				return nil, nil, err
-			}
-		}
-
-		var body io.Reader
-		if payloadBytes != nil {
-			body = bytes.NewReader(payloadBytes)
-		}
-		req, err := http.NewRequestWithContext(r.context(), "POST", url, body)
-		if err != nil {
-			return nil, nil, err
-		}
-		httputil.SetHeaders(req, headers)
-		resp, err := r.Client.Do(req)
-		if err != nil {
-			lastErr = err
-			if isRetryableError(err) {
-				continue
-			}
-			return nil, nil, err
-		}
-		defer resp.Body.Close()
-		data, err := io.ReadAll(resp.Body)
-		return data, resp.Header, err
-	}
-	return nil, nil, lastErr
+	body, _, responseHeaders, err := r.DoPostRaw(url, payload, headers)
+	return body, responseHeaders, err
 }
 
 // DoGet 发送 GET 请求，返回完整信息（带自动重试）
@@ -476,11 +435,9 @@ func (r *Registrar) Step4Portal() error {
 // Step5WorkflowInit 工作流初始化
 func (r *Registrar) Step5WorkflowInit() error {
 	log.Println("[5] 工作流初始化")
-	r.SigninPageStartedAt = time.Now()
 	api := fmt.Sprintf("%s/platform/%s/api/execute", r.Cfg.SigninBase, r.Cfg.DirectoryID)
 	ref := fmt.Sprintf("%s/platform/%s/login?workflowStateHandle=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.WorkflowHandle)
-	r.SigninPageURL = ref
 
 	fp := r.GenFP("signin", "first_load", 0, "")
 	rid := NewUUID()

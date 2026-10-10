@@ -56,7 +56,7 @@ func TestHTTPProviderCreationCancellation(t *testing.T) {
 			name:  "cloudmail",
 			paths: []string{"/api/setting/websiteConfig", "/api/public/genToken", "/api/public/addUser", "/api/public/emailList"},
 			start: func(ctx context.Context, url string) error {
-				_, err := NewCloudMailProviderContext(ctx, CloudMailConfig{URL: url}, "box", "")
+				_, err := NewCloudMailProviderContextWithProxy(ctx, CloudMailConfig{URL: url}, "box", "", "")
 				return err
 			},
 		},
@@ -98,7 +98,7 @@ func TestHTTPProviderCreationCancellation(t *testing.T) {
 func TestMailNestAddressCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	provider := NewMailNestProviderContext(ctx, MailNestConfig{})
+	provider := NewMailNestProviderContextWithProxy(ctx, MailNestConfig{}, "")
 	entered := make(chan struct{})
 	provider.client.client.Transport = emailRoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		close(entered)
@@ -130,7 +130,7 @@ func emailCodeWaiter(kind string, ctx context.Context, transport http.RoundTripp
 		provider.client.token = "test-token"
 		return provider.WaitForCode
 	default:
-		provider := NewMailNestProviderContext(ctx, MailNestConfig{})
+		provider := NewMailNestProviderContextWithProxy(ctx, MailNestConfig{}, "")
 		provider.client.client = client
 		return provider.WaitForCode
 	}

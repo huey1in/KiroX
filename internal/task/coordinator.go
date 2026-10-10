@@ -38,13 +38,8 @@ type StartTaskRequest struct {
 	ProxyConfigured bool   `json:"proxyConfigured"`
 }
 
-// StartTask 公开方法（包装器）
+// StartTask 启动注册任务。
 func StartTask(req StartTaskRequest) map[string]interface{} {
-	return startTask(req)
-}
-
-// startTask 启动注册任务（私有方法）
-func startTask(req StartTaskRequest) map[string]interface{} {
 	if req.Count <= 0 {
 		req.Count = 1
 	}
@@ -68,9 +63,6 @@ func startTask(req StartTaskRequest) map[string]interface{} {
 
 	// 根据邮箱提供商类型处理
 	emailProvider := req.EmailProvider
-	if emailProvider == "" {
-		emailProvider = "outlook" // 默认使用 Outlook
-	}
 
 	var outlookAccounts []email.OutlookAccount
 	var icloudAccounts []email.ICloudAccount

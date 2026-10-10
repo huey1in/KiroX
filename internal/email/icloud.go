@@ -145,13 +145,8 @@ func ExtractICloudCode(body string) string {
 }
 
 type iCloudMessage struct {
-	Body        string `json:"body"`
-	FromAddress string `json:"fromAddress"`
-	HTML        bool   `json:"html"`
-	IsTrash     bool   `json:"isTrash"`
-	Mailbox     string `json:"mailbox"`
-	ReceivedAt  string `json:"receivedAt"`
-	Subject     string `json:"subject"`
+	Body    string `json:"body"`
+	Subject string `json:"subject"`
 }
 
 // ICloudProvider reads verification messages from an apple55-style mailbox URL.

@@ -1,6 +1,9 @@
 package http
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
@@ -8,6 +11,43 @@ import (
 	fhttp "github.com/bogdanfinn/fhttp"
 	"github.com/bogdanfinn/tls-client/profiles"
 )
+
+func TestNewTLSClientRedirectPolicy(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/redirect" {
+			http.Redirect(w, req, "/destination", http.StatusFound)
+			return
+		}
+		io.WriteString(w, "destination")
+	}))
+	defer server.Close()
+	for _, version := range []string{"131.0.0.0", "133.0.0.0", "144.0.0.0"} {
+		for _, follow := range []bool{false, true} {
+			client := NewTLSClient("", follow, version)
+			if client.GetFollowRedirect() != follow {
+				t.Fatalf("%s redirect policy = %t, want %t", version, client.GetFollowRedirect(), follow)
+			}
+			response, err := client.Get(server.URL + "/redirect")
+			if err != nil {
+				client.CloseIdleConnections()
+				t.Fatal(err)
+			}
+			body, err := io.ReadAll(response.Body)
+			response.Body.Close()
+			client.CloseIdleConnections()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if follow {
+				if response.StatusCode != http.StatusOK || string(body) != "destination" {
+					t.Fatalf("%s followed redirect: status=%d body=%q", version, response.StatusCode, body)
+				}
+			} else if response.StatusCode != http.StatusFound || response.Header.Get("Location") != "/destination" {
+				t.Fatalf("%s unfollowed redirect: status=%d location=%q", version, response.StatusCode, response.Header.Get("Location"))
+			}
+		}
+	}
+}
 
 func TestSaveCookiesOnlyReadsSetCookieHeaders(t *testing.T) {
 	cookies := map[string]string{"existing": "kept"}

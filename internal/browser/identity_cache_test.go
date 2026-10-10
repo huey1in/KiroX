@@ -4,24 +4,35 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 )
 
 func TestRegistrationIdentityPreservesHardwareDomains(t *testing.T) {
-	base := fingerprintIdentityFixture("base", 1)
-	fresh := fingerprintIdentityFixture("fresh", 2)
-	for _, tt := range []struct {
-		canvas, mathRuntime bool
-		fields              []string
-	}{
-		{false, false, []string{}},
-		{true, false, []string{"CanvasHash", "HistogramBase"}},
-		{false, true, []string{"MathCos", "MathSin", "MathTan"}},
-		{true, true, []string{"CanvasHash", "HistogramBase", "MathCos", "MathSin", "MathTan"}},
-	} {
-		got := cloneWith(base, func(*BrowserIdentity) {})
-		applyRegistrationIdentityDomains(got, fresh, tt.canvas, tt.mathRuntime)
-		if changed := changedIdentityFields(base, got); !reflect.DeepEqual(changed, tt.fields) {
-			t.Errorf("canvas=%t math=%t changed %v, want %v", tt.canvas, tt.mathRuntime, changed, tt.fields)
+	base := RandomIdentity()
+	idCacheMu.Lock()
+	previousCache := idCache
+	idCache = map[string]cachedIdentity{
+		"registration.example:8080": {Identity: base, CreatedAt: time.Now().Unix()},
+	}
+	idCacheMu.Unlock()
+	t.Cleanup(func() {
+		idCacheMu.Lock()
+		idCache = previousCache
+		idCacheMu.Unlock()
+	})
+	allowed := map[string]bool{
+		"CanvasHash": true, "HistogramBase": true,
+		"LsubidPrefixSignin": true, "LsubidPrefixProfile": true, "WebpackHash": true,
+	}
+	for i := 0; i < 50; i++ {
+		got := IdentityForRegistration("http://registration.example:8080")
+		if got == base {
+			t.Fatal("registration returned the shared cached identity")
+		}
+		for _, field := range changedIdentityFields(base, got) {
+			if !allowed[field] {
+				t.Fatalf("registration changed the cached hardware field %s", field)
+			}
 		}
 	}
 }

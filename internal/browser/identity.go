@@ -190,9 +190,6 @@ func genScreen() ScreenInfo {
 	taskbar := 32 + rand.Intn(17) // 32-48
 	// 圆整到 8 的倍数 (Windows 常见)
 	taskbar = (taskbar / 8) * 8
-	if taskbar < 32 {
-		taskbar = 32
-	}
 
 	return ScreenInfo{
 		Width:       res.w,
@@ -203,14 +200,7 @@ func genScreen() ScreenInfo {
 	}
 }
 
-// ──────────────────── 算法: Math 精度生成 ────────────────────
-// 规律: Math.tan/sin/cos(-1e300) 在不同硬件上仅末位 1-2 位有差异
-// tan 基准: "-1.4214488238747245"  末位 3~7
-// sin 基准: "0.8178819121159085"   末位 3~7
-// cos 有两个家族:
-//   家族A: "-0.5753861119575491"   末位 89~93
-//   家族B: "-0.5765775004286854"   末位 53~55
-
+// genMath returns the stable math results emitted by Chrome's V8 runtime.
 func genMath() (tan, sin, cos string) {
 	// FWCIM reads these three values directly from V8. Random decimal suffixes
 	// produce values that no Chrome runtime can emit.
@@ -303,12 +293,6 @@ func generateCanvasData() (int32, [256]int) {
 	// ── 余量归入 bins[0] (最大的 bin 微调不影响分布形状) ──
 	if remaining > 0 {
 		bins[0] += remaining
-	} else if remaining < 0 {
-		// 如果超出了, 从 bins[0] 扣除
-		bins[0] += remaining // remaining is negative
-		if bins[0] < 10000 {
-			bins[0] = 10000
-		}
 	}
 
 	// The browser returns a CRC32 of rendered canvas markers and its data URL.
@@ -364,7 +348,7 @@ func RandomIdentity() *BrowserIdentity {
 	exts := make([]string, len(webglExtCore))
 	copy(exts, webglExtCore)
 	nOpt := rand.Intn(5)
-	if nOpt > 0 && nOpt <= len(webglExtOptional) {
+	if nOpt > 0 {
 		perm := rand.Perm(len(webglExtOptional))
 		for i := 0; i < nOpt; i++ {
 			exts = append(exts, webglExtOptional[perm[i]])
