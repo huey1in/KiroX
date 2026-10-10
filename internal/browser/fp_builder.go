@@ -450,11 +450,7 @@ func BuildFingerprintData(
 	result.Set("canvas", map[string]interface{}{
 		"hash": canvasHash, "emailHash": nil, "histogramBins": histSlice,
 	})
-	pageHasCaptcha := 0
-	if ctx != nil && ctx.PageHasCaptcha {
-		pageHasCaptcha = 1
-	}
-	result.Set("token", map[string]interface{}{"isCompatible": isCompatible, "pageHasCaptcha": pageHasCaptcha})
+	result.Set("token", map[string]interface{}{"isCompatible": isCompatible, "pageHasCaptcha": 0})
 	result.Set("auth", map[string]interface{}{"form": map[string]string{"method": "get"}})
 	result.Set("errors", []interface{}{})
 	result.Set("version", crypto.GetTESVersion())

@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"net/url"
 	"strings"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	tls_client "github.com/bogdanfinn/tls-client"
 
 	"reg_go/internal/browser"
-	"reg_go/internal/captcha"
 	"reg_go/internal/crypto"
 	"reg_go/internal/email"
 	httputil "reg_go/internal/http"
@@ -71,35 +69,18 @@ type Registrar struct {
 	ProfileEmailStartedAt        time.Time
 	ProfileVerificationStartedAt time.Time
 	PasswordPageStartedAt        time.Time
-
-	solveAWSWAF func(context.Context, captcha.AWSWAFOptions) (captcha.AWSWAFSolution, error)
-	solveImage  func(context.Context, []byte) (string, error)
 }
 
 // NewRegistrar 创建注册器
 func NewRegistrar(cfg *Config) *Registrar {
-	// 每个曲线点控制一个指纹域相对缓存身份的重采样概率。
-	identity := browser.IdentityForOffsets(cfg.Proxy, cfg.FingerprintOffsets, cfg.FingerprintCurvePositions)
+	// 按内置策略复用代理身份并刷新会话及少量动态指纹。
+	identity := browser.IdentityForRegistration(cfg.Proxy)
 	log.Printf("[指纹] Chrome: %s | GPU: %s | 内存: %dGB | 核心: %d | 分辨率: %dx%d (%d-bit)",
 		identity.ChromeVer, identity.GPUModel, identity.DeviceMemory, identity.HardwareConcurrency,
 		identity.Screen.Width, identity.Screen.Height, identity.Screen.ColorDepth)
 
 	client := httputil.NewTLSClient(cfg.Proxy, true, identity.ChromeVer)
 	cookies := make(map[string]string)
-	if token := strings.TrimSpace(cfg.WAFToken); token != "" {
-		cookies["aws-waf-token"] = token
-		for _, rawURL := range []string{cfg.SigninBase, cfg.ProfileBase} {
-			target, err := url.Parse(rawURL)
-			if err == nil && target.Hostname() != "" {
-				client.SetCookies(target, []*http.Cookie{{
-					Name:   "aws-waf-token",
-					Value:  token,
-					Path:   "/",
-					Secure: true,
-				}})
-			}
-		}
-	}
 	return &Registrar{
 		Cfg:       cfg,
 		Client:    client,
@@ -205,11 +186,6 @@ func (r *Registrar) DoPost(url string, payload interface{}, headers map[string]s
 			}
 			return nil, nil, err
 		}
-		if amsTraceEnabled() {
-			if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
-				log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
-			}
-		}
 		defer resp.Body.Close()
 		data, err := io.ReadAll(resp.Body)
 		return data, resp.Header, err
@@ -246,11 +222,6 @@ func (r *Registrar) DoGet(url string, headers map[string]string) ([]byte, int, m
 			}
 			return nil, 0, nil, err
 		}
-		if amsTraceEnabled() {
-			if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
-				log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
-			}
-		}
 		defer resp.Body.Close()
 		data, err := io.ReadAll(resp.Body)
 		return data, resp.StatusCode, resp.Header, err
@@ -272,11 +243,6 @@ func (r *Registrar) DoPostBodyRaw(url string, rawBody string, headers map[string
 	resp, err := r.Client.Do(req)
 	if err != nil {
 		return nil, 0, nil, err
-	}
-	if amsTraceEnabled() {
-		if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
-			log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
-		}
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
@@ -319,11 +285,6 @@ func (r *Registrar) DoPostRaw(url string, payload interface{}, headers map[strin
 				continue
 			}
 			return nil, 0, nil, err
-		}
-		if amsTraceEnabled() {
-			if scopes := safeSetCookieScopes(resp.Header); len(scopes) > 0 {
-				log.Printf("[WAF TRACE] cookies from %s: %v", safeResponseRoute(url), scopes)
-			}
 		}
 		defer resp.Body.Close()
 		data, err := io.ReadAll(resp.Body)

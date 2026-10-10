@@ -132,17 +132,9 @@ func TestAuthenticationFailureDoesNotTriggerBatchKillSwitch(t *testing.T) {
 	}
 }
 
-func TestWAFSolverFailureDoesNotRestartRegistration(t *testing.T) {
+func TestCaptchaFailureDoesNotRestartRegistration(t *testing.T) {
 	for _, errorMsg := range []string{
-		"AWS WAF 动态验证失败: 2Captcha: Workers could not solve the Captcha",
-		"AWS WAF 动态验证失败: 2Captcha: ERROR_CAPTCHA_UNSOLVABLE (operation=getTaskResult, taskType=AmazonTaskProxyless, taskId=42): Workers could not solve the Captcha",
-		"AWS WAF 动态验证失败: 2Captcha: ERROR_IP_BLOCKED (operation=createTask, taskType=AmazonTaskProxyless): IP is blocked",
-		"2Captcha: ERROR_IP_BLOCKED (operation=getTaskResult, taskType=AmazonTask, taskId=42): IP is blocked",
-		"2Captcha: ERROR_ACCOUNT_SUSPENDED: account suspended",
-		"AWS WAF 动态验证失败: context deadline exceeded",
-		"AWS WAF 动态验证失败: 2Captcha 结果未返回 captcha_voucher",
 		"CAPTCHA_REQUIRED: verification required",
-		"ERROR_CAPTCHA_UNSOLVABLE",
 		"设置密码失败: CAPTCHA/风控验证",
 	} {
 		t.Run(errorMsg, func(t *testing.T) {

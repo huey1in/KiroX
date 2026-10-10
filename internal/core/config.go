@@ -23,17 +23,11 @@ type Config struct {
 	Password string
 	FullName string
 
-	Proxy                     string
-	Debug                     bool
-	EmailProxy                string
-	OTPTimeout                int
-	TelemetryEnabled          bool
-	HTTPRetries               int
-	FingerprintOffsets        []int
-	FingerprintCurvePositions []int
-	WAFEnabled                bool
-	TwoCaptchaAPIKey          string
-	WAFToken                  string
+	Proxy       string
+	Debug       bool
+	EmailProxy  string
+	OTPTimeout  int
+	HTTPRetries int
 
 	EmailProvider  string
 	UseOutlook     bool
@@ -62,22 +56,19 @@ type Config struct {
 // NewConfig 创建默认配置
 func NewConfig() *Config {
 	return &Config{
-		OIDCBase:                  "https://oidc.us-east-1.amazonaws.com",
-		SigninBase:                "https://us-east-1.signin.aws",
-		ProfileBase:               "https://profile.aws.amazon.com",
-		ViewBase:                  "https://view.awsapps.com",
-		PortalBase:                "https://portal.sso.us-east-1.amazonaws.com",
-		DirectoryID:               "d-9067642ac7",
-		StartURL:                  "https://view.awsapps.com/start",
-		KiroBase:                  "https://app.kiro.dev",
-		KiroRedirectURI:           "https://app.kiro.dev/signin/oauth",
-		Password:                  GenPassword(),
-		FullName:                  "Test User",
-		OTPTimeout:                120,
-		TelemetryEnabled:          true,
-		HTTPRetries:               2,
-		FingerprintOffsets:        []int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100},
-		FingerprintCurvePositions: []int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100},
+		OIDCBase:        "https://oidc.us-east-1.amazonaws.com",
+		SigninBase:      "https://us-east-1.signin.aws",
+		ProfileBase:     "https://profile.aws.amazon.com",
+		ViewBase:        "https://view.awsapps.com",
+		PortalBase:      "https://portal.sso.us-east-1.amazonaws.com",
+		DirectoryID:     "d-9067642ac7",
+		StartURL:        "https://view.awsapps.com/start",
+		KiroBase:        "https://app.kiro.dev",
+		KiroRedirectURI: "https://app.kiro.dev/signin/oauth",
+		Password:        GenPassword(),
+		FullName:        "Test User",
+		OTPTimeout:      120,
+		HTTPRetries:     2,
 	}
 }
 

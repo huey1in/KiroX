@@ -170,6 +170,17 @@ func TestStoredSettingsDiscardRetiredRuntimeFields(t *testing.T) {
 		"requestTimeoutSeconds": 180, "fingerprintTTLHours": 168,
 		"fingerprintOffsets": []int{100, 100, 100, 100, 100},
 		"wafEnabled":         true, "twoCaptchaAPIKey": "old-key",
+		"fingerprintCurvePositions": []int{0, 25, 50, 75, 100},
+		"telemetryEnabled":          false,
+		"wafWebsiteURL":             "https://old.example", "wafWebsiteKey": "old-key",
+		"wafIV": "old-iv", "wafContext": "old-context",
+		"wafJSAPIScript":     "https://old.example/jsapi.js",
+		"wafChallengeScript": "https://old.example/challenge.js",
+		"wafCaptchaScript":   "https://old.example/captcha.js",
+		"signinBase":         "https://old.example", "profileBase": "https://old.example",
+		"viewBase": "https://old.example", "portalBase": "https://old.example",
+		"startURL": "https://old.example", "kiroBase": "https://old.example",
+		"kiroRedirectURI": "https://old.example", "directoryID": "old-directory",
 	}
 	runtime := map[string]interface{}{
 		"language": "en", "soundEnabled": false, "otpTimeoutSeconds": 300,
@@ -188,9 +199,6 @@ func TestStoredSettingsDiscardRetiredRuntimeFields(t *testing.T) {
 	settings := GetAppSettings()
 	if settings.Language != "en" || settings.SoundEnabled || settings.OTPTimeoutSeconds != 300 {
 		t.Fatalf("existing runtime preferences were changed: %+v", settings)
-	}
-	if _, err := SaveAppSettings(settings); err != nil {
-		t.Fatal(err)
 	}
 	data, err = os.ReadFile(path)
 	if err != nil {

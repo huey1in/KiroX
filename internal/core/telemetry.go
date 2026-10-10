@@ -33,9 +33,6 @@ func (r *Registrar) PostFingerprintMetric(metricName, value, operation string) e
 }
 
 func (r *Registrar) postFingerprintMetricAt(metricName, value, operation, ref string) error {
-	if !r.Cfg.TelemetryEnabled {
-		return nil
-	}
 	api := r.Cfg.SigninBase + "/metrics/fingerprint"
 
 	form := url.Values{}
@@ -70,9 +67,6 @@ func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage in
 }
 
 func (r *Registrar) sendUserEvent(directoryID, eventType, pageName string, timeSpentOnPage int64) error {
-	if !r.Cfg.TelemetryEnabled {
-		return nil
-	}
 	api := r.Cfg.SigninBase + "/platform/user-event/send-event"
 	ref := fmt.Sprintf("%s/platform/%s/signup?registrationCode=%s&state=%s",
 		r.Cfg.SigninBase, r.Cfg.DirectoryID, r.RegCode, r.SignState)
@@ -127,9 +121,6 @@ func (r *Registrar) SendUserEventSafe(eventType, pageName string, timeSpentOnPag
 // PostD2CEvent 上报 D2C 遥测事件 (timeTakenToFetchVID)。
 // 对照 HAR entries 37/66。
 func (r *Registrar) PostD2CEvent(pageURL string, fetchDuration time.Duration) error {
-	if !r.Cfg.TelemetryEnabled {
-		return nil
-	}
 	const api = "https://d2c.aws.amazon.com/csds/collector/v1/events/batch"
 
 	origin := r.Cfg.SigninBase
@@ -268,9 +259,6 @@ type katalGroup struct {
 
 // PostKatalNexus 上报一批 katal 指标 (失败仅日志)。
 func (r *Registrar) PostKatalNexus(groups []katalGroup) {
-	if !r.Cfg.TelemetryEnabled {
-		return
-	}
 	if len(groups) == 0 {
 		return
 	}

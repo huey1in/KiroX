@@ -15,6 +15,30 @@ import (
 	"reg_go/internal/storage"
 )
 
+// IdentityForRegistration keeps the cached hardware identity, refreshes the
+// session, and resamples canvas and math data with the built-in 15% probability.
+func IdentityForRegistration(proxyURL string) *BrowserIdentity {
+	identity := IdentityForProxy(proxyURL)
+	canvas := rand.Intn(100) < 15
+	mathRuntime := rand.Intn(100) < 15
+	if canvas || mathRuntime {
+		applyRegistrationIdentityDomains(identity, RandomIdentity(), canvas, mathRuntime)
+	}
+	return identity
+}
+
+func applyRegistrationIdentityDomains(identity, fresh *BrowserIdentity, canvas, mathRuntime bool) {
+	if canvas {
+		identity.CanvasHash = fresh.CanvasHash
+		identity.HistogramBase = fresh.HistogramBase
+	}
+	if mathRuntime {
+		identity.MathTan = fresh.MathTan
+		identity.MathSin = fresh.MathSin
+		identity.MathCos = fresh.MathCos
+	}
+}
+
 type cachedIdentity struct {
 	Identity  *BrowserIdentity `json:"identity"`
 	CreatedAt int64            `json:"createdAt"`
@@ -79,156 +103,6 @@ func saveIdentityCacheLocked() {
 // 每次调用都会刷新 lsubid 前缀和 webpack hash —— 这两个在真实浏览器同一台机器上每次会话也会变。
 func IdentityForProxy(proxyURL string) *BrowserIdentity {
 	return cachedIdentityForProxy(proxyURL, true)
-}
-
-// StableIdentityForProxy reuses the complete cached identity, including session fields.
-func StableIdentityForProxy(proxyURL string) *BrowserIdentity {
-	return cachedIdentityForProxy(proxyURL, false)
-}
-
-// IdentityForOffsets resamples each fingerprint domain independently according
-// to the curve values: browser, platform, plugins, resources, GPU/WebGL,
-// screen, timezone, canvas, math runtime, and session.
-func IdentityForOffsets(proxyURL string, offsets, positions []int) *BrowserIdentity {
-	values := resolveFingerprintOffsets(offsets, positions)
-	allFresh := true
-	selected := [10]bool{}
-	selectedCount := 0
-	for _, value := range values {
-		if value != 100 {
-			allFresh = false
-		}
-	}
-	if allFresh {
-		return RandomIdentity()
-	}
-	for i, value := range values {
-		selected[i] = resampleIdentityDomain(value)
-		if selected[i] {
-			selectedCount++
-		}
-	}
-
-	identity := StableIdentityForProxy(proxyURL)
-	if selectedCount == 0 {
-		return identity
-	}
-	if selectedCount == 1 && selected[9] {
-		return refreshVolatile(identity)
-	}
-	fresh := RandomIdentity()
-	applySelectedIdentityDomains(identity, fresh, selected)
-	return identity
-}
-
-func applySelectedIdentityDomains(identity, fresh *BrowserIdentity, selected [10]bool) {
-	if selected[0] {
-		identity.ChromeVer = fresh.ChromeVer
-		identity.UA = fresh.UA
-		identity.SecUA = fresh.SecUA
-	}
-	if selected[1] {
-		identity.Platform = fresh.Platform
-	}
-	if selected[2] {
-		identity.Plugins = fresh.Plugins
-	}
-	if selected[3] {
-		identity.DeviceMemory = fresh.DeviceMemory
-		identity.HardwareConcurrency = fresh.HardwareConcurrency
-	}
-	if selected[4] {
-		identity.GPUVendor = fresh.GPUVendor
-		identity.GPUModel = fresh.GPUModel
-		identity.WebGLExts = fresh.WebGLExts
-	}
-	if selected[5] {
-		identity.Screen = fresh.Screen
-	}
-	if selected[6] {
-		identity.TimezoneHours = fresh.TimezoneHours
-	}
-	if selected[7] {
-		identity.CanvasHash = fresh.CanvasHash
-		identity.HistogramBase = fresh.HistogramBase
-	}
-	if selected[8] {
-		identity.MathTan = fresh.MathTan
-		identity.MathSin = fresh.MathSin
-		identity.MathCos = fresh.MathCos
-	}
-	if selected[9] {
-		identity.LsubidPrefixSignin = fresh.LsubidPrefixSignin
-		identity.LsubidPrefixProfile = fresh.LsubidPrefixProfile
-		identity.WebpackHash = fresh.WebpackHash
-	}
-}
-
-func normalizeIdentityOffsets(offsets []int) [10]int {
-	values := [10]int{0, 0, 0, 0, 0, 0, 0, 15, 15, 100}
-	if len(offsets) == 5 {
-		offsets = []int{offsets[0], offsets[1], offsets[0], offsets[1], offsets[1], offsets[2], offsets[2], offsets[3], offsets[3], offsets[4]}
-	} else if len(offsets) != len(values) {
-		return values
-	}
-	for i, value := range offsets {
-		if value < 0 {
-			value = 0
-		} else if value > 100 {
-			value = 100
-		}
-		values[i] = value
-	}
-	return values
-}
-
-func resolveFingerprintOffsets(offsets, positions []int) [10]int {
-	values := normalizeIdentityOffsets(offsets)
-	x := normalizeIdentityCurvePositions(positions)
-	targets := [10]int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100}
-	resolved := [10]int{}
-	for targetIndex, target := range targets {
-		if target <= x[0] {
-			resolved[targetIndex] = values[0]
-			continue
-		}
-		resolved[targetIndex] = values[len(values)-1]
-		for i := 1; i < len(x); i++ {
-			if target > x[i] {
-				continue
-			}
-			span := x[i] - x[i-1]
-			distance := target - x[i-1]
-			resolved[targetIndex] = (values[i-1]*(span-distance) + values[i]*distance + span/2) / span
-			break
-		}
-	}
-	return resolved
-}
-
-func normalizeIdentityCurvePositions(positions []int) [10]int {
-	values := [10]int{0, 11, 22, 33, 44, 56, 67, 78, 89, 100}
-	if len(positions) != len(values) {
-		return values
-	}
-	for i, position := range positions {
-		minValue := 0
-		if i > 0 {
-			minValue = values[i-1] + 2
-		}
-		maxValue := 100 - (len(values)-1-i)*2
-		if position < minValue {
-			position = minValue
-		} else if position > maxValue {
-			position = maxValue
-		}
-		values[i] = position
-	}
-	return values
-}
-
-func resampleIdentityDomain(intensity int) bool {
-	return intensity >= 100 || (intensity > 0 && rand.Intn(100) < intensity)
 }
 
 func cachedIdentityForProxy(proxyURL string, refreshSession bool) *BrowserIdentity {

@@ -22,17 +22,16 @@ func TestResetPerfTimingStartsANewPageContext(t *testing.T) {
 	}
 }
 
-func TestFingerprintReportsCaptchaAfterChallengeAppears(t *testing.T) {
-	identity := fingerprintIdentityFixture("captcha", 1)
+func TestFingerprintReportsNormalPageState(t *testing.T) {
+	identity := fingerprintIdentityFixture("page", 1)
 	ctx := NewFPContext(identity)
-	ctx.PageHasCaptcha = true
 	encoded := GenerateFingerprintJSON(identity, "https://signin.example.com/signup", "", ctx, "signup", "PageSubmit", 0, 0, "")
 	var fingerprint map[string]interface{}
 	if err := json.Unmarshal([]byte(encoded), &fingerprint); err != nil {
 		t.Fatal(err)
 	}
 	token, _ := fingerprint["token"].(map[string]interface{})
-	if token["pageHasCaptcha"] != float64(1) {
+	if token["pageHasCaptcha"] != float64(0) {
 		t.Fatalf("pageHasCaptcha = %#v", token["pageHasCaptcha"])
 	}
 }

@@ -8,14 +8,13 @@ import (
 
 // FingerprintContext 保持同一会话内硬件级指纹字段不变
 type FingerprintContext struct {
-	Identity       *BrowserIdentity
-	CanvasHash     int32
-	HistogramBins  [256]int
-	LsUbidSignin   string
-	LsUbidProfile  string
-	PageHasCaptcha bool
-	perfTiming     map[string]int64
-	startTime      *int64
+	Identity      *BrowserIdentity
+	CanvasHash    int32
+	HistogramBins [256]int
+	LsUbidSignin  string
+	LsUbidProfile string
+	perfTiming    map[string]int64
+	startTime     *int64
 }
 
 // NewFPContext 创建指纹上下文

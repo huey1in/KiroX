@@ -1,15 +1,12 @@
 package core
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
-	"reg_go/internal/captcha"
 	httputil "reg_go/internal/http"
 )
 
@@ -110,11 +107,6 @@ func (r *Registrar) Step12SetPassword() error {
 	if strings.TrimSpace(identityPoolID) == "" {
 		identityPoolID = r.Cfg.DirectoryID
 	}
-	applicationType, _ := presentationContext["applicationType"].(string)
-	if amsTraceEnabled() {
-		log.Printf("[WAF TRACE] password page stepId=%q identityPoolId=%q applicationType=%q builderIdSourceDirectory=%q responseKeys=%v",
-			passwordStepID, identityPoolID, applicationType, builderIDSourceDirectory, safeJSONResponseKeys(body))
-	}
 
 	encCtx := httputil.GetNestedMap(data, "workflowResponseData", "encryptionContextResponse")
 	pubKeyMap := httputil.GetNestedStringMap(encCtx, "publicKey")
@@ -134,14 +126,10 @@ func (r *Registrar) Step12SetPassword() error {
 	if region == "" {
 		region = "us-east-1"
 	}
-	if amsTraceEnabled() {
-		log.Printf("[WAF TRACE] encryption context alg=%q issuer=%q audience=%q region=%q keyBits=%d",
-			pubKeyMap["alg"], issuer, audience, region, decodedModulusBits(pubKeyMap["n"]))
-	}
 
 	// CreatePasswordPage sends these two page-load signals before it accepts a
 	// password submission. They also establish the server-side fingerprint
-	// context that the later CAPTCHA access code is redeemed against.
+	// context used by the password submission.
 	r.sendUserEventSafe(identityPoolID, "PAGE_LOAD", "CREDENTIAL_COLLECTION", 0)
 	if err := r.postFingerprintMetricAt(
 		"IsFingerprintFileLoaded:Success",
@@ -194,47 +182,19 @@ func (r *Registrar) Step12SetPassword() error {
 	if strings.TrimSpace(builderIDSourceDirectory) != "" {
 		builderIDSession, readErr := r.readBuilderIDSession(builderIDSourceDirectory, ref)
 		if readErr != nil {
-			log.Printf("[WAF] 读取 Builder ID 会话失败: %v", readErr)
+			log.Printf("[Kiro] 读取 Builder ID 会话失败: %v", readErr)
 		} else {
 			passwordPayload["builderIdSession"] = builderIDSession
-			if amsTraceEnabled() {
-				log.Printf("[WAF TRACE] builderIdSession present=%t length=%d", builderIDSession != "", len(builderIDSession))
-			}
 		}
 	}
-	passwordSubmitAttempt := 0
 	submitPassword := func() ([]byte, map[string][]string, error) {
-		passwordSubmitAttempt++
 		rid = NewUUID()
 		passwordPayload["requestId"] = rid
 		h = r.BuildHeaders(ref, r.Cfg.SigninBase)
 		h["x-amzn-requestid"] = rid
 		h["x-amz-date"] = GmtDate()
 		h["priority"] = "u=1, i"
-		if amsTraceEnabled() {
-			shape, _ := json.Marshal(safeJSONShape(passwordPayload))
-			log.Printf("[WAF TRACE] password request=%s jarCookies=%v legacyCookies=%v", shape, r.safeClientCookieNames(api), safeCookieNames(r.Cookies))
-			_, hasCaptchaAccessCode := passwordPayload["captchaRequest"]
-			log.Printf("[WAF TRACE] password fingerprint attempt=%d pageHasCaptcha=%t captchaAccessCodePresent=%t encryptedLength=%d chrome=%q platform=%q plugins=%d screen=%dx%d/%d-bit memory=%d cores=%d canvasHash=%d",
-				passwordSubmitAttempt,
-				r.FPCtx != nil && r.FPCtx.PageHasCaptcha,
-				hasCaptchaAccessCode,
-				len(fingerprintInput["fingerPrint"]),
-				r.Identity.ChromeVer,
-				r.Identity.Platform,
-				len(r.Identity.Plugins),
-				r.Identity.Screen.Width,
-				r.Identity.Screen.Height,
-				r.Identity.Screen.ColorDepth,
-				r.Identity.DeviceMemory,
-				r.Identity.HardwareConcurrency,
-				r.Identity.CanvasHash,
-			)
-		}
 		responseBody, _, responseHeaders, submitErr := r.DoPostRaw(api, passwordPayload, h)
-		if amsTraceEnabled() {
-			log.Printf("[WAF TRACE] password response keys=%v error=%v headers=%v", safeJSONResponseKeys(responseBody), parseServiceError(responseBody), sortedHeaderNames(responseHeaders))
-		}
 		return responseBody, responseHeaders, submitErr
 	}
 
@@ -245,66 +205,6 @@ func (r *Registrar) Step12SetPassword() error {
 	httputil.SaveCookies(r.Cookies, respH)
 
 	rurl := passwordRedirect(body)
-	initialChallenge, hadInitialChallenge := parseAWSWAFChallenge(body)
-	if rurl == "" && r.Cfg.WAFEnabled {
-		if hadInitialChallenge {
-			r.FPCtx.PageHasCaptcha = true
-		}
-		handled, solveErr := r.solvePasswordWAFChallenge(body, ref, passwordPayload)
-		if solveErr != nil {
-			return solveErr
-		}
-		if handled {
-			var challengeData map[string]interface{}
-			if json.Unmarshal(body, &challengeData) == nil {
-				encCtxUpdate := httputil.GetNestedMap(challengeData, "workflowResponseData", "encryptionContextResponse")
-				if updatedKey := httputil.GetNestedStringMap(encCtxUpdate, "publicKey"); updatedKey != nil && updatedKey["n"] != "" {
-					pubKeyMap = updatedKey
-					if value, ok := encCtxUpdate["issuer"].(string); ok && value != "" {
-						issuer = value
-					}
-					if value, ok := encCtxUpdate["audience"].(string); ok && value != "" {
-						audience = value
-					}
-					if value, ok := encCtxUpdate["region"].(string); ok && value != "" {
-						region = value
-					}
-					log.Println("[WAF] 挑战响应更新了密码加密上下文")
-				}
-			}
-			// The browser encrypts the password again after AMS completes. JWE uses
-			// fresh randomness, and AWS rejects a ciphertext reused from the request
-			// that originally triggered the challenge.
-			encrypted, err = r.JWE.Encrypt(r.Cfg.Password, pubKeyMap, issuer, audience, region)
-			if err != nil {
-				return fmt.Errorf("JWE 重新加密失败: %w", err)
-			}
-			passwordInput["password"] = encrypted
-			userEvent["timeSpentOnPage"] = elapsedMillisSince(r.PasswordPageStartedAt, time.Now())
-			fingerprintInput["fingerPrint"] = genPasswordFP()
-			// In the browser the AMS callback closes the challenge before the user
-			// submits the password form again. Give the redeemed code the same brief
-			// propagation window instead of consuming it in the same instant.
-			if err := r.wait(time.Second); err != nil {
-				return err
-			}
-			log.Println("[WAF] 动态验证完成，正在重新提交密码")
-			body, respH, err = submitPassword()
-			if err != nil {
-				return err
-			}
-			httputil.SaveCookies(r.Cookies, respH)
-			rurl = passwordRedirect(body)
-			if rurl == "" && hadInitialChallenge {
-				if nextChallenge, ok := parseAWSWAFChallenge(body); ok {
-					log.Printf("[WAF] 密码重试仍返回挑战: tokenRotated=%t, stateUpdated=%t, stepUpdated=%t",
-						nextChallenge.RedemptionToken != initialChallenge.RedemptionToken,
-						nextChallenge.WorkflowStateHandle != "" && nextChallenge.WorkflowStateHandle != initialChallenge.WorkflowStateHandle,
-						nextChallenge.StepID != "" && nextChallenge.StepID != initialChallenge.StepID)
-				}
-			}
-		}
-	}
 	if rurl == "" {
 		return unexpectedServiceResponse("密码设置未返回 redirect", body)
 	}
@@ -355,61 +255,6 @@ func (r *Registrar) readBuilderIDSession(sourceDirectory, referer string) (strin
 		return "", fmt.Errorf("Builder ID cookieread 响应格式无效")
 	}
 	return response.CookieValue, nil
-}
-
-func (r *Registrar) solvePasswordWAFChallenge(body []byte, websiteURL string, passwordPayload map[string]interface{}) (bool, error) {
-	challenge, ok := parseAWSWAFChallenge(body)
-	if !ok {
-		return false, nil
-	}
-	if challenge.StepID != "" {
-		passwordPayload["stepId"] = challenge.StepID
-	}
-	if challenge.WorkflowStateHandle != "" {
-		passwordPayload["workflowStateHandle"] = challenge.WorkflowStateHandle
-		r.WorkflowHandle = challenge.WorkflowStateHandle
-	}
-	if amsInspectionEnabled() {
-		reportPath, err := r.captureAMSScript(challenge.JSAPIScript, challenge.RedemptionToken, websiteURL)
-		if err != nil {
-			return false, fmt.Errorf("AMS 诊断采集失败: %w", err)
-		}
-		log.Printf("[WAF] AMS SDK 诊断已保存: %s", reportPath)
-		return false, fmt.Errorf("AMS 诊断捕获完成")
-	}
-	log.Println("[WAF] AWS 要求 AMS 动态验证，正在读取挑战类型")
-	tokenPayload, amsChallenge, err := r.loadAMSChallenge(challenge.RedemptionToken, websiteURL)
-	if err != nil {
-		return false, fmt.Errorf("AWS WAF 动态验证失败: %w", err)
-	}
-	solverProxy := captcha.RemoteWorkerProxy(r.Cfg.Proxy)
-	if strings.TrimSpace(r.Cfg.Proxy) != "" && solverProxy == "" {
-		log.Println("[WAF] 当前任务代理仅本机可访问，WAF_GRID 将使用 2Captcha 代理池")
-	}
-	solveCtx, cancelSolve := context.WithTimeout(r.context(), 3*time.Minute)
-	var accessCode string
-	switch strings.ToUpper(amsChallenge.ChallengeType) {
-	case "AMCS":
-		log.Println("[WAF] 挑战类型: AMCS，正在识别验证图片")
-		accessCode, err = r.solveAMCSImage(solveCtx, tokenPayload, amsChallenge, challenge.RedemptionToken, websiteURL)
-	case "WAF_GRID":
-		log.Println("[WAF] 挑战类型: WAF_GRID，正在通过 2Captcha 处理")
-		accessCode, err = r.solveAMSWAFGrid(solveCtx, tokenPayload, amsChallenge, challenge.RedemptionToken, websiteURL, solverProxy)
-	default:
-		err = fmt.Errorf("不支持的 AMS challengeType: %s", amsChallenge.ChallengeType)
-	}
-	cancelSolve()
-	if err != nil {
-		var apiErr *captcha.APIError
-		if errors.As(err, &apiErr) && apiErr.Code == "ERROR_CAPTCHA_UNSOLVABLE" {
-			return false, fmt.Errorf("AWS WAF 动态验证失败: %w", err)
-		}
-		return false, fmt.Errorf("AWS WAF 动态验证失败: %w", err)
-	}
-	passwordPayload["captchaRequest"] = map[string]string{
-		"captchaAccessCode": accessCode,
-	}
-	return true, nil
 }
 
 func passwordRedirect(body []byte) string {

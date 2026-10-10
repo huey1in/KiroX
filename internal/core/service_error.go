@@ -37,10 +37,8 @@ func (e *ServiceError) Error() string {
 }
 
 type serviceErrorResponse struct {
-	RequestID           string `json:"requestId"`
-	StepID              string `json:"stepId"`
-	WorkflowStateHandle string `json:"workflowStateHandle"`
-	Message             struct {
+	RequestID string `json:"requestId"`
+	Message   struct {
 		Text      string `json:"text"`
 		Heading   string `json:"heading"`
 		Type      string `json:"type"`
@@ -53,27 +51,6 @@ type serviceErrorResponse struct {
 		CaptchaToken string `json:"captchaToken"`
 		CaptchaCDN   string `json:"captchaCDN"`
 	} `json:"captchaResponse"`
-}
-
-type awsWAFChallenge struct {
-	RedemptionToken     string
-	JSAPIScript         string
-	StepID              string
-	WorkflowStateHandle string
-}
-
-func parseAWSWAFChallenge(body []byte) (awsWAFChallenge, bool) {
-	var response serviceErrorResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return awsWAFChallenge{}, false
-	}
-	challenge := awsWAFChallenge{
-		RedemptionToken:     strings.TrimSpace(response.CaptchaResponse.CaptchaToken),
-		JSAPIScript:         strings.TrimSpace(response.CaptchaResponse.CaptchaCDN),
-		StepID:              strings.TrimSpace(response.StepID),
-		WorkflowStateHandle: strings.TrimSpace(response.WorkflowStateHandle),
-	}
-	return challenge, challenge.RedemptionToken != "" && challenge.JSAPIScript != ""
 }
 
 func parseServiceError(body []byte) *ServiceError {

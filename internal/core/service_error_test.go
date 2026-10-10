@@ -48,22 +48,6 @@ func TestUnexpectedServiceResponseNeverIncludesRawBody(t *testing.T) {
 	}
 }
 
-func TestParseAWSWAFChallengeRequiresTokenAndScript(t *testing.T) {
-	challenge, ok := parseAWSWAFChallenge([]byte(`{
-		"captchaResponse": {
-			"captchaToken": " redemption-token ",
-			"captchaCDN": " https://example.com/jsapi.js "
-		}
-	}`))
-	if !ok || challenge.RedemptionToken != "redemption-token" || challenge.JSAPIScript != "https://example.com/jsapi.js" {
-		t.Fatalf("unexpected challenge: %#v, ok=%v", challenge, ok)
-	}
-
-	if _, ok := parseAWSWAFChallenge([]byte(`{"captchaResponse":{"captchaToken":"token"}}`)); ok {
-		t.Fatal("incomplete challenge was accepted")
-	}
-}
-
 func TestFormatAuthenticationFailure(t *testing.T) {
 	r := &Registrar{}
 	got := r.formatError("SetPassword", &ServiceError{

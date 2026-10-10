@@ -725,11 +725,7 @@ func classifyError(errorMsg string) string {
 
 func isCaptchaError(errorMsg string) bool {
 	markers := []string{
-		"2Captcha",
-		"AWS WAF 动态验证失败",
-		"AMS 诊断捕获完成",
 		"CAPTCHA_REQUIRED",
-		"ERROR_CAPTCHA_UNSOLVABLE",
 		"CAPTCHA/风控验证",
 	}
 	for _, marker := range markers {
@@ -764,10 +760,6 @@ func isRetryableRegistrationError(errorMsg string) bool {
 // 命中则立即终止全部并发任务。与单纯的瞬态失败（网络超时、验证码延迟）区分。
 func isKillSwitchError(errorMsg string) bool {
 	if errorMsg == "" {
-		return false
-	}
-	// A solver's IP/account errors do not describe AWS risk for this batch.
-	if strings.Contains(errorMsg, "2Captcha") {
 		return false
 	}
 	triggers := []string{
