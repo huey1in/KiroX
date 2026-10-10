@@ -26,6 +26,22 @@ KiroX 是一款基于 [Wails v2](https://wails.io) 构建的 Kiro 桌面注册�
 
 ---
 
+## 赞助推广
+
+<p align="center">
+  <a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">
+    <img src="docs/proxylane_kirox_1600x320.png" alt="ProxyLane 住宅代理，首次购买使用优惠码 KIROX30 享 7 折" width="800">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> 住宅代理覆盖 195 个国家，95%+ IP 获 Scamalytics 低风险评级，可按城市、ISP、ASN 定向，粘性会话最长 72 小时。<br>
+  KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>，每个账号一个会话名、一个固定住宅 IP。<br>
+  网站有中文界面，支持 USDT 付款，首次购买使用优惠码 <code>KIROX30</code> 可享 <b>7 折</b>。
+</p>
+
+---
+
 ## 特别鸣谢
 
 <p align="center">

@@ -26,6 +26,22 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
 
 ---
 
+## Sponsorship
+
+<p align="center">
+  <a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">
+    <img src="docs/proxylane_kirox_1600x320.png" alt="ProxyLane residential proxies — 30% off your first purchase with KIROX30" width="800">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> residential proxies cover 195 countries, with 95%+ of IPs rated low risk by Scamalytics. Target by city, ISP, or ASN, with sticky sessions lasting up to 72 hours.<br>
+  For KiroX batch imports, enter one <code>protocol://user:password@host:port</code> per line, using a separate session name and a fixed residential IP for each account.<br>
+  The website offers a Chinese interface and accepts USDT payments. Use <code>KIROX30</code> for <b>30% off your first purchase</b>.
+</p>
+
+---
+
 ## Special Thanks
 
 <p align="center">
