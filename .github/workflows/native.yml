@@ -25,7 +25,7 @@ jobs:
             arch: win64_mingw
           - os: ubuntu-24.04
             host: linux
-            arch: gcc_64
+            arch: linux_gcc_64
           - os: macos-latest
             host: mac
             arch: clang_64
@@ -55,19 +55,19 @@ jobs:
         run: python -m aqt install-tool windows desktop tools_mingw1310 qt.tools.win64_mingw1310 -O .tools/qt --timeout 30
       - name: Configure
         run: |
-          qt_arch="${{ matrix.arch }}"
+          qt_root="$(python -c 'from pathlib import Path; print(next(Path(".tools/qt/6.8.3").glob("*/lib/cmake/Qt6/Qt6Config.cmake")).resolve().parents[3].as_posix())')"
           if [ "$RUNNER_OS" = Windows ]; then
-            qt_arch=mingw_64
             export PATH="$PWD/.tools/qt/Tools/mingw1310_64/bin:$PWD/.tools/qt/6.8.3/mingw_64/bin:$PATH"
             compiler="-DCMAKE_CXX_COMPILER=$PWD/.tools/qt/Tools/mingw1310_64/bin/g++.exe"
-            echo "$PWD/.tools/qt/Tools/mingw1310_64/bin" >> "$GITHUB_PATH"
+            cygpath -w "$PWD/.tools/qt/Tools/mingw1310_64/bin" >> "$GITHUB_PATH"
+            cygpath -w "$qt_root/bin" >> "$GITHUB_PATH"
+          else
+            echo "$qt_root/bin" >> "$GITHUB_PATH"
           fi
-          qt_root="$PWD/.tools/qt/6.8.3/$qt_arch"
           prefix="$qt_root"
           if [ "$RUNNER_OS" = macOS ]; then
             prefix="$prefix;$(brew --prefix openssl@3)"
           fi
-          echo "$qt_root/bin" >> "$GITHUB_PATH"
           cmake --preset release "-DCMAKE_PREFIX_PATH=$prefix" ${compiler:-} -DKIROX_WARNINGS_AS_ERRORS=ON "-DKIROX_VERIFY_PYTHON=$(python -c 'import sys; print(sys.executable)')"
       - name: Build
         run: cmake --build --preset release --parallel 3
