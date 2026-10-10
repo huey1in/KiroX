@@ -34,10 +34,10 @@ KiroX は [Wails v2](https://wails.io) ベースの Kiro 登録ツールで、HT
   </a>
 </p>
 
-<p align="center">
-  <b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> のレジデンシャルプロキシは 195 か国をカバーし、95% 以上の IP が Scamalytics で低リスクと評価されています。都市・ISP・ASN による指定が可能で、スティッキーセッションは最大 72 時間維持できます。<br>
-  KiroX の一括インポートでは、1 行に 1 件の <code>プロトコル://ユーザー:パスワード@host:port</code> を入力し、アカウントごとに個別のセッション名と固定のレジデンシャル IP を使用します。<br>
-  サイトは中国語表示と USDT 決済に対応。初回購入時にコード <code>KIROX30</code> を使用すると <b>30% オフ</b>になります。
+<p align="left">
+<b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> のレジデンシャルプロキシは 195 か国をカバーし、95% 以上の IP が Scamalytics で低リスクと評価されています。都市・ISP・ASN による指定が可能で、スティッキーセッションは最大 72 時間維持できます。<br>
+KiroX の一括インポートでは、1 行に 1 件の <code>プロトコル://ユーザー:パスワード@host:port</code> を入力し、アカウントごとに個別のセッション名と固定のレジデンシャル IP を使用します。<br>
+サイトは中国語表示と USDT 決済に対応。初回購入時にコード <code>KIROX30</code> を使用すると <b>30% オフ</b>になります。
 </p>
 
 <p align="center">
@@ -46,10 +46,10 @@ KiroX は [Wails v2](https://wails.io) ベースの Kiro 登録ツールで、HT
   </a>
 </p>
 
-<p align="center">
-  <b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> は 195 以上の国・地域をカバーするレジデンシャルプロキシ IP を提供し、HTTP・HTTPS・SOCKS5 プロトコルに対応しています。<br>
-  Kiro、AI コーディング、ブラウザ自動化、海外ネットワークアクセスに適しており、地域やビジネスニーズに応じてネットワーク環境を選択できます。<br>
-  無料トライアル対応。専用割引コード：<code>0205</code>
+<p align="left">
+<b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> は 195 以上の国・地域をカバーするレジデンシャルプロキシ IP を提供し、HTTP・HTTPS・SOCKS5 プロトコルに対応しています。<br>
+Kiro、AI コーディング、ブラウザ自動化、海外ネットワークアクセスに適しており、地域やビジネスニーズに応じてネットワーク環境を選択できます。<br>
+無料トライアル対応。専用割引コード：<code>0205</code>
 </p>
 
 ---

@@ -34,10 +34,10 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
   </a>
 </p>
 
-<p align="center">
-  <b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> residential proxies cover 195 countries, with 95%+ of IPs rated low risk by Scamalytics. Target by city, ISP, or ASN, with sticky sessions lasting up to 72 hours.<br>
-  For KiroX batch imports, enter one <code>protocol://user:password@host:port</code> per line, using a separate session name and a fixed residential IP for each account.<br>
-  The website offers a Chinese interface and accepts USDT payments. Use <code>KIROX30</code> for <b>30% off your first purchase</b>.
+<p align="left">
+<b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> residential proxies cover 195 countries, with 95%+ of IPs rated low risk by Scamalytics. Target by city, ISP, or ASN, with sticky sessions lasting up to 72 hours.<br>
+For KiroX batch imports, enter one <code>protocol://user:password@host:port</code> per line, using a separate session name and a fixed residential IP for each account.<br>
+The website offers a Chinese interface and accepts USDT payments. Use <code>KIROX30</code> for <b>30% off your first purchase</b>.
 </p>
 
 <p align="center">
@@ -46,10 +46,10 @@ KiroX is a Kiro registration tool built on [Wails v2](https://wails.io) and impl
   </a>
 </p>
 
-<p align="center">
-  <b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> provides residential proxy IPs covering 195+ countries and regions, supporting HTTP, HTTPS, and SOCKS5 protocols.<br>
-  It is suitable for Kiro, AI Coding, browser automation, and overseas network access, letting you choose the network environment that suits your region and business needs.<br>
-  Free trial supported. Exclusive discount code: <code>0205</code>
+<p align="left">
+<b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> provides residential proxy IPs covering 195+ countries and regions, supporting HTTP, HTTPS, and SOCKS5 protocols.<br>
+It is suitable for Kiro, AI Coding, browser automation, and overseas network access, letting you choose the network environment that suits your region and business needs.<br>
+Free trial supported. Exclusive discount code: <code>0205</code>
 </p>
 
 ---

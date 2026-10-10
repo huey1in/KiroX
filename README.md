@@ -34,10 +34,10 @@ KiroX 是一款基于 [Wails v2](https://wails.io) 构建的 Kiro 桌面注册�
   </a>
 </p>
 
-<p align="center">
-  <b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> 住宅代理覆盖 195 个国家，95%+ IP 获 Scamalytics 低风险评级，可按城市、ISP、ASN 定向，粘性会话最长 72 小时。<br>
-  KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>，每个账号一个会话名、一个固定住宅 IP。<br>
-  网站有中文界面，支持 USDT 付款，首次购买使用优惠码 <code>KIROX30</code> 可享 <b>7 折</b>。
+<p align="left">
+<b><a href="https://proxylane.dev/?utm_source=kirox&amp;utm_medium=partnership&amp;utm_campaign=kirox_sponsor_202610&amp;utm_content=github_readme" target="_blank">ProxyLane</a></b> 住宅代理覆盖 195 个国家，95%+ IP 获 Scamalytics 低风险评级，可按城市、ISP、ASN 定向，粘性会话最长 72 小时。<br>
+KiroX 批量导入时每行一个 <code>协议://用户:密码@host:port</code>，每个账号一个会话名、一个固定住宅 IP。<br>
+网站有中文界面，支持 USDT 付款，首次购买使用优惠码 <code>KIROX30</code> 可享 <b>7 折</b>。
 </p>
 
 <p align="center">
@@ -46,10 +46,10 @@ KiroX 是一款基于 [Wails v2](https://wails.io) 构建的 Kiro 桌面注册�
   </a>
 </p>
 
-<p align="center">
-  <b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> 提供覆盖 195+ 国家和地区的住宅代理 IP，支持 HTTP、HTTPS 及 SOCKS5 协议。<br>
-  适用于 Kiro、AI Coding、浏览器自动化及海外网络访问，可根据不同地区和业务需求选择相应的网络环境。<br>
-  支持免费测试，专属折扣码：<code>0205</code>
+<p align="left">
+<b><a href="https://www.ipwo.net/?ref=githubKiroX" target="_blank">IPWO</a></b> 提供覆盖 195+ 国家和地区的住宅代理 IP，支持 HTTP、HTTPS 及 SOCKS5 协议。<br>
+适用于 Kiro、AI Coding、浏览器自动化及海外网络访问，可根据不同地区和业务需求选择相应的网络环境。<br>
+支持免费测试，专属折扣码：<code>0205</code>
 </p>
 
 ---
