@@ -3,29 +3,6 @@
 let cloudmailConfigs = [];
 let cloudmailConfigStatus = {};
 
-function _cmT(key, varsOrFallback, fallbackMaybe) {
-  var vars = null, fallback = null;
-  if (typeof varsOrFallback === 'string') {
-    fallback = varsOrFallback;
-  } else if (varsOrFallback && typeof varsOrFallback === 'object') {
-    vars = varsOrFallback;
-    if (typeof fallbackMaybe === 'string') fallback = fallbackMaybe;
-  }
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key, vars);
-    if (v && v !== key) return v;
-  }
-  if (fallback != null) {
-    if (vars) {
-      return fallback.replace(/\{(\w+)\}/g, function(_, k) {
-        return vars[k] != null ? vars[k] : '{' + k + '}';
-      });
-    }
-    return fallback;
-  }
-  return key;
-}
-
 async function loadCloudMailConfigs() {
   try {
     const configs = await window.go.main.App.GetCloudMailConfigs();
@@ -69,9 +46,9 @@ function updateCloudMailUI() {
   const summaryEl = document.getElementById('settings-cloudmail-summary');
   if (summaryEl) {
     if (cloudmailConfigs.length === 0) {
-      summaryEl.textContent = _cmT('cloudmail.summaryNone', '未配置');
+      summaryEl.textContent = tr('cloudmail.summaryNone', '未配置');
     } else {
-      summaryEl.textContent = _cmT('cloudmail.summaryActive', { n: cloudmailConfigs.length, m: activeCount }, '已配置 {n} 个，可用 {m} 个');
+      summaryEl.textContent = tr('cloudmail.summaryActive', { n: cloudmailConfigs.length, m: activeCount }, '已配置 {n} 个，可用 {m} 个');
     }
   }
 
@@ -89,7 +66,7 @@ function renderCloudMailConfigList() {
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
           <polyline points="22,6 12,13 2,6"></polyline>
         </svg>
-        <div>${_cmT('cloudmail.emptyInline', '暂无配置，请在上方添加 Cloud-Mail 配置')}</div>
+        <div>${tr('cloudmail.emptyInline', '暂无配置，请在上方添加 Cloud-Mail 配置')}</div>
       </div>
     `;
     return;
@@ -98,7 +75,7 @@ function renderCloudMailConfigList() {
   inlineList.innerHTML = cloudmailConfigs.map((cfg, idx) => {
     const status = cloudmailConfigStatus[cfg.name] || { tested: false };
     let dotClass = 'untested';
-    let statusLabel = _cmT('status.untested', '未测试');
+    let statusLabel = tr('status.untested', '未测试');
     let statusClass = 'untested';
     let domainsHtml = '';
 
@@ -112,11 +89,11 @@ function renderCloudMailConfigList() {
 
     if (status.tested && status.success) {
       dotClass = 'success';
-      statusLabel = _cmT('status.available', '可用');
+      statusLabel = tr('status.available', '可用');
       statusClass = 'success';
     } else if (status.tested) {
       dotClass = 'error';
-      statusLabel = _cmT('status.unavailable', '不可用');
+      statusLabel = tr('status.unavailable', '不可用');
       statusClass = 'error';
     }
 
@@ -139,14 +116,14 @@ function renderCloudMailConfigList() {
               <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
-            ${_cmT('common.test', '测试')}
+            ${tr('common.test', '测试')}
           </button>
           <button onclick="deleteCloudMailConfig(${idx})" class="btn btn-secondary btn-sm" style="color:var(--danger);">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
             </svg>
-            ${_cmT('common.delete', '删除')}
+            ${tr('common.delete', '删除')}
           </button>
         </div>
       </div>
@@ -155,7 +132,7 @@ function renderCloudMailConfigList() {
 }
 
 function generateCloudMailName() {
-  var prefix = _cmT('cloudmail.autoNamePrefix', '配置');
+  var prefix = tr('cloudmail.autoNamePrefix', '配置');
   let idx = cloudmailConfigs.length + 1;
   let name = prefix + ' ' + idx;
   while (cloudmailConfigs.some(c => c.name === name)) {
@@ -172,13 +149,13 @@ async function inlineAddCloudMail() {
   var pwd = (document.getElementById('cloudmail-inline-password').value || '').trim();
 
   if (!url || !em || !pwd) {
-    showToast(_cmT('cloudmail.requiredFields', '请填写 URL、管理员邮箱、密码'), 'error');
+    showToast(tr('cloudmail.requiredFields', '请填写 URL、管理员邮箱、密码'), 'error');
     return;
   }
   // 域名在服务器端通过 /api/setting/websiteConfig 自动获取，无需用户输入
   if (!name) name = generateCloudMailName();
   if (cloudmailConfigs.some(c => c.name === name)) {
-    showToast(_cmT('cloudmail.nameExists', '配置名称已存在'), 'error');
+    showToast(tr('cloudmail.nameExists', '配置名称已存在'), 'error');
     return;
   }
 
@@ -199,9 +176,9 @@ async function inlineAddCloudMail() {
   }
 
   if (!testResult || testResult.error) {
-    var errMsg = (testResult && testResult.error) || _cmT('cloudmail.testFailedShort', '测试失败');
+    var errMsg = (testResult && testResult.error) || tr('cloudmail.testFailedShort', '测试失败');
     if (statusEl) { statusEl.style.color = 'var(--danger)'; clearLocalizedStatus(statusEl, errMsg); }
-    showToast(_cmT('cloudmail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
+    showToast(tr('cloudmail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
     return;
   }
 
@@ -211,7 +188,7 @@ async function inlineAddCloudMail() {
   const saveResult = await window.go.main.App.SaveCloudMailConfigs(JSON.stringify(cloudmailConfigs));
   if (saveResult.error) {
     cloudmailConfigs.pop();
-    showToast(_cmT('toast.operationFailed', '保存失败') + ': ' + saveResult.error, 'error');
+    showToast(tr('toast.operationFailed', '保存失败') + ': ' + saveResult.error, 'error');
     return;
   }
 
@@ -226,9 +203,9 @@ async function inlineAddCloudMail() {
   if (statusEl) { statusEl.style.color = 'var(--success)'; clearLocalizedStatus(statusEl); }
 
   if (fetchedDomains.length > 0) {
-    showToast(_cmT('cloudmail.addedWithDomains', { name: name, n: fetchedDomains.length }, '已添加 {name}，{n} 个域名'));
+    showToast(tr('cloudmail.addedWithDomains', { name: name, n: fetchedDomains.length }, '已添加 {name}，{n} 个域名'));
   } else {
-    showToast(_cmT('cloudmail.addedNamed', { name: name }, '已添加: {name}'));
+    showToast(tr('cloudmail.addedNamed', { name: name }, '已添加: {name}'));
   }
   renderCloudMailConfigList();
   updateCloudMailUI();
@@ -240,7 +217,7 @@ async function inlineTestCloudMail() {
   var pwd = (document.getElementById('cloudmail-inline-password').value || '').trim();
 
   if (!url || !em || !pwd) {
-    showToast(_cmT('cloudmail.requiredFields', '请填写 URL、管理员邮箱、密码'), 'error');
+    showToast(tr('cloudmail.requiredFields', '请填写 URL、管理员邮箱、密码'), 'error');
     return;
   }
   var btn = document.getElementById('cloudmail-inline-test-btn');
@@ -295,9 +272,9 @@ async function testCloudMailConfigByIndex(index) {
       renderCloudMailConfigList();
       updateCloudMailUI();
       if (domains.length > 0) {
-        showToast(config.name + ': ' + _cmT('cloudmail.testOkWithDomains', { n: domains.length }, '连接成功，{n} 个域名'), 'success');
+        showToast(config.name + ': ' + tr('cloudmail.testOkWithDomains', { n: domains.length }, '连接成功，{n} 个域名'), 'success');
       } else {
-        showToast(config.name + ': ' + _cmT('cloudmail.testOkNoDomain', '连接成功，但服务器未返回域名'), 'success');
+        showToast(config.name + ': ' + tr('cloudmail.testOkNoDomain', '连接成功，但服务器未返回域名'), 'success');
       }
     }
   } catch (e) {
@@ -305,7 +282,7 @@ async function testCloudMailConfigByIndex(index) {
     saveCloudMailConfigStatus();
     renderCloudMailConfigList();
     updateCloudMailUI();
-    showToast(config.name + ': ' + _cmT('cloudmail.testFailedShort', '测试失败'), 'error');
+    showToast(config.name + ': ' + tr('cloudmail.testFailedShort', '测试失败'), 'error');
   }
 }
 
@@ -313,24 +290,24 @@ async function deleteCloudMailConfig(index) {
   if (index < 0 || index >= cloudmailConfigs.length) return;
   const configName = cloudmailConfigs[index].name;
   showConfirmModal(
-    _cmT('cloudmail.deleteConfigTitle', '删除配置'),
-    _cmT('cloudmail.deleteConfigMsg', { name: configName }, '确认删除配置 "{name}" 吗？'),
-    _cmT('accounts.deleteConfirm', '确认删除'),
+    tr('cloudmail.deleteConfigTitle', '删除配置'),
+    tr('cloudmail.deleteConfigMsg', { name: configName }, '确认删除配置 "{name}" 吗？'),
+    tr('accounts.deleteConfirm', '确认删除'),
     async function() {
       cloudmailConfigs.splice(index, 1);
       try {
         const result = await window.go.main.App.SaveCloudMailConfigs(JSON.stringify(cloudmailConfigs));
         if (result.error) {
-          showToast(_cmT('toast.deleteFailed', '删除失败') + ': ' + result.error, 'error');
+          showToast(tr('toast.deleteFailed', '删除失败') + ': ' + result.error, 'error');
           await loadCloudMailConfigs();
           return;
         }
         delete cloudmailConfigStatus[configName];
         saveCloudMailConfigStatus();
         updateCloudMailUI();
-        showToast(_cmT('toast.deleteOk', '删除成功'), 'success');
+        showToast(tr('toast.deleteOk', '删除成功'), 'success');
       } catch (e) {
-        showToast(_cmT('toast.deleteFailed', '删除失败') + ': ' + e, 'error');
+        showToast(tr('toast.deleteFailed', '删除失败') + ': ' + e, 'error');
         await loadCloudMailConfigs();
       }
     }

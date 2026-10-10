@@ -18,7 +18,7 @@ func TestRegistrationIdentityPreservesHardwareDomains(t *testing.T) {
 		{false, true, []string{"MathCos", "MathSin", "MathTan"}},
 		{true, true, []string{"CanvasHash", "HistogramBase", "MathCos", "MathSin", "MathTan"}},
 	} {
-		got := cloneIdentity(base)
+		got := cloneWith(base, func(*BrowserIdentity) {})
 		applyRegistrationIdentityDomains(got, fresh, tt.canvas, tt.mathRuntime)
 		if changed := changedIdentityFields(base, got); !reflect.DeepEqual(changed, tt.fields) {
 			t.Errorf("canvas=%t math=%t changed %v, want %v", tt.canvas, tt.mathRuntime, changed, tt.fields)
@@ -68,10 +68,10 @@ func TestIdentityMatchesTLSProfiles(t *testing.T) {
 }
 
 func cloneWith(base *BrowserIdentity, mutate func(*BrowserIdentity)) *BrowserIdentity {
-	clone := cloneIdentity(base)
+	clone := *base
 	clone.Plugins = append([]map[string]string(nil), base.Plugins...)
-	mutate(clone)
-	return clone
+	mutate(&clone)
+	return &clone
 }
 
 func fingerprintIdentityFixture(prefix string, number int) *BrowserIdentity {

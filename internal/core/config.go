@@ -24,29 +24,23 @@ type Config struct {
 	FullName string
 
 	Proxy       string
-	Debug       bool
 	EmailProxy  string
 	OTPTimeout  int
 	HTTPRetries int
 
-	EmailProvider  string
 	UseOutlook     bool
 	OutlookAccount *email.OutlookAccount
 
 	UseMoeMail      bool
-	MoeMailConfig   *email.MoeMailConfig
 	MoeMailProvider *email.MoeMailProvider
 
 	UseCloudMail      bool
-	CloudMailConfig   *email.CloudMailConfig
 	CloudMailProvider *email.CloudMailProvider
 
 	UseMailNest      bool
-	MailNestConfig   *email.MailNestConfig
 	MailNestProvider *email.MailNestProvider
 
 	UseICloud     bool
-	ICloudCSV     string
 	ICloudAccount *email.ICloudAccount
 
 	MoEmailBaseURL string

@@ -15,14 +15,6 @@ function _ipEscape(s) {
   });
 }
 
-function _ipT(key, fallback) {
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key);
-    if (v && v !== key) return v;
-  }
-  return fallback;
-}
-
 // ---- 代理 URL 解析 / 拼装 ----
 // url 形如 scheme://[user:pass@]host[:port]（后端已归一化），兼容简写
 function parseProxyUrl(u) {
@@ -64,7 +56,6 @@ function buildProxyUrl(obj) {
 
 // 徽章辅助
 function _badgeOk(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.15);color:#10b981;">' + t + '</span>'; }
-function _badgeOff(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(107,114,128,0.15);color:var(--text-muted);">' + t + '</span>'; }
 function _badgeErr(t) { return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.15);color:#ef4444;">' + t + '</span>'; }
 
 // 代理质量色阶：家宽(最佳) / 移动(中等) / 机房(较差)
@@ -172,7 +163,7 @@ function renderIpList() {
   if (!box) return;
   if (ipListLoading) {
     if (empty) empty.style.display = 'none';
-    box.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">' + _ipT('ip.loading', '加载中...') + '</div>';
+    box.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px;">' + tr('ip.loading', '加载中...') + '</div>';
     return;
   }
   var q = (document.getElementById('ip-search').value || '').toLowerCase().trim();
@@ -194,12 +185,12 @@ function renderIpTable(rows) {
   var h = '<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;">';
   h += '<thead><tr style="border-bottom:1px solid var(--border);">'
     + '<th style="width:30px;padding:8px;text-align:center;white-space:nowrap;"><input type="checkbox" ' + (allSel ? 'checked' : '') + ' onclick="toggleIpSelectAll(this)"></th>'
-    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colAddress', '地址') + '</th>'
-    + '<th style="text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;width:70px;">' + _ipT('ip.colType', '类型') + '</th>'
-    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colLocation', '位置') + '</th>'
-    + '<th style="width:86px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colLatency', '延迟') + '</th>'
-    + '<th style="width:56px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colStatus', '状态') + '</th>'
-    + '<th style="width:172px;text-align:right;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + _ipT('ip.colActions', '操作') + '</th>'
+    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + tr('ip.colAddress', '地址') + '</th>'
+    + '<th style="text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;width:70px;">' + tr('ip.colType', '类型') + '</th>'
+    + '<th style="text-align:left;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + tr('ip.colLocation', '位置') + '</th>'
+    + '<th style="width:86px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + tr('ip.colLatency', '延迟') + '</th>'
+    + '<th style="width:56px;text-align:center;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + tr('ip.colStatus', '状态') + '</th>'
+    + '<th style="width:172px;text-align:right;padding:8px;color:var(--text-muted);font-weight:600;white-space:nowrap;">' + tr('ip.colActions', '操作') + '</th>'
     + '</tr></thead><tbody>';
   rows.forEach(function(p) { h += renderIpRow(p); });
   h += '</tbody></table>';
@@ -224,7 +215,7 @@ function renderIpRow(p) {
   }
 
   // 类型列：机房 / 移动 / 家宽（探测中骨架屏）
-  var typeCell = probing ? sk : (p.probeOk && p.probeType ? _badgeType(p.probeType, _ipT('ip.type.' + p.probeType, p.probeType)) : '—');
+  var typeCell = probing ? sk : (p.probeOk && p.probeType ? _badgeType(p.probeType, tr('ip.type.' + p.probeType, p.probeType)) : '—');
 
   // 位置列：国旗 + 国家（只显示国家，不显示城市等详细地址）
   var loc = probing ? sk : (p.probeOk ? (flagImg(p.probeCountryCode) + ' ' + _ipEscape(p.probeCountry || '')) : '—');
@@ -232,17 +223,17 @@ function renderIpRow(p) {
   // 延迟列
   var lat = '—';
   if (probing) lat = sk;
-  else if (p.probeOk) lat = _badgeOk(p.probeMs ? (p.probeMs + 'ms') : _ipT('ip.available', '可用'));
-  else if (p.probeAt) lat = _badgeErr(_ipT('ip.failure', '失败'));
+  else if (p.probeOk) lat = _badgeOk(p.probeMs ? (p.probeMs + 'ms') : tr('ip.available', '可用'));
+  else if (p.probeAt) lat = _badgeErr(tr('ip.failure', '失败'));
 
   // 状态开关：添加后通过列表开关控制启用/停用
-  var toggleHtml = '<label class="toggle-switch" title="' + (p.enabled ? _ipT('ip.enabled', '启用') : _ipT('ip.disabled', '停用')) + '">'
+  var toggleHtml = '<label class="toggle-switch" title="' + (p.enabled ? tr('ip.enabled', '启用') : tr('ip.disabled', '停用')) + '">'
     + '<input type="checkbox" ' + (p.enabled ? 'checked' : '') + ' onchange="toggleIpEnabled(\'' + id + '\', this.checked)">'
     + '<span class="toggle-slider"></span></label>';
 
-  var ops = '<button type="button" class="btn btn-secondary btn-sm" onclick="testIpEntry(\'' + id + '\')">' + _ipT('ip.test', '测试') + '</button>'
-    + '<button type="button" class="btn btn-secondary btn-sm" onclick="editIpEntry(\'' + id + '\')">' + _ipT('ip.edit', '编辑') + '</button>'
-    + '<button type="button" class="btn btn-secondary btn-sm" style="color:var(--danger);" onclick="deleteIpEntry(\'' + id + '\')">' + _ipT('ip.delete', '删除') + '</button>';
+  var ops = '<button type="button" class="btn btn-secondary btn-sm" onclick="testIpEntry(\'' + id + '\')">' + tr('ip.test', '测试') + '</button>'
+    + '<button type="button" class="btn btn-secondary btn-sm" onclick="editIpEntry(\'' + id + '\')">' + tr('ip.edit', '编辑') + '</button>'
+    + '<button type="button" class="btn btn-secondary btn-sm" style="color:var(--danger);" onclick="deleteIpEntry(\'' + id + '\')">' + tr('ip.delete', '删除') + '</button>';
 
   return '<tr style="border-bottom:1px solid var(--border);">'
     + '<td style="padding:8px;text-align:center;"><input type="checkbox" ' + chk + ' onclick="toggleIpSelect(\'' + id + '\',this)"></td>'
@@ -266,7 +257,7 @@ async function toggleIpEnabled(id, enabled) {
     p.enabled = enabled;
     renderIpList();
   } catch (e) {
-    showToast(_ipT('ip.saveFailed', '保存失败') + ': ' + e.message, 'error');
+    showToast(tr('ip.saveFailed', '保存失败') + ': ' + e.message, 'error');
     await loadIpList();
   }
 }
@@ -319,21 +310,21 @@ function showIpResultModal(p, res) {
   if (!res) {
     var u0 = parseProxyUrl(p.url);
     var known = [];
-    known.push(row(_ipT('ip.resultScheme', '协议'), _ipEscape(u0.proto || '—')));
-    known.push(row(_ipT('ip.resultIP', '出口 IP'), p.probeIp
+    known.push(row(tr('ip.resultScheme', '协议'), _ipEscape(u0.proto || '—')));
+    known.push(row(tr('ip.resultIP', '出口 IP'), p.probeIp
       ? '<span style="font-family:var(--font-mono);">' + _ipEscape(p.probeIp) + '</span>'
       : '<span class="ip-skel" style="width:70%;"></span>'));
-    known.push(row(_ipT('ip.colType', '类型'), p.probeType
-      ? _badgeType(p.probeType, _ipT('ip.type.' + p.probeType, p.probeType))
+    known.push(row(tr('ip.colType', '类型'), p.probeType
+      ? _badgeType(p.probeType, tr('ip.type.' + p.probeType, p.probeType))
       : '<span class="ip-skel" style="width:60px;"></span>'));
-    known.push(row(_ipT('ip.resultCountry', '国家'), p.probeCountryCode
+    known.push(row(tr('ip.resultCountry', '国家'), p.probeCountryCode
       ? (flagImg(p.probeCountryCode) + ' ' + _ipEscape(p.probeCountry || '—'))
       : '<span class="ip-skel" style="width:70%;"></span>'));
     body.innerHTML =
         '<div style="margin-bottom:12px;"><span class="ip-skel" style="width:110px;height:16px;"></span></div>'
       + known.join('')
       + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">'
-      + '<button onclick="closeIpResultModal()" class="btn btn-dark" data-i18n="common.close">' + _ipT('common.close', '关闭') + '</button>'
+      + '<button onclick="closeIpResultModal()" class="btn btn-dark" data-i18n="common.close">' + tr('common.close', '关闭') + '</button>'
       + '</div>';
     m.classList.add('show');
     return;
@@ -341,29 +332,29 @@ function showIpResultModal(p, res) {
 
   var ok = !!(res && !res.error && res.ok);
   var ms = (res && typeof res.ms === 'number') ? res.ms : (p.probeMs || 0);
-  var typeLabel = (p.probeType && _ipT('ip.type.' + p.probeType, p.probeType)) || '—';
+  var typeLabel = (p.probeType && tr('ip.type.' + p.probeType, p.probeType)) || '—';
 
   var html = '';
   html += '<div style="margin-bottom:12px;">'
     + (ok
-        ? _badgeOk(_ipT('ip.available', '可用') + (ms ? ' · ' + ms + 'ms' : ''))
-        : _badgeErr(_ipT('ip.failure', '失败') + ((res && res.error) ? ' · ' + _ipEscape(res.error) : '')))
+        ? _badgeOk(tr('ip.available', '可用') + (ms ? ' · ' + ms + 'ms' : ''))
+        : _badgeErr(tr('ip.failure', '失败') + ((res && res.error) ? ' · ' + _ipEscape(res.error) : '')))
     + '</div>';
 
   if (ok) {
-    html += row(_ipT('ip.resultScheme', '协议'), _ipEscape(res.scheme || p._scheme || '—'));
-    html += row(_ipT('ip.resultIP', '出口 IP'), '<span style="font-family:var(--font-mono);">' + _ipEscape(res.ip || p.probeIp || '—') + '</span>');
-    html += row(_ipT('ip.colType', '类型'), _badgeType(p.probeType, typeLabel));
-    html += row(_ipT('ip.resultCountry', '国家'), flagImg(res.countryCode || p.probeCountryCode) + ' ' + _ipEscape(res.country || p.probeCountry || '—'));
-    html += row(_ipT('ip.resultRegion', '地区'), _ipEscape(res.region || p.probeRegion || '—'));
-    html += row(_ipT('ip.resultCity', '城市'), _ipEscape(res.city || p.probeCity || '—'));
-    html += row(_ipT('ip.resultISP', '运营商'), _ipEscape(res.isp || p.probeIsp || '—'));
+    html += row(tr('ip.resultScheme', '协议'), _ipEscape(res.scheme || p._scheme || '—'));
+    html += row(tr('ip.resultIP', '出口 IP'), '<span style="font-family:var(--font-mono);">' + _ipEscape(res.ip || p.probeIp || '—') + '</span>');
+    html += row(tr('ip.colType', '类型'), _badgeType(p.probeType, typeLabel));
+    html += row(tr('ip.resultCountry', '国家'), flagImg(res.countryCode || p.probeCountryCode) + ' ' + _ipEscape(res.country || p.probeCountry || '—'));
+    html += row(tr('ip.resultRegion', '地区'), _ipEscape(res.region || p.probeRegion || '—'));
+    html += row(tr('ip.resultCity', '城市'), _ipEscape(res.city || p.probeCity || '—'));
+    html += row(tr('ip.resultISP', '运营商'), _ipEscape(res.isp || p.probeIsp || '—'));
   } else {
-    html += row(_ipT('ip.resultError', '错误'), _ipEscape((res && res.error) || p.probeError || _ipT('ip.unknownError', '未知错误')));
+    html += row(tr('ip.resultError', '错误'), _ipEscape((res && res.error) || p.probeError || tr('ip.unknownError', '未知错误')));
   }
 
   html += '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">'
-    + '<button onclick="closeIpResultModal()" class="btn btn-dark" data-i18n="common.close">' + _ipT('common.close', '关闭') + '</button>'
+    + '<button onclick="closeIpResultModal()" class="btn btn-dark" data-i18n="common.close">' + tr('common.close', '关闭') + '</button>'
     + '</div>';
 
   body.innerHTML = html;
@@ -373,8 +364,8 @@ function showIpResultModal(p, res) {
 async function batchTestIp() {
   var sel = selectedIpIds();
   var targets = ipPool.filter(function(p) { return sel.length ? sel.indexOf(p.id) >= 0 : !!p.url; });
-  if (!targets.length) { showToast(_ipT('ip.noProxies', '没有可测试的代理')); return; }
-  showToast(_ipT('ip.testingN', '测试 {n} 个代理…').replace('{n}', targets.length));
+  if (!targets.length) { showToast(tr('ip.noProxies', '没有可测试的代理')); return; }
+  showToast(tr('ip.testingN', '测试 {n} 个代理…').replace('{n}', targets.length));
   var i = 0;
   async function w() {
     while (i < targets.length) {
@@ -391,7 +382,7 @@ async function batchTestIp() {
 function openIpFormModal() {
   ipFormMode = 'create';
   ipEditingId = null;
-  document.getElementById('ip-form-title').textContent = _ipT('ip.addTitle', '添加代理');
+  document.getElementById('ip-form-title').textContent = tr('ip.addTitle', '添加代理');
   document.getElementById('ip-form-protocol').value = 'http';
   document.getElementById('ip-form-host').value = '';
   document.getElementById('ip-form-port').value = '8080';
@@ -410,7 +401,7 @@ function editIpEntry(id) {
   var u = parseProxyUrl(p.url);
   ipFormMode = 'edit';
   ipEditingId = id;
-  document.getElementById('ip-form-title').textContent = _ipT('ip.editTitle', '编辑代理');
+  document.getElementById('ip-form-title').textContent = tr('ip.editTitle', '编辑代理');
   document.getElementById('ip-form-protocol').value = u.proto || 'http';
   document.getElementById('ip-form-host').value = u.host || '';
   document.getElementById('ip-form-port').value = u.port || '';
@@ -471,14 +462,14 @@ async function submitSingle() {
     user: document.getElementById('ip-form-user').value,
     pass: document.getElementById('ip-form-pass').value
   };
-  if (!obj.host) { showToast(_ipT('ip.hostRequired', '主机不能为空'), 'error'); return; }
+  if (!obj.host) { showToast(tr('ip.hostRequired', '主机不能为空'), 'error'); return; }
   var url = buildProxyUrl(obj);
   if (ipFormMode === 'create') {
     try {
       var res = await window.go.main.App.AddProxyEntry('', url, 1);
       if (res && res.error) { showToast(res.error, 'error'); return; }
-      showToast(_ipT('ip.added', '已添加'));
-    } catch (e) { showToast(_ipT('ip.addFailed', '添加失败') + ': ' + e.message, 'error'); return; }
+      showToast(tr('ip.added', '已添加'));
+    } catch (e) { showToast(tr('ip.addFailed', '添加失败') + ': ' + e.message, 'error'); return; }
   } else {
     // 编辑时保持现有启用状态（列表开关负责切换）
     var cur = ipPool.find(function(x) { return x.id === ipEditingId; });
@@ -486,8 +477,8 @@ async function submitSingle() {
     try {
       var res2 = await window.go.main.App.UpdateProxyEntry(ipEditingId, '', url, 1, enabled);
       if (res2 && res2.error) { showToast(res2.error, 'error'); return; }
-      showToast(_ipT('ip.saved', '已保存'));
-    } catch (e) { showToast(_ipT('ip.saveFailed', '保存失败') + ': ' + e.message, 'error'); return; }
+      showToast(tr('ip.saved', '已保存'));
+    } catch (e) { showToast(tr('ip.saveFailed', '保存失败') + ': ' + e.message, 'error'); return; }
   }
   closeIpFormModal();
   await loadIpList();
@@ -495,7 +486,7 @@ async function submitSingle() {
 
 async function submitBatch() {
   var r = parseBatchText();
-  if (!r.valid.length) { showToast(_ipT('ip.invalidBatch', '没有有效的代理行'), 'error'); return; }
+  if (!r.valid.length) { showToast(tr('ip.invalidBatch', '没有有效的代理行'), 'error'); return; }
   var added = 0, dup = 0, fail = 0;
   for (var i = 0; i < r.valid.length; i++) {
     try {
@@ -505,9 +496,9 @@ async function submitBatch() {
       } else added++;
     } catch (e) { fail++; }
   }
-  var msg = _ipT('ip.batchDone', '完成：{added} 成功').replace('{added}', added);
-  if (dup > 0) msg += _ipT('ip.batchDup', '，{n} 已存在').replace('{n}', dup);
-  if (fail > 0) msg += _ipT('ip.batchFail', '，{n} 失败').replace('{n}', fail);
+  var msg = tr('ip.batchDone', '完成：{added} 成功').replace('{added}', added);
+  if (dup > 0) msg += tr('ip.batchDup', '，{n} 已存在').replace('{n}', dup);
+  if (fail > 0) msg += tr('ip.batchFail', '，{n} 失败').replace('{n}', fail);
   showToast(msg);
   closeIpFormModal();
   await loadIpList();
@@ -515,20 +506,20 @@ async function submitBatch() {
 
 // ===== 删除 =====
 function deleteIpEntry(id) {
-  showConfirmModal(_ipT('ip.deleteTitle', '删除代理'), _ipT('ip.deleteMsg', '确认从池中删除该代理？'), _ipT('ip.delete', '删除'), async function() {
+  showConfirmModal(tr('ip.deleteTitle', '删除代理'), tr('ip.deleteMsg', '确认从池中删除该代理？'), tr('ip.delete', '删除'), async function() {
     try {
       var res = await window.go.main.App.DeleteProxyEntry(id);
       if (res && res.error) { showToast(res.error, 'error'); return; }
-      showToast(_ipT('ip.deleted', '已删除'));
+      showToast(tr('ip.deleted', '已删除'));
       await loadIpList();
-    } catch (e) { showToast(_ipT('ip.deleteFailed', '删除失败') + ': ' + e.message, 'error'); }
+    } catch (e) { showToast(tr('ip.deleteFailed', '删除失败') + ': ' + e.message, 'error'); }
   });
 }
 
 async function batchDeleteIp() {
   var sel = selectedIpIds();
-  if (!sel.length) { showToast(_ipT('ip.selectFirst', '请选择要删除的代理')); return; }
-  showConfirmModal(_ipT('ip.batchDeleteTitle', '批量删除'), _ipT('ip.batchDeleteMsg', '确认删除选中的 {n} 个代理？').replace('{n}', sel.length), _ipT('ip.batchDelete', '批量删除'), async function() {
+  if (!sel.length) { showToast(tr('ip.selectFirst', '请选择要删除的代理')); return; }
+  showConfirmModal(tr('ip.batchDeleteTitle', '批量删除'), tr('ip.batchDeleteMsg', '确认删除选中的 {n} 个代理？').replace('{n}', sel.length), tr('ip.batchDelete', '批量删除'), async function() {
     var ok = 0, err = 0;
     for (var i = 0; i < sel.length; i++) {
       try {
@@ -536,7 +527,7 @@ async function batchDeleteIp() {
         if (res && res.error) err++; else ok++;
       } catch (e) { err++; }
     }
-    showToast(_ipT('ip.batchDeleteDone', '删除完成：{ok} 成功').replace('{ok}', ok) + (err ? _ipT('ip.batchFail', '，{n} 失败').replace('{n}', err) : ''));
+    showToast(tr('ip.batchDeleteDone', '删除完成：{ok} 成功').replace('{ok}', ok) + (err ? tr('ip.batchFail', '，{n} 失败').replace('{n}', err) : ''));
     await loadIpList();
   });
 }
@@ -549,7 +540,7 @@ async function loadProxyOptions() {
   var list = [];
   try { list = await window.go.main.App.ListProxyPool(); } catch (e) {}
   var enabled = (list || []).filter(function(p) { return p.enabled; });
-  var html = '<div class="dropdown-option" data-value="" data-i18n="ip.direct">' + _ipT('ip.direct', '直连') + '</div>';
+  var html = '<div class="dropdown-option" data-value="" data-i18n="ip.direct">' + tr('ip.direct', '直连') + '</div>';
   enabled.forEach(function(p) {
     var u = parseProxyUrl(p.url);
     var label = p.probeIp || (u.host + (u.port ? ':' + u.port : ''));
@@ -564,7 +555,7 @@ window.addEventListener('i18n:changed', function() {
   var form = document.getElementById('ip-form-modal');
   var formTitle = document.getElementById('ip-form-title');
   if (form && form.classList.contains('show') && formTitle) {
-    formTitle.textContent = ipFormMode === 'edit' ? _ipT('ip.editTitle', '编辑代理') : _ipT('ip.addTitle', '添加代理');
+    formTitle.textContent = ipFormMode === 'edit' ? tr('ip.editTitle', '编辑代理') : tr('ip.addTitle', '添加代理');
   }
   var resultModal = document.getElementById('ip-result-modal');
   if (ipResultView && resultModal && resultModal.classList.contains('show')) {

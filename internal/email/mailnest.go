@@ -77,11 +77,6 @@ func newMailNestClient(ctx context.Context, config MailNestConfig) *MailNestClie
 	}
 }
 
-// NewMailNestProvider 创建 MailNest
-func NewMailNestProvider(config MailNestConfig) *MailNestProvider {
-	return NewMailNestProviderContext(context.Background(), config)
-}
-
 func NewMailNestProviderContext(ctx context.Context, config MailNestConfig) *MailNestProvider {
 	return NewMailNestProviderContextWithProxy(ctx, config, "")
 }

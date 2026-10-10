@@ -95,66 +95,9 @@ func (a *App) GetLogs() []string {
 	return task.Manager.GetLogs()
 }
 
-// GetOverview 获取全局概览数据
-func (a *App) GetOverview() map[string]interface{} {
-	// Outlook 账号统计
-	outlookTotal, outlookRegistered, outlookSuccess, outlookPending := countOutlookAccounts()
-
-	// 当前任务状态
-	taskStatus := task.Manager.GetStatus()
-
-	return map[string]interface{}{
-		"version": updater.GetCurrentVersion(),
-		"kiro": map[string]interface{}{
-			"taskRunning":   taskStatus["running"],
-			"taskSuccess":   taskStatus["success"],
-			"taskFailed":    taskStatus["failed"],
-			"taskCompleted": taskStatus["completed"],
-			"taskTotal":     taskStatus["total"],
-		},
-		"outlook": map[string]interface{}{
-			"total":      outlookTotal,
-			"registered": outlookRegistered,
-			"success":    outlookSuccess,
-			"pending":    outlookPending,
-		},
-	}
-}
-
-// GetTaskStatus 获取实时任务状态
-func (a *App) GetTaskStatus() map[string]interface{} {
-	taskStatus := task.Manager.GetStatus()
-	return map[string]interface{}{
-		"kiro": map[string]interface{}{
-			"taskRunning":   taskStatus["running"],
-			"taskSuccess":   taskStatus["success"],
-			"taskFailed":    taskStatus["failed"],
-			"taskCompleted": taskStatus["completed"],
-			"taskTotal":     taskStatus["total"],
-		},
-	}
-}
-
-// countOutlookAccounts 统计 Outlook 账号
-func countOutlookAccounts() (total, registered, success, pending int) {
-	accounts := storage.GetAccountsCached()
-	if len(accounts) == 0 {
-		return
-	}
-	total = len(accounts)
-	for _, acc := range accounts {
-		reg, _ := acc["registered"].(bool)
-		suc, _ := acc["success"].(bool)
-		if reg {
-			registered++
-			if suc {
-				success++
-			}
-		} else {
-			pending++
-		}
-	}
-	return
+// GetCurrentVersion 获取当前应用版本。
+func (a *App) GetCurrentVersion() string {
+	return updater.GetCurrentVersion()
 }
 
 // ---- MoeMail ----
@@ -359,37 +302,6 @@ func (a *App) ResetResultOutputDir() map[string]interface{} {
 	return map[string]interface{}{"success": true, "path": path}
 }
 
-// GetProxy 返回当前全局代理（空字符串=直连）
-func (a *App) GetProxy() string {
-	return storage.GetProxy()
-}
-
-// SetProxy 保存全局代理；输入的简写（host:port:user:pass 等）会被自动归一化；
-// 保存后会探测代理出口 IP 与归属信息并一并返回。
-func (a *App) SetProxy(raw string) map[string]interface{} {
-	normalized, err := storage.SetProxy(raw)
-	if err != nil {
-		return map[string]interface{}{"error": err.Error()}
-	}
-	resp := map[string]interface{}{"success": true, "proxy": normalized}
-	if normalized != "" {
-		resp["detect"] = proxy.Detect(normalized)
-	}
-	return resp
-}
-
-// DetectProxy 单独探测一个代理（不保存），用于"测试连接"
-func (a *App) DetectProxy(raw string) proxy.Info {
-	normalized := storage.NormalizeProxyAddress(raw)
-	return proxy.Detect(normalized)
-}
-
-// ResetProxy 清空代理，恢复直连
-func (a *App) ResetProxy() map[string]interface{} {
-	storage.ResetProxy()
-	return map[string]interface{}{"success": true}
-}
-
 // GetLanguage 获取当前界面语言代码，空字符串表示未设置（前端应回落到 OS 语言）
 func (a *App) GetLanguage() string {
 	return storage.GetLanguage()
@@ -408,10 +320,6 @@ func (a *App) SaveAppSettings(settings storage.AppSettings) map[string]interface
 	}
 	storage.ConfigurePersistentLogs(saved.PersistentLogs, saved.LogRetentionDays)
 	return map[string]interface{}{"success": true, "settings": saved}
-}
-
-func (a *App) GetLogsDir() string {
-	return storage.GetLogsDir()
 }
 
 func (a *App) OpenLogsDir() {

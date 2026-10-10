@@ -15,7 +15,6 @@ type State struct {
 	completed int
 	success   int
 	failed    int
-	results   []map[string]interface{}
 	startTime time.Time
 	logs      []string
 	logsMu    sync.Mutex
@@ -40,7 +39,6 @@ func (s *State) beginBatchLocked(count int) *taskBatch {
 	s.completed = 0
 	s.success = 0
 	s.failed = 0
-	s.results = nil
 	s.startTime = time.Now()
 	return batch
 }

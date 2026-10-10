@@ -15,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"reg_go/internal/storage"
 )
 
 // OutlookAccount Outlook 邮箱账号
@@ -110,11 +108,6 @@ func (a OutlookAccount) mailMode() string {
 	return normalizeOutlookMode(a.Mode)
 }
 
-// RefreshOutlookToken 用 refresh_token 获取 access_token（优先走全局代理，失败时降级直连）
-func RefreshOutlookToken(acc OutlookAccount) (string, error) {
-	return RefreshOutlookTokenWithProxy(acc, storage.GetProxy())
-}
-
 // RefreshOutlookTokenWithProxy refreshes a token using the explicit mailbox proxy policy.
 func RefreshOutlookTokenWithProxy(acc OutlookAccount, proxyURL string) (string, error) {
 	form := url.Values{
@@ -163,11 +156,6 @@ type imapClient struct {
 	conn   net.Conn
 	reader *bufio.Reader
 	tag    int
-}
-
-// newIMAPClient 连接 Outlook IMAP（优先走全局代理，代理被封端口时自动降级直连）
-func newIMAPClient() (*imapClient, error) {
-	return newIMAPClientWithProxy(storage.GetProxy())
 }
 
 func newIMAPClientWithProxy(proxyURL string) (*imapClient, error) {
@@ -429,16 +417,6 @@ func (c *imapClient) fetchLatestBody(seq int) (string, error) {
 	return raw, nil
 }
 
-// WaitForOTP 通过 IMAP 轮询等待 AWS 验证码
-func WaitForOTP(acc OutlookAccount, beforeCount, timeout, interval int) (string, error) {
-	return WaitForOTPWithProxy(acc, beforeCount, timeout, interval, storage.GetProxy())
-}
-
-// WaitForOTPWithProxy polls Outlook through the selected mailbox network policy.
-func WaitForOTPWithProxy(acc OutlookAccount, beforeCount, timeout, interval int, proxyURL string) (string, error) {
-	return WaitForOTPWithMailboxCountsProxy(acc, OutlookMailboxCounts{Inbox: beforeCount, Junk: -1}, timeout, interval, proxyURL)
-}
-
 type imapPollFolder struct {
 	mailbox string
 	label   string
@@ -555,22 +533,6 @@ func WaitForOTPWithMailboxCountsProxy(acc OutlookAccount, counts OutlookMailboxC
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 	return "", fmt.Errorf("等待验证码超时 (%ds)", timeout)
-}
-
-// GetInboxCount 获取收件箱当前邮件数量（带完整重连重试）
-func GetInboxCount(acc OutlookAccount) (int, error) {
-	return GetInboxCountWithProxy(acc, storage.GetProxy())
-}
-
-// GetInboxCountWithProxy reads the baseline count through the explicit mailbox proxy.
-func GetInboxCountWithProxy(acc OutlookAccount, proxyURL string) (int, error) {
-	counts, err := GetOutlookMailboxCountsWithProxy(acc, proxyURL)
-	return counts.Inbox, err
-}
-
-// GetOutlookMailboxCounts records Inbox and Junk counts before requesting an OTP.
-func GetOutlookMailboxCounts(acc OutlookAccount) (OutlookMailboxCounts, error) {
-	return GetOutlookMailboxCountsWithProxy(acc, storage.GetProxy())
 }
 
 // GetOutlookMailboxCountsWithProxy reads both Outlook OTP folder baselines.

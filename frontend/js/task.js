@@ -1,28 +1,5 @@
 // ===== 任务控制 + 更新系统 + 状态轮询 =====
 
-function _tkT(key, varsOrFallback, fallbackMaybe) {
-  var vars = null, fallback = null;
-  if (typeof varsOrFallback === 'string') {
-    fallback = varsOrFallback;
-  } else if (varsOrFallback && typeof varsOrFallback === 'object') {
-    vars = varsOrFallback;
-    if (typeof fallbackMaybe === 'string') fallback = fallbackMaybe;
-  }
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key, vars);
-    if (v && v !== key) return v;
-  }
-  if (fallback != null) {
-    if (vars) {
-      return fallback.replace(/\{(\w+)\}/g, function(_, k) {
-        return vars[k] != null ? vars[k] : '{' + k + '}';
-      });
-    }
-    return fallback;
-  }
-  return key;
-}
-
 function formatTime(seconds) {
   seconds = Math.round(seconds);
   if (seconds < 60) return seconds + 's';
@@ -112,9 +89,9 @@ function renderUnifiedLogs() {
       navigator.clipboard.writeText(text).then(function() {
         line.classList.add('log-copied');
         setTimeout(function() { line.classList.remove('log-copied'); }, 600);
-        if (typeof showToast === 'function') showToast(_tkT('toast.copied', '复制成功'), 'success');
+        if (typeof showToast === 'function') showToast(tr('toast.copied', '复制成功'), 'success');
       }).catch(function(err) {
-        if (typeof showToast === 'function') showToast(_tkT('toast.copyFailed', '复制失败') + ': ' + err.message, 'error');
+        if (typeof showToast === 'function') showToast(tr('toast.copyFailed', '复制失败') + ': ' + err.message, 'error');
       });
     });
     box.dataset.copyBound = '1';
@@ -125,7 +102,7 @@ function renderUnifiedLogs() {
   var logs = window._kiroLogs || [];
   var html;
   if (!logs.length) {
-    html = '<span style="color:var(--text-muted);">' + _tkT('logs.empty', '暂无日志') + '</span>';
+    html = '<span style="color:var(--text-muted);">' + tr('logs.empty', '暂无日志') + '</span>';
   } else {
     html = logs.map(function(l) {
       return _formatLogLine(l.replace(/^\s+/, ''));
@@ -144,15 +121,15 @@ function copyLogs() {
 
   var logs = window._kiroLogs || [];
   if (!logs.length) {
-    showToast(_tkT('toast.logEmpty', '暂无日志可复制'), 'error');
+    showToast(tr('toast.logEmpty', '暂无日志可复制'), 'error');
     return;
   }
   var text = box.textContent;
 
   navigator.clipboard.writeText(text).then(function() {
-    showToast(_tkT('toast.logCopied', '日志已复制到剪贴板'), 'success');
+    showToast(tr('toast.logCopied', '日志已复制到剪贴板'), 'success');
   }).catch(function(e) {
-    showToast(_tkT('toast.copyFailed', '复制失败') + ': ' + e.message, 'error');
+    showToast(tr('toast.copyFailed', '复制失败') + ': ' + e.message, 'error');
   });
 }
 
@@ -223,7 +200,7 @@ function showTaskDesktopNotification(message) {
 }
 
 function notifyTaskComplete(taskName, success, failed, total) {
-  var msg = _tkT('toast.taskCompleteMsg', { name: taskName, s: success, f: failed, t: total }, '{name} 任务完成！成功 {s} / 失败 {f} / 共 {t}');
+  var msg = tr('toast.taskCompleteMsg', { name: taskName, s: success, f: failed, t: total }, '{name} 任务完成！成功 {s} / 失败 {f} / 共 {t}');
   showToast(msg, success > 0 ? 'success' : 'error');
   var soundEnabled = document.getElementById('cfg-sound');
   if (soundEnabled && soundEnabled.checked) {
@@ -245,9 +222,9 @@ async function startTask() {
     }
     updateUIStatus(true);
     closeNewTaskModal();
-    showToast(_tkT('toast.taskStarted', '任务已启动'));
+    showToast(tr('toast.taskStarted', '任务已启动'));
   } catch(e) {
-    showToast(_tkT('toast.taskStartFailed', '启动失败') + ': ' + e.message, 'error');
+    showToast(tr('toast.taskStartFailed', '启动失败') + ': ' + e.message, 'error');
   }
 }
 
@@ -275,13 +252,13 @@ function confirmAction() {
 async function stopTask() {
   try {
     var result = await window.go.main.App.StopTask();
-    if (result.error) { 
-      showToast(result.error, 'error'); 
-      return; 
+    if (result.error) {
+      showToast(result.error, 'error');
+      return;
     }
-    showToast(_tkT('toast.taskStopping', '正在停止任务...'));
+    showToast(tr('toast.taskStopping', '正在停止任务...'));
   } catch(e) {
-    showToast(_tkT('toast.taskStopFailed', '停止失败') + ': ' + (e.message || e), 'error');
+    showToast(tr('toast.taskStopFailed', '停止失败') + ': ' + (e.message || e), 'error');
   }
 }
 
@@ -322,10 +299,10 @@ async function checkUpdateManually() {
     if (result.hasUpdate) {
       showUpdateModal(result);
     } else {
-      showToast(_tkT('toast.upToDate', '当前已是最新版本'));
+      showToast(tr('toast.upToDate', '当前已是最新版本'));
     }
   } catch(e) {
-    showToast(_tkT('toast.checkUpdateFailed', '检查更新失败') + ': ' + e.message, 'error');
+    showToast(tr('toast.checkUpdateFailed', '检查更新失败') + ': ' + e.message, 'error');
   }
 }
 
@@ -335,6 +312,10 @@ setInterval(async function() {
   try {
     var s = await window.go.main.App.GetStatus();
     updateUIStatus(s.running);
+    document.getElementById('ov-kiro-success').textContent = s.success;
+    var attempts = s.success + s.failed;
+    var successRate = attempts > 0 ? Math.round(s.success / attempts * 100) : 0;
+    document.getElementById('ov-kiro-success-rate').textContent = successRate + '%';
     document.getElementById('st-progress').textContent = s.completed + '/' + s.total;
     document.getElementById('st-success').textContent = s.success;
     document.getElementById('st-failed').textContent = s.failed;

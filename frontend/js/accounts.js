@@ -4,29 +4,6 @@ var outlookCurrentPage = 1;
 var outlookPageSize = 10;
 var outlookAllAccounts = [];
 
-function _accT(key, varsOrFallback, fallbackMaybe) {
-  var vars = null, fallback = null;
-  if (typeof varsOrFallback === 'string') {
-    fallback = varsOrFallback;
-  } else if (varsOrFallback && typeof varsOrFallback === 'object') {
-    vars = varsOrFallback;
-    if (typeof fallbackMaybe === 'string') fallback = fallbackMaybe;
-  }
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key, vars);
-    if (v && v !== key) return v;
-  }
-  if (fallback != null) {
-    if (vars) {
-      return fallback.replace(/\{(\w+)\}/g, function(_, k) {
-        return vars[k] != null ? vars[k] : '{' + k + '}';
-      });
-    }
-    return fallback;
-  }
-  return key;
-}
-
 function openAddOutlookModal() {
   document.getElementById('add-outlook-modal').classList.add('show');
 }
@@ -39,7 +16,7 @@ function closeAddOutlookModal() {
 async function addOutlookAccounts() {
   var data = document.getElementById('cfg-outlook-data').value.trim();
   if (!data) {
-    showToast(_accT('accounts.inputRequired', '请先输入 Outlook 账号数据'), 'error');
+    showToast(tr('accounts.inputRequired', '请先输入 Outlook 账号数据'), 'error');
     return;
   }
   try {
@@ -51,9 +28,9 @@ async function addOutlookAccounts() {
 
     closeAddOutlookModal();
     await loadOutlookAccountsList();
-    showToast(_accT('accounts.addedSummary', { n: result.added, total: result.total }, '成功添加 {n} 个账号，当前共 {total} 个'));
+    showToast(tr('accounts.addedSummary', { n: result.added, total: result.total }, '成功添加 {n} 个账号，当前共 {total} 个'));
   } catch(e) {
-    showToast(_accT('toast.addFailed', '添加失败') + ': ' + e.message, 'error');
+    showToast(tr('toast.addFailed', '添加失败') + ': ' + e.message, 'error');
   }
 }
 
@@ -72,9 +49,9 @@ async function importOutlookFile() {
 
     await loadOutlookAccountsList();
     closeAddOutlookModal();
-    showToast(_accT('accounts.importSummary', { n: result.added, total: result.total }, '成功导入 {n} 个账号，当前共 {total} 个'));
+    showToast(tr('accounts.importSummary', { n: result.added, total: result.total }, '成功导入 {n} 个账号，当前共 {total} 个'));
   } catch(e) {
-    showToast(_accT('accounts.importFailed', '导入失败') + ': ' + e.message, 'error');
+    showToast(tr('accounts.importFailed', '导入失败') + ': ' + e.message, 'error');
   }
 }
 
@@ -110,27 +87,27 @@ function renderOutlookPage() {
     pageAccounts.forEach(function(acc, i) {
       var globalIdx = start + i;
       var status = acc.registered
-        ? (acc.success ? _accT('status.success', '成功') : _accT('status.failed', '失败'))
-        : _accT('status.unregistered', '未注册');
+        ? (acc.success ? tr('status.success', '成功') : tr('status.failed', '失败'))
+        : tr('status.unregistered', '未注册');
       var statusColor = acc.registered ? (acc.success ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)';
       var addedTime = acc.addedAt ? acc.addedAt.substring(5, 16) : '-';
       html += '<tr><td>' + (globalIdx+1) + '</td><td>' + acc.email + '</td>';
       html += '<td style="color:' + statusColor + ';font-weight:600;">' + status + '</td>';
       html += '<td style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">' + addedTime + '</td>';
-      html += '<td style="text-align:right;"><a href="javascript:void(0)" onclick="deleteOutlookAccount(\'' + acc.email + '\')" style="color:var(--danger);">' + _accT('common.delete', '删除') + '</a></td></tr>';
+      html += '<td style="text-align:right;"><a href="javascript:void(0)" onclick="deleteOutlookAccount(\'' + acc.email + '\')" style="color:var(--danger);">' + tr('common.delete', '删除') + '</a></td></tr>';
     });
     tbody.innerHTML = html;
 
     if (totalPages > 1) {
       pager.style.display = 'flex';
-      document.getElementById('outlook-pager-info').textContent = _accT('accounts.pagerInfo', { cur: outlookCurrentPage, total: totalPages, n: total }, '第 {cur} / {total} 页 (共 {n} 个)');
+      document.getElementById('outlook-pager-info').textContent = tr('accounts.pagerInfo', { cur: outlookCurrentPage, total: totalPages, n: total }, '第 {cur} / {total} 页 (共 {n} 个)');
       document.getElementById('outlook-pager-prev').disabled = outlookCurrentPage <= 1;
       document.getElementById('outlook-pager-next').disabled = outlookCurrentPage >= totalPages;
     } else {
       pager.style.display = 'none';
     }
   } else {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">' + _accT('accounts.emptyRow', '暂无邮箱账号') + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">' + tr('accounts.emptyRow', '暂无邮箱账号') + '</td></tr>';
     pager.style.display = 'none';
   }
 }
@@ -143,9 +120,9 @@ function changeOutlookPage(delta) {
 
 async function deleteOutlookAccount(email) {
   showConfirmModal(
-    _accT('accounts.deleteTitle', '删除账号'),
-    _accT('accounts.deleteMsg', { email: email }, '确认删除账号 {email} ?'),
-    _accT('accounts.deleteConfirm', '确认删除'),
+    tr('accounts.deleteTitle', '删除账号'),
+    tr('accounts.deleteMsg', { email: email }, '确认删除账号 {email} ?'),
+    tr('accounts.deleteConfirm', '确认删除'),
     async function() {
       try {
         var result = await window.go.main.App.DeleteOutlookAccount(email);
@@ -153,10 +130,10 @@ async function deleteOutlookAccount(email) {
           showToast(result.error, 'error');
           return;
         }
-        showToast(_accT('accounts.deletedOne', '账号已删除'));
+        showToast(tr('accounts.deletedOne', '账号已删除'));
         await loadOutlookAccountsList();
       } catch(e) {
-        showToast(_accT('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
+        showToast(tr('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
       }
     }
   );
@@ -164,9 +141,9 @@ async function deleteOutlookAccount(email) {
 
 function clearAllOutlookAccounts() {
   showConfirmModal(
-    _accT('accounts.clearAllTitle', '清空微软邮箱'),
-    _accT('accounts.clearAllMsg', '确认清空所有微软邮箱账号？此操作不可恢复！'),
-    _accT('accounts.clearAllConfirm', '确认清空'),
+    tr('accounts.clearAllTitle', '清空微软邮箱'),
+    tr('accounts.clearAllMsg', '确认清空所有微软邮箱账号？此操作不可恢复！'),
+    tr('accounts.clearAllConfirm', '确认清空'),
     async function() {
       try {
         var result = await window.go.main.App.ClearOutlookAccounts();
@@ -174,10 +151,10 @@ function clearAllOutlookAccounts() {
           showToast(result.error, 'error');
           return;
         }
-        showToast(_accT('accounts.allCleared', '已清空所有账号'));
+        showToast(tr('accounts.allCleared', '已清空所有账号'));
         await loadOutlookAccountsList();
       } catch(e) {
-        showToast(_accT('toast.clearFailed', '清空失败') + ': ' + e.message, 'error');
+        showToast(tr('toast.clearFailed', '清空失败') + ': ' + e.message, 'error');
       }
     }
   );
@@ -186,13 +163,13 @@ function clearAllOutlookAccounts() {
 function clearRegisteredOutlookAccounts() {
   var registered = outlookAllAccounts.filter(function(a) { return a.registered; }).length;
   if (!registered) {
-    showToast(_accT('accounts.noRegistered', '没有已注册的账号'));
+    showToast(tr('accounts.noRegistered', '没有已注册的账号'));
     return;
   }
   showConfirmModal(
-    _accT('accounts.clearRegisteredTitle', '清除已注册'),
-    _accT('accounts.clearRegisteredMsg', { n: registered }, '确认删除 {n} 个已注册（成功/失败）的账号？'),
-    _accT('accounts.deleteConfirm', '确认删除'),
+    tr('accounts.clearRegisteredTitle', '清除已注册'),
+    tr('accounts.clearRegisteredMsg', { n: registered }, '确认删除 {n} 个已注册（成功/失败）的账号？'),
+    tr('accounts.deleteConfirm', '确认删除'),
     async function() {
       try {
         var result = await window.go.main.App.ClearRegisteredOutlookAccounts();
@@ -200,10 +177,10 @@ function clearRegisteredOutlookAccounts() {
           showToast(result.error, 'error');
           return;
         }
-        showToast(_accT('toast.accountsDeleted', { n: (result.removed || 0) }, '已删除 {n} 个账号'));
+        showToast(tr('toast.accountsDeleted', { n: (result.removed || 0) }, '已删除 {n} 个账号'));
         await loadOutlookAccountsList();
       } catch(e) {
-        showToast(_accT('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
+        showToast(tr('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
       }
     }
   );
@@ -246,7 +223,7 @@ function closeAddICloudModal() {
 async function addICloudAccounts() {
   var data = document.getElementById('cfg-icloud-data').value.trim();
   if (!data) {
-    showToast(_accT('accounts.icloudInputRequired', '请先输入 iCloud 账号数据'), 'error');
+    showToast(tr('accounts.icloudInputRequired', '请先输入 iCloud 账号数据'), 'error');
     return;
   }
   try {
@@ -257,9 +234,9 @@ async function addICloudAccounts() {
     }
     closeAddICloudModal();
     await loadICloudAccountsList();
-    showToast(_accT('accounts.addedSummary', { n: result.added, total: result.total }, '成功添加 {n} 个账号，当前共 {total} 个'));
+    showToast(tr('accounts.addedSummary', { n: result.added, total: result.total }, '成功添加 {n} 个账号，当前共 {total} 个'));
   } catch(e) {
-    showToast(_accT('toast.addFailed', '添加失败') + ': ' + e.message, 'error');
+    showToast(tr('toast.addFailed', '添加失败') + ': ' + e.message, 'error');
   }
 }
 
@@ -274,9 +251,9 @@ async function importICloudFile() {
     }
     await loadICloudAccountsList();
     closeAddICloudModal();
-    showToast(_accT('accounts.importSummary', { n: result.added, total: result.total }, '成功导入 {n} 个账号，当前共 {total} 个'));
+    showToast(tr('accounts.importSummary', { n: result.added, total: result.total }, '成功导入 {n} 个账号，当前共 {total} 个'));
   } catch(e) {
-    showToast(_accT('accounts.importFailed', '导入失败') + ': ' + e.message, 'error');
+    showToast(tr('accounts.importFailed', '导入失败') + ': ' + e.message, 'error');
   }
 }
 
@@ -302,26 +279,26 @@ function renderICloudPage() {
     var html = '';
     accounts.forEach(function(acc, i) {
       var status = acc.registered
-        ? (acc.success ? _accT('status.success', '成功') : _accT('status.failed', '失败'))
-        : _accT('status.unregistered', '未注册');
+        ? (acc.success ? tr('status.success', '成功') : tr('status.failed', '失败'))
+        : tr('status.unregistered', '未注册');
       var statusColor = acc.registered ? (acc.success ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)';
       var addedTime = acc.addedAt ? acc.addedAt.substring(5, 16) : '-';
       html += '<tr><td>' + (i+1) + '</td><td>' + acc.email + '</td>';
       html += '<td style="color:' + statusColor + ';font-weight:600;">' + status + '</td>';
       html += '<td style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">' + addedTime + '</td>';
-      html += '<td style="text-align:right;"><a href="javascript:void(0)" onclick="deleteICloudAccount(\'' + acc.email + '\')" style="color:var(--danger);">' + _accT('common.delete', '删除') + '</a></td></tr>';
+      html += '<td style="text-align:right;"><a href="javascript:void(0)" onclick="deleteICloudAccount(\'' + acc.email + '\')" style="color:var(--danger);">' + tr('common.delete', '删除') + '</a></td></tr>';
     });
     tbody.innerHTML = html;
   } else {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">' + _accT('accounts.emptyRow', '暂无 iCloud 账号') + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">' + tr('accounts.emptyRow', '暂无 iCloud 账号') + '</td></tr>';
   }
 }
 
 async function deleteICloudAccount(email) {
   showConfirmModal(
-    _accT('accounts.deleteTitle', '删除账号'),
-    _accT('accounts.deleteMsg', { email: email }, '确认删除账号 {email} ?'),
-    _accT('accounts.deleteConfirm', '确认删除'),
+    tr('accounts.deleteTitle', '删除账号'),
+    tr('accounts.deleteMsg', { email: email }, '确认删除账号 {email} ?'),
+    tr('accounts.deleteConfirm', '确认删除'),
     async function() {
       try {
         var result = await window.go.main.App.DeleteICloudAccount(email);
@@ -329,10 +306,10 @@ async function deleteICloudAccount(email) {
           showToast(result.error, 'error');
           return;
         }
-        showToast(_accT('accounts.deletedOne', '账号已删除'));
+        showToast(tr('accounts.deletedOne', '账号已删除'));
         await loadICloudAccountsList();
       } catch(e) {
-        showToast(_accT('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
+        showToast(tr('toast.deleteFailed', '删除失败') + ': ' + e.message, 'error');
       }
     }
   );
@@ -340,9 +317,9 @@ async function deleteICloudAccount(email) {
 
 function clearAllICloudAccounts() {
   showConfirmModal(
-    _accT('accounts.clearICloudTitle', '清空 iCloud 邮箱'),
-    _accT('accounts.clearICloudMsg', '确认清空所有 iCloud 邮箱账号？此操作不可恢复！'),
-    _accT('accounts.clearAllConfirm', '确认清空'),
+    tr('accounts.clearICloudTitle', '清空 iCloud 邮箱'),
+    tr('accounts.clearICloudMsg', '确认清空所有 iCloud 邮箱账号？此操作不可恢复！'),
+    tr('accounts.clearAllConfirm', '确认清空'),
     async function() {
       try {
         var result = await window.go.main.App.ClearICloudAccounts();
@@ -350,10 +327,10 @@ function clearAllICloudAccounts() {
           showToast(result.error, 'error');
           return;
         }
-        showToast(_accT('accounts.allCleared', '已清空所有账号'));
+        showToast(tr('accounts.allCleared', '已清空所有账号'));
         await loadICloudAccountsList();
       } catch(e) {
-        showToast(_accT('toast.clearFailed', '清空失败') + ': ' + e.message, 'error');
+        showToast(tr('toast.clearFailed', '清空失败') + ': ' + e.message, 'error');
       }
     }
   );

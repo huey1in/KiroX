@@ -31,7 +31,7 @@ function getPageTitle(pageId) {
 }
 function switchPage(pageId) {
   _currentPageId = pageId;
-  document.querySelectorAll('.page, .page-placeholder, .page-iframe').forEach(function(p) {
+  document.querySelectorAll('.page').forEach(function(p) {
     p.classList.remove('active');
   });
   var target = document.getElementById('page-' + pageId);
@@ -40,11 +40,6 @@ function switchPage(pageId) {
     item.classList.toggle('active', item.getAttribute('data-page') === pageId);
   });
   document.getElementById('titlebar-text').textContent = getPageTitle(pageId);
-  if (pageId === 'overview') {
-    startOverviewTimer();
-  } else {
-    stopOverviewTimer();
-  }
   if (pageId === 'ip') {
     loadIpList();
   }
@@ -63,8 +58,7 @@ function switchPage(pageId) {
 
 async function loadInfoVersion() {
   try {
-    var data = await window.go.main.App.GetOverview();
-    var ver = (data && data.version) ? data.version : '';
+    var ver = await window.go.main.App.GetCurrentVersion();
     if (ver) {
       ['info-version-detail', 'info-version-detail2'].forEach(function(id) {
         var el = document.getElementById(id);
@@ -108,15 +102,6 @@ async function loadInfoVersion() {
   } catch(e) {
     setInfoChangelogState('error');
   }
-}
-
-// 翻译辅助：t() 返回 key 自身时回落到 fallback
-function tr(key, fallback) {
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key);
-    if (v && v !== key) return v;
-  }
-  return fallback != null ? fallback : key;
 }
 
 // 存储目录设置
@@ -191,87 +176,6 @@ async function resetResultOutputDir() {
     }
     document.getElementById('cfg-result-output-dir').value = result.path;
     showToast(tr('toast.outputDirReset', '已重置为默认输出目录'));
-  } catch(e) {
-    showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');
-  }
-}
-
-// 代理设置
-async function loadProxy() {
-  try {
-    var p = await window.go.main.App.GetProxy();
-    var el = document.getElementById('cfg-proxy');
-    if (el) el.value = p || '';
-  } catch(e) {}
-}
-
-var proxyDetectView = { state: 'hidden', payload: null };
-
-function renderProxyDetectCard(state, payload) {
-  proxyDetectView = { state: state, payload: payload || null };
-  var box = document.getElementById('proxy-detect-card');
-  if (!box) return;
-  if (state === 'hidden') { box.style.display = 'none'; box.innerHTML = ''; return; }
-  box.style.display = 'block';
-  var base = 'border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;';
-  if (state === 'loading') {
-    box.style.cssText = base + 'background:var(--card-bg, transparent);color:var(--muted);';
-    box.textContent = tr('settings.proxyDetecting', '正在检测代理出口…');
-    return;
-  }
-  if (state === 'ok') {
-    var loc = [payload.country, payload.region, payload.city].filter(Boolean).join(' · ');
-    box.style.cssText = base + 'background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.35);';
-    box.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span style="font-weight:600;color:#10b981;">✓ ' + tr('settings.proxyAvailable', '可用') + '</span>' +
-        '<span style="padding:1px 6px;border-radius:4px;background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:600;">' + (payload.scheme || '').toUpperCase() + '</span>' +
-        '<span style="color:var(--text);font-weight:600;">' + (payload.ip || '') + '</span>' +
-        (loc ? '<span style="color:var(--muted);">· ' + loc + '</span>' : '') +
-      '</div>' +
-      (payload.isp ? '<div style="margin-top:4px;color:var(--muted);font-size:11px;">' + payload.isp + '</div>' : '');
-    return;
-  }
-  // error
-  box.style.cssText = base + 'background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.35);color:#ef4444;';
-  box.textContent = '✗ ' + tr('settings.proxyDetectFailed', '检测失败') + ': ' + (payload && payload.error ? payload.error : tr('ip.unknownError', '未知错误'));
-}
-
-async function saveProxy() {
-  var el = document.getElementById('cfg-proxy');
-  if (!el) return;
-  try {
-    if (el.value.trim()) renderProxyDetectCard('loading');
-    else renderProxyDetectCard('hidden');
-    var result = await window.go.main.App.SetProxy(el.value.trim());
-    if (result.error) {
-      showToast(result.error, 'error');
-      renderProxyDetectCard('hidden');
-      return;
-    }
-    el.value = result.proxy || '';
-    if (!result.proxy) {
-      renderProxyDetectCard('hidden');
-      showToast(tr('toast.proxyCleared', '代理已清除'));
-      return;
-    }
-    showToast(tr('toast.proxySaved', '代理已保存'));
-    var d = result.detect;
-    if (d && d.ok) renderProxyDetectCard('ok', d);
-    else renderProxyDetectCard('error', d || {});
-  } catch(e) {
-    showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');
-    renderProxyDetectCard('error', { error: e.message });
-  }
-}
-
-async function resetProxy() {
-  try {
-    await window.go.main.App.ResetProxy();
-    var el = document.getElementById('cfg-proxy');
-    if (el) el.value = '';
-    renderProxyDetectCard('hidden');
-    showToast(tr('toast.proxyCleared', '代理已清除'));
   } catch(e) {
     showToast(tr('toast.operationFailed', '操作失败') + ': ' + e.message, 'error');
   }
@@ -551,9 +455,9 @@ function clearFingerprintCache() { showConfirmModal(tr('settings.clearFingerprin
 // 初始化加载
 async function loadConfig() {
   console.log('[启动] 开始初始化...');
-  
+
   // 默认禁用所有功能，等待卡密验证
-  
+
   let retries = 0;
   while ((!window.go || !window.go.main || !window.go.main.App) && retries < 100) {
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -588,25 +492,23 @@ async function loadConfig() {
     mainContainer.style.top = '0';
     mainContainer.style.left = '0';
     mainContainer.style.zIndex = '1';
-    
+
     // 隐藏骨架屏
     const skeleton = document.getElementById('skeleton-loader');
     if (skeleton) {
       skeleton.style.display = 'none';
     }
-    
+
     console.log('[启动] main-container 已显示');
   } else {
     console.error('[启动] 找不到 main-container 元素');
   }
-  
+
   await loadAppSettings();
   loadOutlookAccountsList();
   loadDataDir();
   loadResultOutputDir();
-  loadProxy();
   if (typeof loadProxyOptions === 'function') loadProxyOptions();
-  startOverviewTimer();
   console.log('[启动] 初始化完成');
 }
 
@@ -641,7 +543,6 @@ window.addEventListener('DOMContentLoaded', async function() {
       savedSettingsSnapshot = snapshotAppSettings(savedLanguageState);
     }
     renderInfoChangelogState();
-    renderProxyDetectCard(proxyDetectView.state, proxyDetectView.payload);
     updateSettingsDirtyState();
   });
   // 启动时静默检查更新

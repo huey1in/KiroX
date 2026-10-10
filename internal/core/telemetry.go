@@ -60,12 +60,6 @@ func (r *Registrar) PostFingerprintMetricSafe(metricName, value, operation strin
 	}
 }
 
-// SendUserEvent 上报页面事件 (signin.aws 页面加载/提交行为)。
-// 对照 HAR entry 97: PAGE_LOAD / CREDENTIAL_COLLECTION。
-func (r *Registrar) SendUserEvent(eventType, pageName string, timeSpentOnPage int64) error {
-	return r.sendUserEvent(r.Cfg.DirectoryID, eventType, pageName, timeSpentOnPage)
-}
-
 func (r *Registrar) sendUserEvent(directoryID, eventType, pageName string, timeSpentOnPage int64) error {
 	api := r.Cfg.SigninBase + "/platform/user-event/send-event"
 	ref := fmt.Sprintf("%s/platform/%s/signup?registrationCode=%s&state=%s",
@@ -112,10 +106,6 @@ func (r *Registrar) sendUserEventSafe(directoryID, eventType, pageName string, t
 	if err := r.sendUserEvent(directoryID, eventType, pageName, timeSpentOnPage); err != nil {
 		log.Printf("[遥测] %s/%s 上报失败: %v", pageName, eventType, err)
 	}
-}
-
-func (r *Registrar) SendUserEventSafe(eventType, pageName string, timeSpentOnPage int64) {
-	r.sendUserEventSafe(r.Cfg.DirectoryID, eventType, pageName, timeSpentOnPage)
 }
 
 // PostD2CEvent 上报 D2C 遥测事件 (timeTakenToFetchVID)。

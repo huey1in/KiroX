@@ -83,18 +83,6 @@ html, body {
     background: rgba(255,255,255,0.06);
 }
 
-[data-theme="dark"] .sidebar-traffic div {
-    opacity: 0.7;
-}
-
-/* Disable transitions during theme switch to prevent flicker */
-.theme-switching,
-.theme-switching *,
-.theme-switching *::before,
-.theme-switching *::after {
-  transition: none !important;
-}
-
 /* View Transition for theme toggle */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -192,23 +180,6 @@ html, body {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.nav-icon-img {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  object-fit: contain;
-  opacity: 0.8;
-  transition: all 0.3s ease;
-}
-
-.nav-item:hover .nav-icon-img {
-  opacity: 0.9;
-}
-
-.nav-item.active .nav-icon-img {
-  opacity: 1;
 }
 
 .nav-item .nav-dot {
@@ -314,110 +285,6 @@ html, body {
   margin: 0 auto;
   padding: 28px 32px;
 }
-
-/* ===== Placeholder pages ===== */
-.page-placeholder {
-  display: none;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-.page-placeholder.active { display: flex; }
-
-.placeholder-icon {
-  width: 64px; height: 64px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-  color: var(--text-muted);
-}
-
-.placeholder-icon svg {
-  width: 28px; height: 28px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.placeholder-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-
-.placeholder-desc {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* ===== Iframe page ===== */
-.page-iframe {
-  display: none;
-  height: 100%;
-}
-.page-iframe.active { display: block; }
-.page-iframe iframe {
-  width: 100%; height: 100%;
-  border: none;
-}
-
-/* ===== Tabs ===== */
-.tab-bar {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 24px;
-  position: sticky;
-  top: 0;
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  z-index: 10;
-  padding: 0 32px;
-}
-
-.tab-item {
-  padding: 12px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
-  user-select: none;
-}
-
-.tab-item:hover {
-  color: var(--text-secondary);
-}
-
-.tab-item.active {
-  color: var(--text);
-  border-bottom-color: var(--accent);
-}
-
-.tab-panel {
-  display: none;
-  padding: 0 32px 32px;
-}
-
-.tab-panel.active {
-  display: block;
-}
-
-/* ===== Logs Page (统一日志) ===== */
-.logs-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
 .logs-panel {
   background: rgba(255,255,255,0.7);
   border: 1px solid rgba(255,255,255,0.6);
@@ -445,47 +312,15 @@ html, body {
   border: none;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
-.log-filter-btn {
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.log-filter-btn:hover {
-  background: var(--bg-hover);
-}
-.log-filter-btn.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
 
 @media (max-width: 1024px) {
-  .dashboard-grid { 
-    grid-template-columns: 1fr; 
-  }
   .db-stats-row {
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
-  .db-detail-grid {
-    grid-template-columns: 1fr;
-  }
-  .db-outlook-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  /* MoeMail 在小屏幕上保持 2 列 */
 }
 
 @media (max-width: 768px) {
-  .input-grid-3 { 
-    grid-template-columns: 1fr; 
-  }
-  .stats-row {
-    grid-template-columns: 1fr;
-  }
   .btn-row {
     flex-direction: column;
   }

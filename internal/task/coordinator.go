@@ -212,7 +212,6 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 	taskConfig := core.NewConfig()
 	taskConfig.OTPTimeout = settings.OTPTimeoutSeconds
 	taskConfig.HTTPRetries = map[string]int{"fast": 0, "standard": 2, "stable": 3}[settings.RetryProfile]
-	taskConfig.EmailProvider = emailProvider
 	taskConfig.Proxy = req.Proxy
 	switch settings.EmailProxyMode {
 	case "follow-task":
@@ -401,8 +400,6 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 			}
 
 			taskCfg.CloudMailProvider = provider
-			cfgCopy := config
-			taskCfg.CloudMailConfig = &cfgCopy
 			currentEmail = provider.GetAddress()
 		} else if emailProvider == "mailnest" {
 			config := req.MailNestConfig
@@ -417,8 +414,6 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 				return
 			}
 			taskCfg.MailNestProvider = provider
-			cfgCopy := config
-			taskCfg.MailNestConfig = &cfgCopy
 			currentEmail = address
 		} else if emailProvider == "icloud" {
 			// iCloud 模式：从共享池领取账号
@@ -517,7 +512,6 @@ func runBatch(batch *taskBatch, req StartTaskRequest, emailProvider string, outl
 		itemDuration := time.Since(itemStart).Seconds()
 
 		Manager.mu.Lock()
-		Manager.results = append(Manager.results, result)
 		Manager.completed++
 
 		success := result["status"] == "success"

@@ -1,13 +1,12 @@
 // ===== MailNest 配置管理 =====
 let mailnestConfig = {};
 
-
 // 内联测试 MailNest 配置
 async function inlineTestMailNest() {
     var apiKey = document.getElementById('mailnest-inline-apikey').value.trim();
     var projectCode = document.getElementById('mailnest-inline-project-code').value.trim();
     if (!projectCode || !apiKey) {
-        showToast(_mmT('mailnest.requiredKeyProjectCodeShort', '请填写 Key 和 项目代码'), 'error');
+        showToast(tr('mailnest.requiredKeyProjectCodeShort', '请填写 Key 和 项目代码'), 'error');
         return;
     }
     var btn = document.getElementById('mailnest-inline-test-btn');
@@ -38,7 +37,7 @@ async function inlineAddMailNest() {
     var apiKey = document.getElementById('mailnest-inline-apikey').value.trim();
     var projectCode = document.getElementById('mailnest-inline-project-code').value.trim();
     if (!projectCode || !apiKey) {
-        showToast(_mmT('mailnest.requiredKeyProjectCodeShort', '请填写 Key 和 项目代码'), 'error');
+        showToast(tr('mailnest.requiredKeyProjectCodeShort', '请填写 Key 和 项目代码'), 'error');
         return;
     }
 
@@ -63,12 +62,12 @@ async function inlineAddMailNest() {
     }
 
     if (!testResult || testResult.error) {
-        var errMsg = (testResult && testResult.error) || _mmT('moemail.testFailedShort', '测试失败');
+        var errMsg = (testResult && testResult.error) || tr('moemail.testFailedShort', '测试失败');
         if (statusEl) {
             statusEl.style.color = 'var(--danger)';
             clearLocalizedStatus(statusEl, errMsg);
         }
-        showToast(_mmT('moemail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
+        showToast(tr('moemail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
         return;
     }
 
@@ -76,13 +75,13 @@ async function inlineAddMailNest() {
     mailnestConfig['projectCode'] = projectCode;
     const saveResult = await window.go.main.App.SaveMailNestConfig(JSON.stringify(mailnestConfig));
     if (saveResult.error) {
-        showToast(_mmT('toast.operationFailed', '保存失败') + ': ' + saveResult.error, 'error');
+        showToast(tr('toast.operationFailed', '保存失败') + ': ' + saveResult.error, 'error');
         return;
     }
     // 更新设置页摘要
     const summaryEl = document.getElementById('settings-mailnest-summary');
     if (summaryEl) {
-        summaryEl.textContent = _mmT('mailnest.summaryActive', "已配置");
+        summaryEl.textContent = tr('mailnest.summaryActive', "已配置");
     }
 }
 
@@ -102,11 +101,11 @@ function updateMailNestUI() {
     if (mailnestConfig.projectCode) {
         document.getElementById('mailnest-inline-apikey').value = mailnestConfig.apiKey;
         document.getElementById('mailnest-inline-project-code').value = mailnestConfig.projectCode;
-        summaryEl.textContent = _mmT('mailnest.summaryActive', "已配置");
+        summaryEl.textContent = tr('mailnest.summaryActive', "已配置");
     } else {
         document.getElementById('mailnest-inline-apikey').value = '';
         document.getElementById('mailnest-inline-project-code').value = '';
-        summaryEl.textContent = _mmT('mailnest.summaryNone', "未配置");
+        summaryEl.textContent = tr('mailnest.summaryNone', "未配置");
     }
 }
 

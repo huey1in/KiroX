@@ -330,11 +330,6 @@ type CloudMailProvider struct {
 	initialMaxEmailID int64
 }
 
-// NewCloudMailProvider 创建一个 cloud-mail 邮箱（执行 addUser）
-func NewCloudMailProvider(config CloudMailConfig, name, domain string) (*CloudMailProvider, error) {
-	return NewCloudMailProviderContext(context.Background(), config, name, domain)
-}
-
 func NewCloudMailProviderContext(ctx context.Context, config CloudMailConfig, name, domain string) (*CloudMailProvider, error) {
 	return NewCloudMailProviderContextWithProxy(ctx, config, name, domain, "")
 }

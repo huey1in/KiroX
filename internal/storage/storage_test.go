@@ -34,8 +34,6 @@ func resetStorageGlobalsForTest() {
 	_dataDirOnce = sync.Once{}
 	_resultOutputDir = ""
 	_resultOutputOnce = sync.Once{}
-	_proxy = ""
-	_proxyOnce = sync.Once{}
 	_language = ""
 	_languageOnce = sync.Once{}
 }

@@ -148,8 +148,8 @@ function setInlineTestButton(btn, testing, testingKey) {
   btn.disabled = !!testing;
   var label = btn.querySelector('[data-i18n="accounts.testConnection"]');
   if (label) label.textContent = testing
-    ? _uiT(testingKey || 'moemail.testing', '测试中...')
-    : _uiT('accounts.testConnection', '测试连接');
+    ? tr(testingKey || 'moemail.testing', '测试中...')
+    : tr('accounts.testConnection', '测试连接');
 }
 
 function setLocalizedStatus(el, key, vars, fallback) {
@@ -157,7 +157,7 @@ function setLocalizedStatus(el, key, vars, fallback) {
   el.dataset.i18nDynamic = key;
   el.dataset.i18nDynamicVars = JSON.stringify(vars || {});
   el.dataset.i18nDynamicFallback = fallback || '';
-  el.textContent = _uiT(key, vars || {}, fallback || key);
+  el.textContent = tr(key, vars || {}, fallback || key);
 }
 
 function clearLocalizedStatus(el, text) {
@@ -206,48 +206,35 @@ function selectEmailProvider(provider) {
   }
 }
 
-function _uiT(key, varsOrFallback, fallbackMaybe) {
-  var vars = null;
-  var fallback = fallbackMaybe;
-  if (typeof varsOrFallback === 'string') fallback = varsOrFallback;
-  else if (varsOrFallback && typeof varsOrFallback === 'object') vars = varsOrFallback;
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key, vars);
-    if (v && v !== key) return v;
-  }
-  if (fallback == null) return key;
-  return vars ? fallback.replace(/\{(\w+)\}/g, function(_, k) { return vars[k] != null ? vars[k] : '{' + k + '}'; }) : fallback;
-}
-
 function renderMoeMailDomains() {
   const listDiv = document.getElementById('cfg-moemail-domains-list');
   if (!listDiv) return;
   if (moeMailDomainViewState === 'loading' || moeMailDomainViewState === 'idle') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + _uiT('common.loading', '加载中...') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + tr('common.loading', '加载中...') + '</div>';
     return;
   }
   if (moeMailDomainViewState === 'empty') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + _uiT('moemail.noDomainsHint', '暂无配置，请先在设置页添加') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + tr('moemail.noDomainsHint', '暂无配置，请先在设置页添加') + '</div>';
     return;
   }
   if (moeMailDomainViewState === 'unavailable') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + _uiT('moemail.noActiveDomain', '暂无可用域名，请先测试配置') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + tr('moemail.noActiveDomain', '暂无可用域名，请先测试配置') + '</div>';
     return;
   }
   if (moeMailDomainViewState === 'error') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:12px;padding:12px;">' + _uiT('common.loadFailed', '加载失败') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:12px;padding:12px;">' + tr('common.loadFailed', '加载失败') + '</div>';
     return;
   }
   if (!selectedMoeMailDomains.length) selectedMoeMailDomains = ['__random__'];
   var html = '<div class="domain-mode-row">'
     + '<div class="domain-mode-btn" data-domain="__random__" onclick="toggleMoeMailDomain(\'__random__\')">'
     + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>'
-    + _uiT('register.modeRandom', '随机') + '</div>'
+    + tr('register.modeRandom', '随机') + '</div>'
     + '<div class="domain-mode-btn" data-domain="__all__" onclick="toggleMoeMailDomain(\'__all__\')">'
     + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>'
-    + _uiT('register.modeRoundRobin', '轮询') + '</div></div><div class="domain-chips-wrap">';
+    + tr('register.modeRoundRobin', '轮询') + '</div></div><div class="domain-chips-wrap">';
   html += allMoeMailDomains.map(function(item) {
-    return '<div class="domain-chip" data-domain="' + escapeHtml(item.domain) + '" onclick="toggleMoeMailDomain(\'' + escapeHtml(item.domain) + '\')" title="' + _uiT('register.configCount', { n: item.configs.length }, '{n} 个配置') + '">' + escapeHtml(item.domain) + '</div>';
+    return '<div class="domain-chip" data-domain="' + escapeHtml(item.domain) + '" onclick="toggleMoeMailDomain(\'' + escapeHtml(item.domain) + '\')" title="' + tr('register.configCount', { n: item.configs.length }, '{n} 个配置') + '">' + escapeHtml(item.domain) + '</div>';
   }).join('');
   listDiv.innerHTML = html + '</div>';
   updateDomainOptionStyles();
@@ -358,31 +345,31 @@ function renderCloudMailDomains() {
   const listDiv = document.getElementById('cfg-cloudmail-domains-list');
   if (!listDiv) return;
   if (cloudMailDomainViewState === 'loading' || cloudMailDomainViewState === 'idle') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + _uiT('common.loading', '加载中...') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + tr('common.loading', '加载中...') + '</div>';
     return;
   }
   if (cloudMailDomainViewState === 'empty') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + _uiT('cloudmail.noDomainsHint', '暂无配置，请先在邮箱池页添加') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + tr('cloudmail.noDomainsHint', '暂无配置，请先在邮箱池页添加') + '</div>';
     return;
   }
   if (cloudMailDomainViewState === 'unavailable') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + _uiT('cloudmail.noActiveDomain', '暂无可用域名，请先测试 Cloud-Mail 配置') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">' + tr('cloudmail.noActiveDomain', '暂无可用域名，请先测试 Cloud-Mail 配置') + '</div>';
     return;
   }
   if (cloudMailDomainViewState === 'error') {
-    listDiv.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:12px;padding:12px;">' + _uiT('common.loadFailed', '加载失败') + '</div>';
+    listDiv.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:12px;padding:12px;">' + tr('common.loadFailed', '加载失败') + '</div>';
     return;
   }
   if (!selectedCloudMailDomains.length) selectedCloudMailDomains = ['__random__'];
   var html = '<div class="domain-mode-row">'
     + '<div class="domain-mode-btn" data-domain="__random__" onclick="toggleCloudMailDomain(\'__random__\')">'
     + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>'
-    + _uiT('register.modeRandom', '随机') + '</div>'
+    + tr('register.modeRandom', '随机') + '</div>'
     + '<div class="domain-mode-btn" data-domain="__all__" onclick="toggleCloudMailDomain(\'__all__\')">'
     + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>'
-    + _uiT('register.modeRoundRobin', '轮询') + '</div></div><div class="domain-chips-wrap">';
+    + tr('register.modeRoundRobin', '轮询') + '</div></div><div class="domain-chips-wrap">';
   html += allCloudMailDomains.map(function(item) {
-    return '<div class="domain-chip" data-domain="' + escapeHtml(item.domain) + '" onclick="toggleCloudMailDomain(\'' + escapeHtml(item.domain) + '\')" title="' + _uiT('register.configCount', { n: item.configs.length }, '{n} 个配置') + '">' + escapeHtml(item.domain) + '</div>';
+    return '<div class="domain-chip" data-domain="' + escapeHtml(item.domain) + '" onclick="toggleCloudMailDomain(\'' + escapeHtml(item.domain) + '\')" title="' + tr('register.configCount', { n: item.configs.length }, '{n} 个配置') + '">' + escapeHtml(item.domain) + '</div>';
   }).join('');
   listDiv.innerHTML = html + '</div>';
   updateCloudMailDomainStyles();
@@ -469,6 +456,6 @@ window.addEventListener('i18n:changed', function() {
   document.querySelectorAll('[data-i18n-dynamic]').forEach(function(el) {
     var vars = {};
     try { vars = JSON.parse(el.dataset.i18nDynamicVars || '{}'); } catch (e) {}
-    el.textContent = _uiT(el.dataset.i18nDynamic, vars, el.dataset.i18nDynamicFallback || el.dataset.i18nDynamic);
+    el.textContent = tr(el.dataset.i18nDynamic, vars, el.dataset.i18nDynamicFallback || el.dataset.i18nDynamic);
   });
 });

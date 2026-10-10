@@ -4,34 +4,6 @@
   max-width: 1200px;
   margin: 0 auto;
 }
-.db-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-}
-.db-title {
-  font-size: 26px;
-  font-weight: 800;
-  color: #3b82f6;
-  letter-spacing: -0.5px;
-}
-.db-header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.db-version-tag {
-  padding: 4px 14px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
 
 /* 统计卡片行 */
 .db-stats-row {
@@ -60,22 +32,6 @@
   background: rgba(255,255,255,0.04);
   border-color: rgba(255,255,255,0.06);
 }
-.db-stat-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.db-icon-indigo { background: linear-gradient(135deg, #6366f1, #818cf8); }
-.db-icon-green  { background: linear-gradient(135deg, #10b981, #34d399); }
-.db-icon-cyan   { background: linear-gradient(135deg, #06b6d4, #22d3ee); }
-.db-icon-amber  { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-.db-icon-red    { background: linear-gradient(135deg, #ef4444, #f87171); }
-.db-icon-violet { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
-.db-icon-blue   { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
 
 .db-stat-label {
   font-size: 13px;
@@ -90,13 +46,6 @@
   font-family: var(--font-mono);
   letter-spacing: -1px;
   line-height: 1.1;
-}
-
-/* 服务详情区 */
-.db-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
 }
 .db-detail-section {
   background: rgba(255,255,255,0.7);
@@ -145,53 +94,6 @@
   align-items: center;
   gap: 8px;
 }
-.db-btn-refresh {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.db-btn-refresh:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-
-/* Badge */
-.db-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-.db-badge-idle {
-  background: #f3f4f6;
-  color: #9ca3af;
-  border: 1px solid #e5e7eb;
-}
-.db-badge-running {
-  background: #dcfce7;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-}
-[data-theme="dark"] .db-badge-idle {
-  background: rgba(156,163,175,0.12);
-  color: #9ca3af;
-  border-color: rgba(156,163,175,0.2);
-}
-[data-theme="dark"] .db-badge-running {
-  background: rgba(22,163,74,0.15);
-  color: #4ade80;
-  border-color: rgba(22,163,74,0.3);
-}
 
 /* 详情内容区 */
 .db-detail-body {
@@ -233,14 +135,6 @@
 }
 .db-num-green { font-weight: 700; color: #10b981; font-family: var(--font-mono); }
 .db-num-red   { font-weight: 700; color: #ef4444; font-family: var(--font-mono); }
-.db-num-blue  { font-weight: 700; color: #3b82f6; font-family: var(--font-mono); }
-.db-num-muted { font-weight: 700; color: var(--text-muted); font-family: var(--font-mono); }
-.db-sub-empty {
-  text-align: center;
-  padding: 20px 0;
-  font-size: 12px;
-  color: var(--text-muted);
-}
 
 /* 进度条 */
 .db-progress-track {
@@ -294,85 +188,4 @@
   .db-progress-track.is-running .db-progress-fill {
     animation: none;
   }
-}
-
-/* 详情底部 */
-.db-detail-footer {
-  padding: 0 24px 18px;
-}
-.db-btn-view {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: var(--radius);
-  background: #eff6ff;
-  color: #3b82f6;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.db-btn-view:hover {
-  background: #dbeafe;
-}
-[data-theme="dark"] .db-btn-view {
-  background: rgba(59,130,246,0.1);
-  color: #60a5fa;
-}
-[data-theme="dark"] .db-btn-view:hover {
-  background: rgba(59,130,246,0.18);
-}
-
-/* Outlook 网格 */
-.db-outlook-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  padding: 18px 24px;
-}
-
-/* MoeMail 网格（3列布局） */
-
-.db-outlook-item {
-  text-align: center;
-  padding: 16px 0;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-}
-.db-outlook-num {
-  font-size: 24px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  color: var(--text);
-  line-height: 1.2;
-}
-.db-outlook-lbl {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-/* MoeMail 域名列表样式 */
-#ov-moemail-domains-container {
-  padding: 18px 24px 20px;
-  border-top: 1px solid var(--border);
-}
-
-#ov-moemail-domains-list {
-  min-height: 40px;
-}
-
-#ov-moemail-domains-pagination button {
-  transition: all 0.2s;
-}
-
-#ov-moemail-domains-pagination button:hover:not([disabled]) {
-  background: var(--bg-hover) !important;
-  transform: translateY(-1px);
-}
-
-#ov-moemail-domains-pagination button:active:not([disabled]) {
-  transform: translateY(0);
 }

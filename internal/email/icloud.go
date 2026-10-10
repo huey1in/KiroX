@@ -9,15 +9,15 @@ import (
 	"io"
 	"log"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	httputil "reg_go/internal/http"
+
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
-	httputil "reg_go/internal/http"
 )
 
 // ICloudAccount describes one mailbox entry from icloud.csv.
@@ -54,16 +54,6 @@ func ParseICloudCSV(r io.Reader) ([]ICloudAccount, error) {
 		return nil, err
 	}
 	return accounts, nil
-}
-
-// ParseICloudCSVFile parses an iCloud mailbox file from disk.
-func ParseICloudCSVFile(path string) ([]ICloudAccount, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ParseICloudCSV(f)
 }
 
 var iCloudMessageIDPattern = regexp.MustCompile(`(?i)data-id\s*=\s*["']([^"']+)["']`)

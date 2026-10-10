@@ -258,17 +258,6 @@ func elapsedMillisSince(start, now time.Time) int64 {
 	return now.Sub(start).Milliseconds()
 }
 
-func profileStartResponseError(status int, body []byte) error {
-	if status >= 400 {
-		bodyText := strings.ToLower(string(body))
-		if status == 403 && strings.Contains(bodyText, "cloudfront") {
-			return fmt.Errorf("Profile start 被 CloudFront 拒绝 (HTTP %d)", status)
-		}
-		return fmt.Errorf("Profile start 请求失败 (HTTP %d)", status)
-	}
-	return fmt.Errorf("Profile start 未返回 workflowState")
-}
-
 // Step8ProfileStart Profile 启动
 func (r *Registrar) Step8ProfileStart() error {
 	log.Println("[8] Profile 启动")
@@ -349,14 +338,11 @@ func (r *Registrar) Step9SendOTP() error {
 		},
 	}
 
-	respBody, status, _, err := r.DoPostRaw(r.Cfg.ProfileBase+"/api/send-otp", reqPayload, r.BuildProfileHeaders(ref))
+	_, status, _, err := r.DoPostRaw(r.Cfg.ProfileBase+"/api/send-otp", reqPayload, r.BuildProfileHeaders(ref))
 	if err != nil {
 		return err
 	}
 	if status != 200 {
-		if r.Cfg.Debug {
-			log.Printf("[DEBUG] send-otp 失败: status=%d, body=%s, fp_len=%d", status, string(respBody), len(fp))
-		}
 		return fmt.Errorf("send-otp 失败 (%d)", status)
 	}
 	r.ProfileVerificationStartedAt = time.Now()

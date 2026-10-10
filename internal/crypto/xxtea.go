@@ -9,13 +9,13 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	fhttp "github.com/bogdanfinn/fhttp"
 	httputil "reg_go/internal/http"
+
+	fhttp "github.com/bogdanfinn/fhttp"
 )
 
 const (
@@ -110,10 +110,6 @@ func RefreshAppJSConfigContext(ctx context.Context, proxy, chromeVer, userAgent,
 	}
 	WarmAppJSConfig(proxy, chromeVer, userAgent, secUA)
 	return appJSConfig.wait(ctx)
-}
-
-func RefreshAppJSConfig(proxy, chromeVer, userAgent, secUA string) {
-	_ = RefreshAppJSConfigContext(context.Background(), proxy, chromeVer, userAgent, secUA)
 }
 
 func GetTESVersion() string {
@@ -298,60 +294,4 @@ func extractFWCIMVersion(js string) string {
 		return match[1]
 	}
 	return ""
-}
-
-func DecryptFingerprint(encrypted string) (string, error) {
-	parts := strings.SplitN(encrypted, ":", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("格式错误")
-	}
-	data, err := base64.StdEncoding.DecodeString(parts[1])
-	if err != nil {
-		return "", err
-	}
-	raw := xxteaDecrypt(data, GetActiveKey())
-	if idx := strings.Index(raw[:min(16, len(raw))], "#"); idx >= 0 {
-		return raw[idx+1:], nil
-	}
-	return raw, nil
-}
-
-func xxteaDecrypt(data []byte, key [4]uint32) string {
-	n := len(data) / 4
-	if n < 2 {
-		return ""
-	}
-	v := make([]uint32, n)
-	for i := 0; i < n; i++ {
-		v[i] = uint32(data[4*i]) | uint32(data[4*i+1])<<8 |
-			uint32(data[4*i+2])<<16 | uint32(data[4*i+3])<<24
-	}
-	rounds := 6 + 52/n
-	total := uint32(rounds) * delta
-	y := v[0]
-	for r := 0; r < rounds; r++ {
-		e := (total >> 2) & 3
-		for p := n - 1; p >= 0; p-- {
-			z := v[(p-1+n)%n]
-			mx := ((z>>5 ^ y<<2) + (y>>3 ^ z<<4)) ^ ((total ^ y) + (key[(uint32(p)&3)^e] ^ z))
-			v[p] -= mx
-			y = v[p]
-		}
-		total -= delta
-	}
-	var sb strings.Builder
-	for _, val := range v {
-		sb.WriteByte(byte(val))
-		sb.WriteByte(byte(val >> 8))
-		sb.WriteByte(byte(val >> 16))
-		sb.WriteByte(byte(val >> 24))
-	}
-	return strings.TrimRight(sb.String(), "\x00")
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

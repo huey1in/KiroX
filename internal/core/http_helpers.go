@@ -65,15 +65,6 @@ func (r *Registrar) BuildProfileHeaders(referer string) map[string]string {
 	return h
 }
 
-// CookieString 将 cookies 拼接为字符串
-func (r *Registrar) CookieString() string {
-	var parts []string
-	for k, v := range r.Cookies {
-		parts = append(parts, fmt.Sprintf("%s=%s", k, v))
-	}
-	return strings.Join(parts, "; ")
-}
-
 // BuildProfileNavigationHeaders mirrors the document request that loads the
 // Profile app. The browser sends the current AWS cookies on this request too;
 // keeping them on the initial document load makes the subsequent FWCIM and

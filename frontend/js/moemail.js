@@ -3,29 +3,6 @@
 let moemailConfigs = [];
 let moemailConfigStatus = {}; // 存储每个配置的测试状态
 
-function _mmT(key, varsOrFallback, fallbackMaybe) {
-  var vars = null, fallback = null;
-  if (typeof varsOrFallback === 'string') {
-    fallback = varsOrFallback;
-  } else if (varsOrFallback && typeof varsOrFallback === 'object') {
-    vars = varsOrFallback;
-    if (typeof fallbackMaybe === 'string') fallback = fallbackMaybe;
-  }
-  if (window.I18N && typeof window.I18N.t === 'function') {
-    var v = window.I18N.t(key, vars);
-    if (v && v !== key) return v;
-  }
-  if (fallback != null) {
-    if (vars) {
-      return fallback.replace(/\{(\w+)\}/g, function(_, k) {
-        return vars[k] != null ? vars[k] : '{' + k + '}';
-      });
-    }
-    return fallback;
-  }
-  return key;
-}
-
 // 加载 MoeMail 配置
 async function loadMoeMailConfigs() {
   try {
@@ -79,9 +56,9 @@ function updateMoeMailUI() {
   const summaryEl = document.getElementById('settings-moemail-summary');
   if (summaryEl) {
     if (moemailConfigs.length === 0) {
-      summaryEl.textContent = _mmT('moemail.summaryNone', '未配置');
+      summaryEl.textContent = tr('moemail.summaryNone', '未配置');
     } else {
-      summaryEl.textContent = _mmT('moemail.summaryActive', { n: moemailConfigs.length, m: activeCount }, '已配置 {n} 个，可用 {m} 个');
+      summaryEl.textContent = tr('moemail.summaryActive', { n: moemailConfigs.length, m: activeCount }, '已配置 {n} 个，可用 {m} 个');
     }
   }
 
@@ -100,20 +77,20 @@ function renderMoeMailConfigList() {
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
-          <div>${_mmT('moemail.emptyInline', '暂无配置，请在上方添加 MoeMail 配置')}</div>
+          <div>${tr('moemail.emptyInline', '暂无配置，请在上方添加 MoeMail 配置')}</div>
         </div>
       `;
     } else {
       inlineList.innerHTML = moemailConfigs.map((cfg, idx) => {
         const status = moemailConfigStatus[cfg.name] || { tested: false };
         let dotClass = 'untested';
-        let statusLabel = _mmT('status.untested', '未测试');
+        let statusLabel = tr('status.untested', '未测试');
         let statusClass = 'untested';
         let domainsHtml = '';
 
         if (status.tested && status.success) {
           dotClass = 'success';
-          statusLabel = _mmT('status.available', '可用');
+          statusLabel = tr('status.available', '可用');
           statusClass = 'success';
           const domains = status.domains || [];
           if (domains.length > 0) {
@@ -123,7 +100,7 @@ function renderMoeMailConfigList() {
           }
         } else if (status.tested) {
           dotClass = 'error';
-          statusLabel = _mmT('status.unavailable', '不可用');
+          statusLabel = tr('status.unavailable', '不可用');
           statusClass = 'error';
         }
 
@@ -146,14 +123,14 @@ function renderMoeMailConfigList() {
                   <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
                   <polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
-                ${_mmT('common.test', '测试')}
+                ${tr('common.test', '测试')}
               </button>
               <button onclick="deleteMoeMailConfig(${idx})" class="btn btn-secondary btn-sm" style="color:var(--danger);">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                 </svg>
-                ${_mmT('common.delete', '删除')}
+                ${tr('common.delete', '删除')}
               </button>
             </div>
           </div>
@@ -165,7 +142,7 @@ function renderMoeMailConfigList() {
 
 // 自动生成配置名称
 function generateMoeMailName() {
-  var prefix = _mmT('moemail.autoNamePrefix', '配置');
+  var prefix = tr('moemail.autoNamePrefix', '配置');
   let idx = moemailConfigs.length + 1;
   let name = prefix + ' ' + idx;
   while (moemailConfigs.some(c => c.name === name)) {
@@ -181,14 +158,14 @@ async function inlineAddMoeMail() {
   var url = document.getElementById('moemail-inline-url').value.trim();
   var apikey = document.getElementById('moemail-inline-apikey').value.trim();
   if (!url || !apikey) {
-    showToast(_mmT('moemail.requiredUrlKey', '请填写 API URL 和 API Key'), 'error');
+    showToast(tr('moemail.requiredUrlKey', '请填写 API URL 和 API Key'), 'error');
     return;
   }
   if (!name) {
     name = generateMoeMailName();
   }
   if (moemailConfigs.some(c => c.name === name)) {
-    showToast(_mmT('moemail.nameExists', '配置名称已存在'), 'error');
+    showToast(tr('moemail.nameExists', '配置名称已存在'), 'error');
     return;
   }
 
@@ -208,9 +185,9 @@ async function inlineAddMoeMail() {
   }
 
   if (!testResult || testResult.error) {
-    var errMsg = (testResult && testResult.error) || _mmT('moemail.testFailedShort', '测试失败');
+    var errMsg = (testResult && testResult.error) || tr('moemail.testFailedShort', '测试失败');
     if (statusEl) { statusEl.style.color = 'var(--danger)'; clearLocalizedStatus(statusEl, errMsg); }
-    showToast(_mmT('moemail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
+    showToast(tr('moemail.cannotSaveUntilOk', '连接测试未通过，未保存配置：') + errMsg, 'error');
     return;
   }
 
@@ -218,7 +195,7 @@ async function inlineAddMoeMail() {
   const saveResult = await window.go.main.App.SaveMoeMailConfigs(JSON.stringify(moemailConfigs));
   if (saveResult.error) {
     moemailConfigs.pop();
-    showToast(_mmT('toast.operationFailed', '保存失败') + ': ' + saveResult.error, 'error');
+    showToast(tr('toast.operationFailed', '保存失败') + ': ' + saveResult.error, 'error');
     return;
   }
 
@@ -230,7 +207,7 @@ async function inlineAddMoeMail() {
   document.getElementById('moemail-inline-url').value = '';
   document.getElementById('moemail-inline-apikey').value = '';
   if (statusEl) { statusEl.style.color = 'var(--success)'; clearLocalizedStatus(statusEl); }
-  showToast(_mmT('moemail.addedNamed', { name: name }, '已添加: {name}'));
+  showToast(tr('moemail.addedNamed', { name: name }, '已添加: {name}'));
   updateMoeMailUI();
 }
 
@@ -239,7 +216,7 @@ async function inlineTestMoeMail() {
   var url = document.getElementById('moemail-inline-url').value.trim();
   var apikey = document.getElementById('moemail-inline-apikey').value.trim();
   if (!url || !apikey) {
-    showToast(_mmT('moemail.requiredUrlKeyShort', '请填写 API URL 和 Key'), 'error');
+    showToast(tr('moemail.requiredUrlKeyShort', '请填写 API URL 和 Key'), 'error');
     return;
   }
   var btn = document.getElementById('moemail-inline-test-btn');
@@ -278,13 +255,13 @@ async function testMoeMailConfigByIndex(index) {
 
       let errorMsg = result.error;
       if (errorMsg.includes('403')) {
-        errorMsg = _mmT('moemail.err403Short', 'API Key 权限不足');
+        errorMsg = tr('moemail.err403Short', 'API Key 权限不足');
       } else if (errorMsg.includes('401')) {
-        errorMsg = _mmT('moemail.err401Short', 'API Key 无效');
+        errorMsg = tr('moemail.err401Short', 'API Key 无效');
       } else if (errorMsg.includes('404')) {
-        errorMsg = _mmT('moemail.err404Short', 'API 地址错误');
+        errorMsg = tr('moemail.err404Short', 'API 地址错误');
       } else if (errorMsg.includes('timeout') || errorMsg.includes('连接')) {
-        errorMsg = _mmT('moemail.errTimeoutShort', '连接超时');
+        errorMsg = tr('moemail.errTimeoutShort', '连接超时');
       }
       showToast(config.name + ': ' + errorMsg, 'error');
     } else {
@@ -300,9 +277,9 @@ async function testMoeMailConfigByIndex(index) {
       updateMoeMailUI();
 
       if (domains.length > 0) {
-        showToast(config.name + ': ' + _mmT('moemail.testOkWithDomains', { n: domains.length }, '连接成功，可用域名 {n} 个'), 'success');
+        showToast(config.name + ': ' + tr('moemail.testOkWithDomains', { n: domains.length }, '连接成功，可用域名 {n} 个'), 'success');
       } else {
-        showToast(config.name + ': ' + _mmT('moemail.testOkNoDomain', '连接成功，但未返回可用域名'), 'warning');
+        showToast(config.name + ': ' + tr('moemail.testOkNoDomain', '连接成功，但未返回可用域名'), 'warning');
       }
     }
   } catch (e) {
@@ -310,7 +287,7 @@ async function testMoeMailConfigByIndex(index) {
     saveMoeMailConfigStatus();
     renderMoeMailConfigList();
     updateMoeMailUI();
-    showToast(config.name + ': ' + _mmT('moemail.testFailedShort', '测试失败'), 'error');
+    showToast(config.name + ': ' + tr('moemail.testFailedShort', '测试失败'), 'error');
   }
 }
 
@@ -320,24 +297,24 @@ async function deleteMoeMailConfig(index) {
 
   const configName = moemailConfigs[index].name;
   showConfirmModal(
-    _mmT('moemail.deleteConfigTitle', '删除配置'),
-    _mmT('moemail.deleteConfigMsg', { name: configName }, '确认删除配置 "{name}" 吗？'),
-    _mmT('accounts.deleteConfirm', '确认删除'),
+    tr('moemail.deleteConfigTitle', '删除配置'),
+    tr('moemail.deleteConfigMsg', { name: configName }, '确认删除配置 "{name}" 吗？'),
+    tr('accounts.deleteConfirm', '确认删除'),
     async function() {
       moemailConfigs.splice(index, 1);
 
       try {
         const result = await window.go.main.App.SaveMoeMailConfigs(JSON.stringify(moemailConfigs));
         if (result.error) {
-          showToast(_mmT('toast.deleteFailed', '删除失败') + ': ' + result.error, 'error');
+          showToast(tr('toast.deleteFailed', '删除失败') + ': ' + result.error, 'error');
           await loadMoeMailConfigs();
           return;
         }
 
         updateMoeMailUI();
-        showToast(_mmT('toast.deleteOk', '删除成功'), 'success');
+        showToast(tr('toast.deleteOk', '删除成功'), 'success');
       } catch (e) {
-        showToast(_mmT('toast.deleteFailed', '删除失败') + ': ' + e, 'error');
+        showToast(tr('toast.deleteFailed', '删除失败') + ': ' + e, 'error');
         await loadMoeMailConfigs();
       }
     }

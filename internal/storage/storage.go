@@ -129,8 +129,6 @@ var (
 	_dataDirOnce      sync.Once
 	_resultOutputDir  string
 	_resultOutputOnce sync.Once
-	_proxy            string
-	_proxyOnce        sync.Once
 	_language         string
 	_languageOnce     sync.Once
 
@@ -525,39 +523,6 @@ func ResetResultOutputDir() (string, error) {
 	_resultOutputOnce = sync.Once{}
 	_resultOutputOnce.Do(func() {})
 	return defaultDir, nil
-}
-
-// GetProxy 返回当前全局代理 URL（空字符串表示直连）。
-func GetProxy() string {
-	_proxyOnce.Do(func() {
-		settings := loadSettings()
-		_proxy = strings.TrimSpace(settings.Proxy)
-	})
-	return _proxy
-}
-
-// SetProxy 设置全局代理 URL（会自动归一化常见简写格式）。
-func SetProxy(raw string) (string, error) {
-	normalized := NormalizeProxyAddress(strings.TrimSpace(raw))
-	if err := updateSettings(func(settings *settingsFile) {
-		settings.Proxy = normalized
-	}); err != nil {
-		return "", err
-	}
-	_proxy = normalized
-	_proxyOnce = sync.Once{}
-	_proxyOnce.Do(func() {})
-	return normalized, nil
-}
-
-// ResetProxy 清空代理配置，恢复直连。
-func ResetProxy() {
-	_ = updateSettings(func(settings *settingsFile) {
-		settings.Proxy = ""
-	})
-	_proxy = ""
-	_proxyOnce = sync.Once{}
-	_proxyOnce.Do(func() {})
 }
 
 // GetLanguage 返回当前界面语言代码（"zh"/"en"/"ja"），未设置时返回空字符串。

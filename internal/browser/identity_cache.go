@@ -102,10 +102,6 @@ func saveIdentityCacheLocked() {
 // IdentityForProxy 返回与代理绑定的稳定身份；同一代理 6 小时内复用同一硬件指纹。
 // 每次调用都会刷新 lsubid 前缀和 webpack hash —— 这两个在真实浏览器同一台机器上每次会话也会变。
 func IdentityForProxy(proxyURL string) *BrowserIdentity {
-	return cachedIdentityForProxy(proxyURL, true)
-}
-
-func cachedIdentityForProxy(proxyURL string, refreshSession bool) *BrowserIdentity {
 	key := proxyKey(proxyURL)
 
 	idCacheMu.Lock()
@@ -115,20 +111,14 @@ func cachedIdentityForProxy(proxyURL string, refreshSession bool) *BrowserIdenti
 	now := time.Now().Unix()
 	if entry, ok := idCache[key]; ok && entry.Identity != nil {
 		if identityMatchesTLSProfiles(entry.Identity) && now-entry.CreatedAt < int64((6*time.Hour).Seconds()) {
-			if refreshSession {
-				return refreshVolatile(entry.Identity)
-			}
-			return cloneIdentity(entry.Identity)
+			return refreshVolatile(entry.Identity)
 		}
 	}
 
 	id := RandomIdentity()
 	idCache[key] = cachedIdentity{Identity: id, CreatedAt: now}
 	saveIdentityCacheLocked()
-	if refreshSession {
-		return refreshVolatile(id)
-	}
-	return cloneIdentity(id)
+	return refreshVolatile(id)
 }
 
 func identityMatchesTLSProfiles(identity *BrowserIdentity) bool {
@@ -183,11 +173,6 @@ func containsInt(values []int, target int) bool {
 	return false
 }
 
-func cloneIdentity(base *BrowserIdentity) *BrowserIdentity {
-	clone := *base
-	return &clone
-}
-
 // refreshVolatile 复制身份并刷新少数每次会话都会变的字段。
 // 这样硬件指纹（UA / Chrome 版本 / GPU / 屏幕 / Math / Canvas / 内存 / 核数）保持稳定，
 // 只有真实浏览器每次会话也变的 lsubid / webpackHash 重新随机。
@@ -203,7 +188,7 @@ func refreshVolatile(base *BrowserIdentity) *BrowserIdentity {
 	return &clone
 }
 
-// ResetIdentityCache 清空缓存（用于「强制刷新指纹」按钮，未来可选）
+// ResetIdentityCache 清空缓存。
 func ResetIdentityCache() {
 	idCacheMu.Lock()
 	defer idCacheMu.Unlock()

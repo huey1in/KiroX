@@ -5,12 +5,28 @@
 //   - HTML placeholder: <input data-i18n-placeholder="form.search" placeholder="搜索">
 //   - HTML title: <span data-i18n-title="tip.help" title="帮助">?</span>
 //   - JS: t('toast.saved') / t('toast.deleted', {n: 3})
+// Translate UI text with an optional interpolation map and fallback.
+function tr(key, varsOrFallback, fallbackMaybe) {
+  var vars = null;
+  var fallback = fallbackMaybe;
+  if (typeof varsOrFallback === 'string') fallback = varsOrFallback;
+  else if (varsOrFallback && typeof varsOrFallback === 'object') vars = varsOrFallback;
+  if (window.I18N && typeof window.I18N.t === 'function') {
+    var value = window.I18N.t(key, vars);
+    if (value && value !== key) return value;
+  }
+  if (fallback == null) return key;
+  return vars ? fallback.replace(/\{(\w+)\}/g, function(_, name) {
+    return vars[name] != null ? vars[name] : '{' + name + '}';
+  }) : fallback;
+}
+
 (function(){
   'use strict';
   var DICT = {
     zh: {
       nav: {
-        overview: '概览', logs: '运行日志', register: '注册', accounts: '邮箱池',
+        overview: '概览', logs: '运行日志', accounts: '邮箱池',
         about: '关于', settings: '设置', toggleTheme: '切换主题', checkUpdate: '检查更新',
         language: '语言：中文 (点击切换)',
         ip: 'IP 管理'
@@ -21,7 +37,7 @@
       },
       ip: {
         proxy: '代理', direct: '直连', add: '+ 添加代理', refresh: '刷新',
-        batchTest: '批量测试', batchDelete: '批量删除', searchPlaceholder: '搜索出口 IP / 地址 / 国家',
+        batchTest: '批量测试', searchPlaceholder: '搜索出口 IP / 地址 / 国家',
         allStatus: '全部状态', enabled: '启用', disabled: '停用',
         empty: '暂无代理，点击右上角添加。', addTitle: '添加代理', editTitle: '编辑代理',
         tabSingle: '单个添加', tabBatch: '批量添加', protocol: '协议',
@@ -32,12 +48,12 @@
         type: { datacenter: '机房', mobile: '移动', residential: '家宽' },
         resultTitle: '测试结果', resultScheme: '协议', resultIP: '出口 IP',
         resultCountry: '国家', resultRegion: '地区', resultCity: '城市',
-        resultISP: '运营商', resultLatency: '延迟', resultError: '错误',
+        resultISP: '运营商', resultError: '错误',
         batchPlaceholder: '每行一个代理，格式：scheme://[user:pass@]host:port',
         loading: '加载中...',
         available: '可用', failure: '失败',
-        testing: '正在测试…', unavailable: '不可用', unknownError: '未知错误',
-        testFailed: '测试失败', noProxies: '没有可测试的代理', testingN: '测试 {n} 个代理…',
+        testing: '正在测试…', unknownError: '未知错误',
+        noProxies: '没有可测试的代理', testingN: '测试 {n} 个代理…',
         addFailed: '添加失败', saveFailed: '保存失败', added: '已添加', saved: '已保存',
         hostRequired: '主机不能为空', invalidBatch: '没有有效的代理行',
         batchDone: '完成：{added} 成功', batchDup: '，{n} 已存在', batchFail: '，{n} 失败',
@@ -48,21 +64,21 @@
       },
       common: {
         loading: '加载中...', loadFailed: '加载失败', noData: '暂无数据',
-        copy: '复制', cancel: '取消', delete: '删除',
+        cancel: '取消', delete: '删除',
         reset: '重置', clearAll: '清空全部', select: '选择', close: '关闭',
         test: '测试', confirm: '确认',
         prevPage: '上一页', nextPage: '下一页'
       },
       status: {
-        idle: '空闲', running: '运行中', success: '成功', failed: '失败',
-        unregistered: '未注册', pending: '待获取', fetching: '获取中',
-        ready: '已就绪', suspended: '已封禁', untested: '未测试',
+        success: '成功', failed: '失败',
+        unregistered: '未注册',
+        untested: '未测试',
         available: '可用', unavailable: '不可用',
       },
       overview: {
         kiroAccounts: 'Kiro 账号数', successRate: '注册成功率', taskControl: '任务控制',
         liveStatus: '实时状态', progress: '进度', success: '成功', failed: '失败',
-        elapsed: '已耗时', eta: '预计剩余', avg: '平均耗时', rate: '成功率',
+        elapsed: '已耗时', avg: '平均耗时',
         newTask: '新建任务', stop: '停止'
       },
       about: {
@@ -80,8 +96,6 @@
         dataDirPlaceholder: '默认存储路径',
         outputDir: '注册结果输出目录', outputDirDesc: '成功账号以明文 JSON 数组写入该目录下的 accounts.json',
         outputDirPlaceholder: '默认：文档/KiroX',
-        proxy: '代理', proxyDetecting: '正在检测代理出口…', proxyAvailable: '可用', proxyDetectFailed: '检测失败',
-        proxyDesc: '所有注册请求走该代理；留空=直连。支持 http/https/socks5 完整 URL，也支持 host:port:user:pass、host:port、user:pass@host:port 等简写。',
         sound: '提示音', soundDesc: '任务结束时播放提示音', desktopNotification: '桌面通知', desktopNotificationDesc: '任务完成时发送 Windows 桌面通知', soundVolume: '提示音音量',
         appearance: '外观与更新', theme: '主题', themeSystem: '跟随系统', themeLight: '浅色', themeDark: '深色', language: '界面语言', autoUpdate: '启动时自动检查更新',
         maintenance: '维护', logRetention: '日志保留天数', moeExpiry: 'MoeMail 有效期（分钟）', persistentLogs: '持久化运行日志', persistentLogsDesc: '落盘前自动遮蔽验证码与令牌', autoProbe: '进入 IP 管理时探测新代理', openLogs: '打开日志目录', clearLogs: '清理日志', clearFingerprint: '清理指纹缓存', logsCleared: '日志已清理', fingerprintCleared: '指纹缓存已清理', clearLogsConfirm: '确定删除全部持久化日志吗？', clearFingerprintConfirm: '确定清理全部指纹缓存吗？',
@@ -93,8 +107,7 @@
         selectDomain: '选择域名', selectAllDomain: '全选域名',
         domainHint: '邮箱名将自动生成随机字符串',
         modeRandom: '随机', modeRoundRobin: '轮询', configCount: '{n} 个配置',
-        startBtn: '开始注册', stopBtn: '停止',
-        icloud: 'iCloud',
+        startBtn: '开始注册',
       },
       accounts: {
         moemailTitle: 'MoeMail 临时邮箱', cloudmailTitle: 'Cloud-Mail 自部署邮箱', addConfig: '添加新配置',
@@ -117,7 +130,6 @@
         icloudTitle: 'iCloud 邮箱', icloudAddTitle: '添加 iCloud 邮箱账号', icloudInputRequired: '请先输入 iCloud 账号数据',
         icloudPerLine: '每行一个账号', icloudManualInput: '手动输入',
         icloudFormat: '格式：邮箱----iCloud 消息列表 URL，每行一个',
-        icloudPlaceholder: 'user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com',
         pagerInfo: '第 {cur} / {total} 页 (共 {n} 个)',
         emptyRow: '暂无邮箱账号',
         deleteTitle: '删除账号',
@@ -140,7 +152,6 @@
       toast: {
         copied: '已复制',
         copyFailed: '复制失败', operationFailed: '操作失败',
-        proxySaved: '代理已保存', proxyCleared: '代理已清除',
         dataDirSet: '存储目录已设置', dataDirReset: '已重置为默认存储目录',
         outputDirSet: '输出目录已设置', outputDirReset: '已重置为默认输出目录',
         addFailed: '添加失败',
@@ -212,7 +223,7 @@
     },
     en: {
       nav: {
-        overview: 'Overview', logs: 'Logs', register: 'Register', accounts: 'Emails',
+        overview: 'Overview', logs: 'Logs', accounts: 'Emails',
         about: 'About', settings: 'Settings', toggleTheme: 'Toggle theme', checkUpdate: 'Check update',
         language: 'Language: English (click to switch)',
         ip: 'IPs'
@@ -223,7 +234,7 @@
       },
       ip: {
         proxy: 'Proxy', direct: 'Direct', add: '+ Add proxy', refresh: 'Refresh',
-        batchTest: 'Batch test', batchDelete: 'Batch delete', searchPlaceholder: 'Search exit IP / address / country',
+        batchTest: 'Batch test', searchPlaceholder: 'Search exit IP / address / country',
         allStatus: 'All statuses', enabled: 'Enabled', disabled: 'Disabled',
         empty: 'No proxies yet. Click Add proxy above.', addTitle: 'Add proxy', editTitle: 'Edit proxy',
         tabSingle: 'Add single', tabBatch: 'Add batch', protocol: 'Protocol',
@@ -234,12 +245,12 @@
         type: { datacenter: 'Datacenter', mobile: 'Mobile', residential: 'Residential' },
         resultTitle: 'Test Result', resultScheme: 'Protocol', resultIP: 'Exit IP',
         resultCountry: 'Country', resultRegion: 'Region', resultCity: 'City',
-        resultISP: 'ISP', resultLatency: 'Latency', resultError: 'Error',
+        resultISP: 'ISP', resultError: 'Error',
         batchPlaceholder: 'One proxy per line: scheme://[user:pass@]host:port',
         loading: 'Loading...',
         available: 'Available', failure: 'Failed',
-        testing: 'Testing…', unavailable: 'Unavailable', unknownError: 'Unknown error',
-        testFailed: 'Test failed', noProxies: 'No proxies to test', testingN: 'Testing {n} proxies…',
+        testing: 'Testing…', unknownError: 'Unknown error',
+        noProxies: 'No proxies to test', testingN: 'Testing {n} proxies…',
         addFailed: 'Add failed', saveFailed: 'Save failed', added: 'Added', saved: 'Saved',
         hostRequired: 'Host is required', invalidBatch: 'No valid proxy lines',
         batchDone: 'Done: {added} added', batchDup: ', {n} already exists', batchFail: ', {n} failed',
@@ -250,21 +261,21 @@
       },
       common: {
         loading: 'Loading...', loadFailed: 'Failed to load', noData: 'No data',
-        copy: 'Copy', cancel: 'Cancel', delete: 'Delete',
+        cancel: 'Cancel', delete: 'Delete',
         reset: 'Reset', clearAll: 'Clear all', select: 'Select', close: 'Close',
         test: 'Test', confirm: 'Confirm',
         prevPage: 'Prev', nextPage: 'Next'
       },
       status: {
-        idle: 'Idle', running: 'Running', success: 'Success', failed: 'Failed',
-        unregistered: 'Unregistered', pending: 'Pending', fetching: 'Fetching',
-        ready: 'Ready', suspended: 'Suspended', untested: 'Untested',
+        success: 'Success', failed: 'Failed',
+        unregistered: 'Unregistered',
+        untested: 'Untested',
         available: 'Available', unavailable: 'Unavailable',
       },
       overview: {
         kiroAccounts: 'Kiro accounts', successRate: 'Success rate', taskControl: 'Task control',
         liveStatus: 'Live status', progress: 'Progress', success: 'Success', failed: 'Failed',
-        elapsed: 'Elapsed', eta: 'ETA', avg: 'Average', rate: 'Rate',
+        elapsed: 'Elapsed', avg: 'Average',
         newTask: 'New task', stop: 'Stop'
       },
       about: {
@@ -282,8 +293,6 @@
         dataDirPlaceholder: 'Default path',
         outputDir: 'Output directory', outputDirDesc: 'Successful accounts are written to accounts.json in this directory',
         outputDirPlaceholder: 'Default: Documents/KiroX',
-        proxy: 'Proxy', proxyDetecting: 'Detecting proxy exit…', proxyAvailable: 'Available', proxyDetectFailed: 'Detection failed',
-        proxyDesc: 'All requests use this proxy; empty = direct. Accepts http/https/socks5 URLs or shortcuts like host:port:user:pass.',
         sound: 'Sound', soundDesc: 'Play a sound when a task ends', desktopNotification: 'Desktop notifications', desktopNotificationDesc: 'Send a Windows notification when a task completes', soundVolume: 'Sound volume',
         appearance: 'Appearance and updates', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', language: 'Language', autoUpdate: 'Check for updates at startup',
         maintenance: 'Maintenance', logRetention: 'Log retention days', moeExpiry: 'MoeMail lifetime (minutes)', persistentLogs: 'Persist runtime logs', persistentLogsDesc: 'Codes and tokens are redacted before writing', autoProbe: 'Probe new proxies when opening IP management', openLogs: 'Open log directory', clearLogs: 'Clear logs', clearFingerprint: 'Clear fingerprint cache', logsCleared: 'Logs cleared', fingerprintCleared: 'Fingerprint cache cleared', clearLogsConfirm: 'Delete all persisted logs?', clearFingerprintConfirm: 'Clear the entire fingerprint cache?',
@@ -295,8 +304,7 @@
         selectDomain: 'Select domain', selectAllDomain: 'Select all',
         domainHint: 'Email username is auto-generated as random string',
         modeRandom: 'Random', modeRoundRobin: 'Round-robin', configCount: '{n} configs',
-        startBtn: 'Start', stopBtn: 'Stop',
-        icloud: 'iCloud',
+        startBtn: 'Start',
       },
       accounts: {
         moemailTitle: 'MoeMail temp mail', cloudmailTitle: 'Cloud-Mail (self-hosted)', addConfig: 'Add config',
@@ -317,7 +325,6 @@
         icloudTitle: 'iCloud mail', icloudAddTitle: 'Add iCloud account', icloudInputRequired: 'Please enter iCloud account data first',
         icloudPerLine: 'One account per line', icloudManualInput: 'Manual input',
         icloudFormat: 'Format: email----iCloud message list URL, one per line',
-        icloudPlaceholder: 'user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com',
         importSummary: 'Imported {n} accounts. Total now: {total}',
         importFailed: 'Import failed',
         pagerInfo: 'Page {cur} / {total} (Total {n})',
@@ -342,7 +349,6 @@
       toast: {
         copied: 'Copied',
         copyFailed: 'Copy failed', operationFailed: 'Operation failed',
-        proxySaved: 'Proxy saved', proxyCleared: 'Proxy cleared',
         dataDirSet: 'Data directory set', dataDirReset: 'Data directory reset to default',
         outputDirSet: 'Output directory set', outputDirReset: 'Output directory reset to default',
         addFailed: 'Failed to add',
@@ -414,7 +420,7 @@
     },
     ja: {
       nav: {
-        overview: '概要', logs: 'ログ', register: '登録', accounts: 'メール',
+        overview: '概要', logs: 'ログ', accounts: 'メール',
         about: '情報', settings: '設定', toggleTheme: 'テーマ切替', checkUpdate: '更新確認',
         language: '言語：日本語 (クリックで切替)',
         ip: 'IP管理'
@@ -425,7 +431,7 @@
       },
       ip: {
         proxy: 'プロキシ', direct: '直接接続', add: '+ プロキシを追加', refresh: '更新',
-        batchTest: '一括テスト', batchDelete: '一括削除', searchPlaceholder: '出口 IP / アドレス / 国を検索',
+        batchTest: '一括テスト', searchPlaceholder: '出口 IP / アドレス / 国を検索',
         allStatus: 'すべての状態', enabled: '有効', disabled: '無効',
         empty: 'プロキシがありません。右上から追加してください。', addTitle: 'プロキシを追加', editTitle: 'プロキシを編集',
         tabSingle: '単数追加', tabBatch: '一括追加', protocol: 'プロトコル',
@@ -436,12 +442,12 @@
         type: { datacenter: 'DC', mobile: 'モバイル', residential: '住宅' },
         resultTitle: 'テスト結果', resultScheme: 'プロトコル', resultIP: '出口 IP',
         resultCountry: '国', resultRegion: '地域', resultCity: '都市',
-        resultISP: 'ISP', resultLatency: '遅延', resultError: 'エラー',
+        resultISP: 'ISP', resultError: 'エラー',
         batchPlaceholder: '1行1プロキシ: scheme://[user:pass@]host:port',
         loading: '読み込み中...',
         available: '利用可能', failure: '失敗',
-        testing: 'テスト中…', unavailable: '利用不可', unknownError: '不明なエラー',
-        testFailed: 'テスト失敗', noProxies: 'テストするプロキシがありません', testingN: '{n} 件のプロキシをテスト…',
+        testing: 'テスト中…', unknownError: '不明なエラー',
+        noProxies: 'テストするプロキシがありません', testingN: '{n} 件のプロキシをテスト…',
         addFailed: '追加失敗', saveFailed: '保存失敗', added: '追加しました', saved: '保存しました',
         hostRequired: 'ホストを入力してください', invalidBatch: '有効なプロキシ行がありません',
         batchDone: '完了：{added} 件追加', batchDup: '、{n} 件重複', batchFail: '、{n} 件失敗',
@@ -452,21 +458,21 @@
       },
       common: {
         loading: '読み込み中...', loadFailed: '読み込み失敗', noData: 'データなし',
-        copy: 'コピー', cancel: 'キャンセル', delete: '削除',
+        cancel: 'キャンセル', delete: '削除',
         reset: 'リセット', clearAll: 'すべてクリア', select: '選択', close: '閉じる',
         test: 'テスト', confirm: '確認',
         prevPage: '前へ', nextPage: '次へ'
       },
       status: {
-        idle: '待機', running: '実行中', success: '成功', failed: '失敗',
-        unregistered: '未登録', pending: '待機中', fetching: '取得中',
-        ready: '準備完了', suspended: '凍結', untested: '未テスト',
+        success: '成功', failed: '失敗',
+        unregistered: '未登録',
+        untested: '未テスト',
         available: '利用可能', unavailable: '利用不可',
       },
       overview: {
         kiroAccounts: 'Kiro アカウント数', successRate: '登録成功率', taskControl: 'タスク操作',
         liveStatus: 'リアルタイム状態', progress: '進行状況', success: '成功', failed: '失敗',
-        elapsed: '経過時間', eta: '残り時間', avg: '平均', rate: '成功率',
+        elapsed: '経過時間', avg: '平均',
         newTask: '新規タスク', stop: '停止'
       },
       about: {
@@ -484,8 +490,6 @@
         dataDirPlaceholder: 'デフォルトパス',
         outputDir: '出力ディレクトリ', outputDirDesc: '成功アカウントはこのディレクトリの accounts.json に書き出されます',
         outputDirPlaceholder: 'デフォルト：Documents/KiroX',
-        proxy: 'プロキシ', proxyDetecting: 'プロキシ出口を検出中…', proxyAvailable: '利用可能', proxyDetectFailed: '検出失敗',
-        proxyDesc: 'すべてのリクエストでこのプロキシを使用。空欄=直接接続。http/https/socks5 のURL、または host:port:user:pass などの省略形式に対応。',
         sound: '通知音', soundDesc: 'タスク終了時に通知音を鳴らす', desktopNotification: 'デスクトップ通知', desktopNotificationDesc: 'タスク完了時に Windows 通知を送信', soundVolume: '通知音量',
         appearance: '外観と更新', theme: 'テーマ', themeSystem: 'システム設定', themeLight: 'ライト', themeDark: 'ダーク', language: '表示言語', autoUpdate: '起動時に更新を確認',
         maintenance: 'メンテナンス', logRetention: 'ログ保持日数', moeExpiry: 'MoeMail 有効期間（分）', persistentLogs: '実行ログを保存', persistentLogsDesc: '保存前にコードとトークンを隠します', autoProbe: 'IP 管理を開くとき新規プロキシを検査', openLogs: 'ログフォルダを開く', clearLogs: 'ログを削除', clearFingerprint: '指紋キャッシュを削除', logsCleared: 'ログを削除しました', fingerprintCleared: '指紋キャッシュを削除しました', clearLogsConfirm: '保存済みログをすべて削除しますか？', clearFingerprintConfirm: '指紋キャッシュをすべて削除しますか？',
@@ -497,8 +501,7 @@
         selectDomain: 'ドメイン選択', selectAllDomain: 'すべて選択',
         domainHint: 'ユーザー名はランダム文字列で自動生成されます',
         modeRandom: 'ランダム', modeRoundRobin: 'ラウンドロビン', configCount: '{n} 件の設定',
-        startBtn: '登録開始', stopBtn: '停止',
-        icloud: 'iCloud',
+        startBtn: '登録開始',
       },
       accounts: {
         moemailTitle: 'MoeMail 使い捨てメール', cloudmailTitle: 'Cloud-Mail (自己ホスト型)', addConfig: '新規追加',
@@ -520,7 +523,6 @@
         icloudTitle: 'iCloud メール', icloudAddTitle: 'iCloud アカウントを追加', icloudInputRequired: 'iCloud アカウントを入力してください',
         icloudPerLine: '1行に1アカウント', icloudManualInput: '手入力',
         icloudFormat: '形式：email----iCloud メッセージリスト URL (1行1件)',
-        icloudPlaceholder: 'user@icloud.com----https://apple55.top/messages/xxx/user@icloud.com',
         importFailed: '取り込み失敗',
         pagerInfo: '{cur} / {total} ページ (合計 {n} 件)',
         emptyRow: 'メールアカウントなし',
@@ -544,7 +546,6 @@
       toast: {
         copied: 'コピーしました',
         copyFailed: 'コピー失敗', operationFailed: '操作に失敗しました',
-        proxySaved: 'プロキシを保存', proxyCleared: 'プロキシをクリア',
         dataDirSet: 'データディレクトリを設定', dataDirReset: 'データディレクトリをデフォルトに戻しました',
         outputDirSet: '出力ディレクトリを設定', outputDirReset: '出力ディレクトリをデフォルトに戻しました',
         addFailed: '追加に失敗しました',

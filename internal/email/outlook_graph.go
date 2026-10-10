@@ -111,18 +111,6 @@ func outlookGraphGet(accessToken, path, proxyURL string, out interface{}) error 
 	return json.Unmarshal(body, out)
 }
 
-func getInboxCountGraph(acc OutlookAccount, proxyURL string) (int, error) {
-	accessToken, err := refreshOutlookGraphToken(acc, proxyURL)
-	if err != nil {
-		return 0, fmt.Errorf("刷新 Graph Token 失败: %v", err)
-	}
-	return getInboxCountGraphWithToken(accessToken, proxyURL)
-}
-
-func getInboxCountGraphWithToken(accessToken, proxyURL string) (int, error) {
-	return getGraphFolderCountWithToken(accessToken, "inbox", proxyURL)
-}
-
 func getGraphFolderCountWithToken(accessToken, folderID, proxyURL string) (int, error) {
 	var folder outlookGraphFolderResponse
 	path := fmt.Sprintf("/me/mailFolders/%s?$select=totalItemCount", url.PathEscape(folderID))

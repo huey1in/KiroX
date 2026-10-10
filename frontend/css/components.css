@@ -259,13 +259,6 @@ tbody td a:hover {
 
 .modal-content::-webkit-scrollbar { display: none; }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
 /* ===== Toast Notification ===== */
 #toast-container {
   position: fixed;
@@ -392,12 +385,6 @@ tbody td a:hover {
   background: #080a0f;
   border-color: rgba(255,255,255,0.05);
   color: rgba(226, 232, 240, 0.85);
-}
-
-/* Proxy 相关样式已移除（代理管理功能下线） */
-
-[data-theme="dark"] .addr-tooltip {
-  background: #374151;
 }
 
 /* ===== MoeMail 配置卡片样式 ===== */

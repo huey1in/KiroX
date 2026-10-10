@@ -3,7 +3,6 @@ package proxy
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -38,11 +37,6 @@ type PoolEntry struct {
 type poolFile struct {
 	Entries []PoolEntry `json:"entries"`
 }
-
-const (
-	// Power 用于"软最大化"：>1 时拉大权重差，<1 时压平。0.6 保证哪怕权重 1 vs 100 也有 ~6% 概率被选中。
-	weightPower = 0.6
-)
 
 var (
 	poolMu      sync.Mutex
@@ -238,42 +232,4 @@ func SetProbe(id string, info Info, ms int) error {
 		}
 	}
 	return fmt.Errorf("代理不存在")
-}
-
-// PickRandom 按权重抽签返回一个启用的代理 URL；池为空或全部禁用返回空串。
-// 使用 weightPower 软化：让低权重也有非零概率被命中，避免全部任务落到单一代理。
-func PickRandom() string {
-	poolMu.Lock()
-	defer poolMu.Unlock()
-	loadPoolLocked()
-
-	type cand struct {
-		url  string
-		soft float64
-	}
-	candidates := make([]cand, 0, len(poolEntries))
-	var total float64
-	for _, e := range poolEntries {
-		if e.URL == "" {
-			continue
-		}
-		w := e.Weight
-		if w <= 0 {
-			w = 1
-		}
-		soft := math.Pow(float64(w), weightPower)
-		candidates = append(candidates, cand{e.URL, soft})
-		total += soft
-	}
-	if total <= 0 || len(candidates) == 0 {
-		return ""
-	}
-	r := rand.Float64() * total
-	for _, c := range candidates {
-		r -= c.soft
-		if r <= 0 {
-			return c.url
-		}
-	}
-	return candidates[len(candidates)-1].url
 }
